@@ -1,0 +1,33 @@
+services:
+  # --- Backend Core (NestJS) ---
+  backend-core:
+    build:
+      context: ./backend-core
+      dockerfile: Dockerfile
+    container_name: finance-backend-core
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount local code into the container for hot-reload
+      - ./backend-core:/app
+      # Prevent local node_modules from overwriting the container's node_modules
+      - /app/node_modules
+      # Database Persistence: Mapping a local data folder
+      - ./data:/app/data
+    environment:
+      # Define DB location (this path will be used in Prisma)
+      - DATABASE_URL="file:/app/data/finance.db"
+    networks:
+      - finance-network
+
+  # --- Placeholder for Backend Science (Python) - To be activated in Phase 2 ---
+  # backend-science:
+  #   ...
+
+  # --- Placeholder for Frontend (Angular) - To be activated in Phase 4 ---
+  # frontend:
+  #   ...
+
+networks:
+  finance-network:
+    driver: bridge
