@@ -16,17 +16,27 @@ services:
       - ./data:/app/data
     environment:
       # Define DB location (this path will be used in Prisma)
-      - DATABASE_URL="file:/app/data/finance.db"
+      - DATABASE_URL=file:/app/data/finance.db
+      - SCIENCE_SERVICE_URL=http://backend-science:8000
     networks:
       - finance-network
+    depends_on:
+      - backend-science
 
-  # --- Placeholder for Backend Science (Python) - To be activated in Phase 2 ---
-  # backend-science:
-  #   ...
-
-  # --- Placeholder for Frontend (Angular) - To be activated in Phase 4 ---
-  # frontend:
-  #   ...
+  # --- 2: PYTHON (Science) ---
+  backend-science:
+    build:
+      context: ./backend-science
+      dockerfile: Dockerfile
+    container_name: finance-backend-science
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend-science:/app
+      - /app/__pycache__
+      - /app/.venv
+    networks:
+      - finance-network
 
 networks:
   finance-network:

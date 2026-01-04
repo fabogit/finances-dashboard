@@ -153,7 +153,7 @@ vite.config.ts.timestamp-*
 *.sublime-workspace
 
 # IDE - VSCode
-backend-core/.vscode/*
+*.vscode/*
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -168,6 +168,12 @@ backend-core/.vscode/*
 .env.local
 .env.*
 !.env.example
+
+# PYTHON
+backend-science/.venv
+backend-science/.venv/
+backend-science/__pycache__/
+
 
 # temp directory
 .temp
