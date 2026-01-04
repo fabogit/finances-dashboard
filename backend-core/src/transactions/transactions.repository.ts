@@ -11,4 +11,12 @@ export class TransactionsRepository {
       data,
     });
   }
+
+  async findAllRaw() {
+    return this.prisma.rawTransaction.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
 }
