@@ -153,6 +153,7 @@ vite.config.ts.timestamp-*
 *.sublime-workspace
 
 # IDE - VSCode
+backend-core/.vscode/*
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -171,3 +172,6 @@ vite.config.ts.timestamp-*
 # temp directory
 .temp
 .tmp
+
+# DB
+*.db
