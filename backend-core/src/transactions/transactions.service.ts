@@ -3,18 +3,7 @@ import { Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 import { TransactionsRepository } from './transactions.repository';
-
-export interface BankExportRow {
-  Data?: string | number;
-  Operazione?: string;
-  Dettagli?: string;
-  'Conto o carta'?: string;
-  Contabilizzazione?: string;
-  Categoria?: string;
-  'Categoria '?: string;
-  Valuta?: string;
-  Importo?: number | string;
-}
+import { BankExportRow } from './interfaces/bank-export-row.interface';
 
 @Injectable()
 export class TransactionsService {
@@ -81,11 +70,15 @@ export class TransactionsService {
       message: 'File processed successfully',
       rowsImported: transactionsToSave.length,
       batchId: batchId,
-      debugInfo: {
-        totalRowsRead: rawData.length,
-        firstRow: rawData[0],
-        lastRow: rawData[rawData.length - 1],
-      },
+      // debugInfo: {
+      //   totalRowsRead: rawData.length,
+      //   firstRow: rawData[0],
+      //   lastRow: rawData[rawData.length - 1],
+      // },
     };
+  }
+
+  async getAllTransactions() {
+    return this.repository.findAllRaw();
   }
 }
