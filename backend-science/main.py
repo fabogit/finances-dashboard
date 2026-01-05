@@ -10,10 +10,10 @@ Key Components:
     - Endpoints: REST interfaces for health checks and data processing.
 """
 import logging
-from typing import List, Optional
+from typing import List, Optional, cast
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
-from processor import DataProcessor
+from processor import DataProcessor, RawTransactionInput
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -31,7 +31,8 @@ class RawTransactionDto(BaseModel):
     such as dates in Excel serial format or amounts as strings.
 
     Attributes:
-        id (str): Unique identifier for the transaction.
+        importBatchId (str): Identifier for the bulk import batch.
+        originalLine (int): Line number from the source file (used for ID generation).
         date (str): Raw date string (e.g., Excel serial date "46020").
         operation (str): The type of operation performed.
         details (str): Specific details or description of the transaction.
@@ -109,9 +110,13 @@ async def process_transactions(transactions: List[RawTransactionDto]):
     try:
         logger.info("Received %s transactions to process", len(transactions))
 
+        # Pydantic returns Dict[str, Any], but DataProcessor expects List[RawTransactionInput].
+        # We use cast because we know the structure is compatible.
         raw_list = [t.model_dump() for t in transactions]
 
-        cleaned_data = DataProcessor.clean_transactions(raw_list)
+        cleaned_data = DataProcessor.clean_transactions(
+            cast(List[RawTransactionInput], raw_list)
+        )
 
         logger.info("Processing completed successfully")
         return cleaned_data
