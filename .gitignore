@@ -170,6 +170,7 @@ vite.config.ts.timestamp-*
 !.env.example
 
 # PYTHON
+backend-science/.direnv
 backend-science/.venv
 backend-science/.venv/
 backend-science/__pycache__/
