@@ -12,7 +12,7 @@ Key Components:
 import logging
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from processor import DataProcessor
 
 logging.basicConfig(level=logging.INFO)
@@ -39,13 +39,16 @@ class RawTransactionDto(BaseModel):
         amount (str): The transaction amount as a string (e.g., "-747.6").
         category (Optional[str]): Optional category label for the transaction.
     """
-    id: str
+    # id: str
+    importBatchId: str
+    originalLine: int
     date: str          # Es: "46020"
     operation: str
     details: str
     account: str
     amount: str        # Es: "-747.6"
     category: Optional[str] = None
+    model_config = ConfigDict(extra='ignore')
 
 # Output
 
