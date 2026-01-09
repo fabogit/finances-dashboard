@@ -123,4 +123,5 @@ async def process_transactions(transactions: List[RawTransactionDto]):
 
     except Exception as e:
         logger.error("Error while processing transactions: %s", e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        # 🛡️ Sentinel: Fail securely - do not leak internal error details to the client
+        raise HTTPException(status_code=500, detail="Internal server error") from e
