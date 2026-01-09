@@ -17,6 +17,7 @@ import {
 } from '@nestjs/swagger';
 import { TransactionsService } from './transactions.service';
 import { UploadTransactionResponseDto } from './dto/upload-transaction-response.dto';
+import { RawTransactionDto } from './dto/raw-transaction.dto';
 
 @ApiTags('transactions')
 @Controller('transactions')
@@ -69,7 +70,12 @@ export class TransactionsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all raw transactions' })
-  @ApiResponse({ status: 200, description: 'List of raw transactions' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of raw transactions',
+    type: RawTransactionDto,
+    isArray: true,
+  })
   async findAll() {
     return this.transactionsService.getAllTransactions();
   }
