@@ -27,6 +27,7 @@ export class TransactionsController {
   @ApiOperation({ summary: 'Upload Excel export file' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
+    description: 'Bank export Excel file (.xlsx). Max size: 5MB.',
     schema: {
       type: 'object',
       properties: {
@@ -45,7 +46,7 @@ export class TransactionsController {
   })
   @ApiResponse({
     status: 422,
-    description: 'File validation failed (type or size)',
+    description: 'File validation failed. Allowed type: .xlsx, Max size: 5MB.',
   })
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
