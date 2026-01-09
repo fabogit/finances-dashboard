@@ -4,8 +4,8 @@ import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 import { TransactionsRepository } from './transactions.repository';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
-import { ScienceService } from 'src/science/science.service';
-import { ProcessedTransaction } from 'src/science/interfaces/processed-transaction.interface';
+import { ScienceService } from '../science/science.service';
+import { ProcessedTransaction } from '../science/interfaces/processed-transaction.interface';
 
 @Injectable()
 export class TransactionsService {
@@ -23,11 +23,6 @@ export class TransactionsService {
     const workbook = XLSX.read(file.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-
-    const rangeRef = sheet['!ref'] || 'A1:Z1';
-    const maxRangeOverride = XLSX.utils.decode_range(rangeRef);
-    maxRangeOverride.e.r = 5000;
-    sheet['!ref'] = XLSX.utils.encode_range(maxRangeOverride);
 
     const rawData = XLSX.utils.sheet_to_json<BankExportRow>(sheet, {
       range: 18,
