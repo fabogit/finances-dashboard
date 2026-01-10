@@ -4,8 +4,8 @@ import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 import { TransactionsRepository } from './transactions.repository';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
-import { ScienceService } from 'src/science/science.service';
-import { ProcessedTransaction } from 'src/science/interfaces/processed-transaction.interface';
+import { ScienceService } from '../science/science.service';
+import { ProcessedTransaction } from '../science/interfaces/processed-transaction.interface';
 
 @Injectable()
 export class TransactionsService {
@@ -111,7 +111,8 @@ export class TransactionsService {
     };
   }
 
-  async getAllTransactions() {
-    return this.repository.findAllRaw();
+  async getAllTransactions(page: number, limit: number) {
+    const skip = (page - 1) * limit;
+    return this.repository.findAllRaw(skip, limit);
   }
 }

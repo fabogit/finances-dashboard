@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Query,
   UseInterceptors,
   UploadedFile,
   ParseFilePipeBuilder,
@@ -17,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import { TransactionsService } from './transactions.service';
 import { UploadTransactionResponseDto } from './dto/upload-transaction-response.dto';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @ApiTags('transactions')
 @Controller('transactions')
@@ -68,9 +70,10 @@ export class TransactionsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all raw transactions' })
+  @ApiOperation({ summary: 'Get paginated raw transactions' })
   @ApiResponse({ status: 200, description: 'List of raw transactions' })
-  async findAll() {
-    return this.transactionsService.getAllTransactions();
+  async findAll(@Query() paginationQuery: PaginationQueryDto) {
+    const { page, limit } = paginationQuery;
+    return this.transactionsService.getAllTransactions(page, limit);
   }
 }
