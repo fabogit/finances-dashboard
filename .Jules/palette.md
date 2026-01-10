@@ -1,0 +1,3 @@
+## 2026-01-10 - Adding Landing Page to API-only Project
+**Learning:** For API-only projects (NestJS), adding a simple static landing page (served via `@nestjs/serve-static`) provides a significantly better user experience than a 404 error at the root URL. It serves as a friendly entry point and can direct users to the API documentation.
+**Action:** When working on API backends, check if the root URL handles requests. If not, consider adding a `public/index.html` and configuring static asset serving to guide developers/users. Ensure `nest-cli.json` is configured to copy these assets to the `dist` folder.
