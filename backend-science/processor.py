@@ -77,9 +77,8 @@ class DataProcessor:
         df['clean_date'] = pd.to_datetime(
             df['date_numeric'], unit='D', origin='1899-12-30'
         )
-        df['date'] = df['clean_date'].apply(
-            lambda x: x.strftime('%Y-%m-%d') if pd.notnull(x) else ''
-        )
+        # Vectorized date formatting is significantly faster than .apply()
+        df['date'] = df['clean_date'].dt.strftime('%Y-%m-%d').fillna('')
 
         # 2. Amount Processing
         df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0.0)
