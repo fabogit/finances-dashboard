@@ -6,4 +6,5 @@ export interface ProcessedTransaction {
   account: string;
   amount: number;
   category: string;
+  subCategory: string;
 }

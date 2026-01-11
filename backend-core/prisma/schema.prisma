@@ -31,3 +31,25 @@ model RawTransaction {
 
   createdAt DateTime @default(now())
 }
+
+model EnrichedTransaction {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  importBatchId String
+  originalLine  Int
+
+  date        DateTime
+  amount      Float
+  operation   String
+  details     String
+  account     String
+  category    String
+  subCategory String?
+
+  @@index([importBatchId])
+  @@index([date])
+  @@index([category])
+  @@index([subCategory])
+}

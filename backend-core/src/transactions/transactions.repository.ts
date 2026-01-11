@@ -19,4 +19,10 @@ export class TransactionsRepository {
       },
     });
   }
+
+  async createManyEnriched(data: Prisma.EnrichedTransactionCreateManyInput[]) {
+    return this.prisma.enrichedTransaction.createMany({
+      data,
+    });
+  }
 }
