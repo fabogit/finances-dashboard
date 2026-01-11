@@ -6,6 +6,7 @@ import { TransactionsRepository } from './transactions.repository';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
 import { ScienceService } from 'src/science/science.service';
 import { ProcessedTransaction } from 'src/science/interfaces/processed-transaction.interface';
+import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
 
 @Injectable()
 export class TransactionsService {
@@ -132,7 +133,22 @@ export class TransactionsService {
       },
     };
   }
-  async getAllTransactions() {
+  async getAllTransactionsRaw() {
     return this.repository.findAllRaw();
+  }
+
+  async getTransactionsEnriched(filters: GetTransactionsFilterDto) {
+    const { total, transactions } =
+      await this.repository.findAllEnriched(filters);
+
+    return {
+      data: transactions,
+      meta: {
+        total,
+        page: filters.page,
+        lastPage: Math.ceil(total / filters.limit),
+        count: transactions.length,
+      },
+    };
   }
 }
