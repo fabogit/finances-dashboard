@@ -12,11 +12,13 @@ export class TransactionsRepository {
     });
   }
 
-  async findAllRaw() {
+  async findAllRaw(skip?: number, take?: number) {
     return this.prisma.rawTransaction.findMany({
       orderBy: {
         createdAt: 'desc',
       },
+      skip,
+      take,
     });
   }
 }

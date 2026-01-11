@@ -4,8 +4,9 @@ import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
 import { TransactionsRepository } from './transactions.repository';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
-import { ScienceService } from 'src/science/science.service';
-import { ProcessedTransaction } from 'src/science/interfaces/processed-transaction.interface';
+import { ScienceService } from '../science/science.service';
+import { ProcessedTransaction } from '../science/interfaces/processed-transaction.interface';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @Injectable()
 export class TransactionsService {
@@ -111,7 +112,15 @@ export class TransactionsService {
     };
   }
 
-  async getAllTransactions() {
+  async getAllTransactions(paginationQuery: PaginationQueryDto) {
+    const { limit, page } = paginationQuery;
+
+    if (limit) {
+      const currentPage = page || 1;
+      const skip = (currentPage - 1) * limit;
+      return this.repository.findAllRaw(skip, limit);
+    }
+
     return this.repository.findAllRaw();
   }
 }
