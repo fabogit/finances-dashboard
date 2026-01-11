@@ -15,8 +15,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Query } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { UploadTransactionResponseDto } from './dto/upload-transaction-response.dto';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @ApiTags('transactions')
 @Controller('transactions')
@@ -70,7 +72,7 @@ export class TransactionsController {
   @Get()
   @ApiOperation({ summary: 'Get all raw transactions' })
   @ApiResponse({ status: 200, description: 'List of raw transactions' })
-  async findAll() {
-    return this.transactionsService.getAllTransactions();
+  async findAll(@Query() query: PaginationQueryDto) {
+    return this.transactionsService.getAllTransactions(query);
   }
 }

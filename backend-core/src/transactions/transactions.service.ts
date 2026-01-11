@@ -6,6 +6,7 @@ import { TransactionsRepository } from './transactions.repository';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
 import { ScienceService } from 'src/science/science.service';
 import { ProcessedTransaction } from 'src/science/interfaces/processed-transaction.interface';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 
 @Injectable()
 export class TransactionsService {
@@ -111,7 +112,13 @@ export class TransactionsService {
     };
   }
 
-  async getAllTransactions() {
+  async getAllTransactions(query?: PaginationQueryDto) {
+    if (query?.page || query?.limit) {
+      const page = query.page || 1;
+      const limit = query.limit || 50;
+      const skip = (page - 1) * limit;
+      return this.repository.findAllRaw(skip, limit);
+    }
     return this.repository.findAllRaw();
   }
 }
