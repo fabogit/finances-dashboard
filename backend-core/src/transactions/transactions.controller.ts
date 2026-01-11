@@ -18,7 +18,7 @@ import {
 import { TransactionsService } from './transactions.service';
 import { UploadTransactionResponseDto } from './dto/upload-transaction-response.dto';
 
-@ApiTags('transactions')
+@ApiTags('Transactions')
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
@@ -40,7 +40,7 @@ export class TransactionsController {
   })
   @ApiResponse({
     status: 201,
-    description: 'File processed successfully',
+    description: 'File processed successfully with science enrichment results',
     type: UploadTransactionResponseDto,
   })
   @ApiResponse({
@@ -56,7 +56,7 @@ export class TransactionsController {
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         })
         .addMaxSizeValidator({
-          maxSize: 1024 * 1024 * 5,
+          maxSize: 1024 * 1024 * 5, // 5MB
         })
         .build({
           errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
