@@ -45,7 +45,7 @@ async function bootstrap() {
       .setTitle('Finance Dashboard API')
       .setDescription('API for managing and analyzing personal expenses')
       .setVersion('1.0')
-      .addTag('transactions')
+      .addTag('Transactions')
       .build(),
   );
   SwaggerModule.setup(swaggerPath, app, document);
