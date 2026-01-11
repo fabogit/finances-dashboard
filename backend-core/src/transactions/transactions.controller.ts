@@ -6,6 +6,9 @@ import {
   UploadedFile,
   ParseFilePipeBuilder,
   HttpStatus,
+  UsePipes,
+  Query,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
@@ -17,6 +20,8 @@ import {
 } from '@nestjs/swagger';
 import { TransactionsService } from './transactions.service';
 import { UploadTransactionResponseDto } from './dto/upload-transaction-response.dto';
+import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
+import { PaginatedTransactionsResponseDto } from './dto/transaction-response.dto';
 
 @ApiTags('Transactions')
 @Controller('transactions')
@@ -67,10 +72,25 @@ export class TransactionsController {
     return this.transactionsService.uploadFile(file);
   }
 
+  @Get('raw')
+  @ApiOperation({ summary: 'Get all RAW transactions (Debug only)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of raw transactions direct from DB',
+  })
+  async findAllRaw() {
+    return this.transactionsService.getAllTransactionsRaw();
+  }
+
   @Get()
-  @ApiOperation({ summary: 'Get all raw transactions' })
-  @ApiResponse({ status: 200, description: 'List of raw transactions' })
-  async findAll() {
-    return this.transactionsService.getAllTransactions();
+  @ApiOperation({ summary: 'Search and filter enriched transactions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of enriched transactions',
+    type: PaginatedTransactionsResponseDto,
+  })
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async findAllEnriched(@Query() filters: GetTransactionsFilterDto) {
+    return this.transactionsService.getTransactionsEnriched(filters);
   }
 }
