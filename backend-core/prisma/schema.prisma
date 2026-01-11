@@ -40,14 +40,16 @@ model EnrichedTransaction {
   importBatchId String
   originalLine  Int
 
-  date      DateTime
-  amount    Float
-  operation String
-  details   String
-  account   String
-  category  String
+  date        DateTime
+  amount      Float
+  operation   String
+  details     String
+  account     String
+  category    String
+  subCategory String?
 
   @@index([importBatchId])
   @@index([date])
   @@index([category])
+  @@index([subCategory])
 }

@@ -17,9 +17,9 @@ export class TransactionsService {
   ) {}
 
   async uploadFile(file: Express.Multer.File) {
-    this.logger.log(`Inizio elaborazione file. Dimensione: ${file.size} bytes`);
+    this.logger.log(`Starting file processing. Size: ${file.size} bytes`);
 
-    // --- 1. PARSING EXCEL ---
+    // --- 1. EXCEL PARSING ---
     const workbook = XLSX.read(file.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -35,7 +35,7 @@ export class TransactionsService {
     });
     this.logger.log(`Total XLSX rows: ${rawData.length}`);
 
-    // --- 2. PREPARAZIONE DATI ---
+    // --- 2. DATA PREPARATION ---
     const batchId = uuidv4();
     const transactionsToSave: Prisma.RawTransactionCreateManyInput[] = [];
 
@@ -58,40 +58,62 @@ export class TransactionsService {
 
     this.logger.log(`Valid transactions to save: ${transactionsToSave.length}`);
 
-    // --- 3. SALVATAGGIO RAW ---
+    // --- 3. RAW SAVING ---
     if (transactionsToSave.length > 0) {
       await this.repository.createManyRaw(transactionsToSave);
     }
 
-    // --- 4. INTEGRAZIONE PYTHON ---
-    // Definiamo esplicitamente il tipo: può essere Array, Oggetto Errore o Null
+    // --- 4. PYTHON INTEGRATION & ENRICHED SAVING ---
     let scienceResult: ProcessedTransaction[] | { error: string } | null = null;
     let scienceStatus = 'skipped';
+    let savedEnrichedCount = 0;
 
     if (transactionsToSave.length > 0) {
       try {
-        this.logger.log('Invio dati al Science Service per il processing...');
+        this.logger.log('Sending data to Science Service for processing...');
 
         scienceResult = await this.scienceService.processTransactions(
           transactionsToSave as unknown as RawTransaction[],
         );
 
-        scienceStatus = 'success';
-        this.logger.log(
-          `Science Service ha restituito ${scienceResult.length} record puliti.`,
-        );
+        if (Array.isArray(scienceResult)) {
+          scienceStatus = 'success';
+          this.logger.log(
+            `Science Service returned ${scienceResult.length} records. Saving in progress...`,
+          );
+
+          // MAPPING: JSON (Python) -> DB Object (Prisma)
+          const enrichedToSave: Prisma.EnrichedTransactionCreateManyInput[] =
+            scienceResult.map((item) => ({
+              importBatchId: batchId, // Use the ID generated at the start
+              originalLine: parseInt(item.id), // Python returns the row as a string ID
+              date: new Date(item.date), // "2024-12-29" -> Date Object
+              amount: item.amount,
+              operation: item.operation,
+              details: item.details,
+              account: item.account,
+              category: item.category,
+              subCategory: item.subCategory,
+            }));
+
+          // WRITING TO DB
+          const result =
+            await this.repository.createManyEnriched(enrichedToSave);
+          savedEnrichedCount = result.count;
+
+          this.logger.log(
+            `✅ Saved ${savedEnrichedCount} enriched transactions to DB.`,
+          );
+        }
       } catch (error: unknown) {
-        // Gestione sicura dell'errore (evitiamo unsafe access a .message)
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
-
-        this.logger.error(`Errore Science Service: ${errorMessage}`);
+        this.logger.error(`Science Service Error: ${errorMessage}`);
         scienceStatus = 'failed';
         scienceResult = { error: errorMessage };
       }
     }
 
-    // Helper per verificare se il risultato è un array valido (Type Guard)
     const isSuccess = Array.isArray(scienceResult);
 
     return {
@@ -100,17 +122,16 @@ export class TransactionsService {
       batchId: batchId,
       science: {
         status: scienceStatus,
-        // Ora TypeScript sa che se isSuccess è true, scienceResult è un array e ha .length
         processedCount: isSuccess
           ? (scienceResult as ProcessedTransaction[]).length
           : 0,
+        savedToDb: savedEnrichedCount,
         preview: isSuccess
           ? (scienceResult as ProcessedTransaction[])[0]
           : null,
       },
     };
   }
-
   async getAllTransactions() {
     return this.repository.findAllRaw();
   }
