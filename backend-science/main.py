@@ -74,7 +74,7 @@ class ProcessedTransactionDto(BaseModel):
     account: str
     amount: float      # Es: -747.6
     category: str
-
+    subCategory: str
 
 @app.get("/health")
 def health_check():
