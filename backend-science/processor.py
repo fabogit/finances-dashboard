@@ -3,28 +3,25 @@ Transaction Processing Module.
 
 This module encapsulates the logic for cleaning, transforming, and validating
 raw financial transaction data. It leverages Pandas to handle common data
-inconsistencies found in exports (e.g., Excel serial dates, mixed string/numeric
-types) and strictly types the output for downstream services.
+inconsistencies found in exports and applies categorization rules.
 """
 from typing import List, TypedDict, cast, Union, Optional
 import pandas as pd
+from rules import get_category_details
 
 
 class RawTransactionInput(TypedDict, total=False):
     """
     Schema for the raw input data received from the Node.js/Prisma service.
-
-    Using total=False allows for optional keys like 'originalLine' or 'category'.
-    Types are permissive (Union) because data hasn't been cleaned yet.
     """
     id: str
-    date: Union[str, float, int]    # "46020" (str) or 46020 (int/float)
+    date: Union[str, float, int]
     operation: str
     details: str
     account: str
-    amount: Union[str, float, int]  # "-747.6" (str) or -747.6 (float)
+    amount: Union[str, float, int]
     category: Optional[str]
-    originalLine: Union[str, int]  # Optional
+    originalLine: Union[str, int]
 
 
 class CleanedTransaction(TypedDict):
@@ -38,7 +35,8 @@ class CleanedTransaction(TypedDict):
     details: str
     account: str
     amount: float      # Strictly float for calculations
-    category: str
+    category: str      # MACRO Category (e.g. "HOME")
+    subCategory: str
 
 
 class DataProcessor:
@@ -49,16 +47,17 @@ class DataProcessor:
     @staticmethod
     def clean_transactions(raw_data: List[RawTransactionInput]) -> List[CleanedTransaction]:
         """
-        Converts raw data (Excel Strings/Serials) to native Python formats (ISO Date, Float).
+        Converts raw data (Excel Strings/Serials) to native Python formats and applies
+        categorization rules to derive Macro and Sub-categories.
 
-        This method performs data cleaning using Pandas to handle:
-        1. Date Conversion: parses Excel serial dates (e.g., "46020") relative to
+        This method performs data cleaning and enrichment using Pandas to handle:
+        1. Date Conversion: Parses Excel serial dates (e.g., "46020") relative to
            the origin 1899-12-30 into ISO 8601 strings (YYYY-MM-DD).
-        2. Numeric Parsing: converts amounts to floats, coercing errors to NaN and
+        2. Numeric Parsing: Converts amounts to floats, coercing errors to NaN and
            filling missing values with 0.0.
-        3. Category Normalization: ensures the 'category' field exists and defaults
-           missing values to "Uncategorized".
-        4. ID Generation: derives the unique identifier from 'originalLine' if available,
+        3. Category Enrichment: Maps the raw category string via 'get_category_details'
+           to generate a standardized 'category' (Macro) and 'subCategory' (English).
+        4. ID Generation: Derives the unique identifier from 'originalLine' if available,
            otherwise defaults to the row index.
 
         Args:
@@ -67,12 +66,11 @@ class DataProcessor:
 
         Returns:
             List[CleanedTransaction]: A list of strictly typed dictionaries with
-                standardized values, suitable for serialization.
+                standardized values (including Macro and Sub categories), suitable for serialization.
         """
         df = pd.DataFrame(raw_data)
 
         # 1. Date Processing
-        # coerce to handle input str/num
         df['date_numeric'] = pd.to_numeric(df['date'], errors='coerce')
         df['clean_date'] = pd.to_datetime(
             df['date_numeric'], unit='D', origin='1899-12-30'
@@ -84,10 +82,19 @@ class DataProcessor:
         # 2. Amount Processing
         df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0.0)
 
-        # 3. Category Processing
+        # --- 3. Category Processing ---
         if 'category' not in df.columns:
-            df['category'] = None
-        df['category'] = df['category'].fillna("Uncategorized")
+            df['category'] = ""
+        df['raw_category'] = df['category'].fillna("").astype(str)
+
+        mapped_cats = df['raw_category'].apply(get_category_details)
+
+        # zip(*mapped_cats) transforms [(A,B), (C,D)] in: (A,C) & (B,D)
+        if not mapped_cats.empty:
+            df['macro_cat'], df['sub_cat_en'] = zip(*mapped_cats)
+        else:
+            df['macro_cat'] = "UNCATEGORIZED"
+            df['sub_cat_en'] = "Unknown"
 
         # 4. ID Generation
         if 'originalLine' in df.columns:
@@ -96,11 +103,17 @@ class DataProcessor:
             df['id'] = df.index.astype(str)
 
         # Select and order columns matching CleanedTransaction
-        final_df = df[['id', 'date', 'operation',
-                       'details', 'account', 'amount', 'category']]
+        final_df = pd.DataFrame()
+        final_df['id'] = df['id']
+        final_df['date'] = df['date']
+        final_df['operation'] = df['operation']
+        final_df['details'] = df['details']
+        final_df['account'] = df['account']
+        final_df['amount'] = df['amount']
+        final_df['category'] = df['macro_cat']
+        final_df['subCategory'] = df['sub_cat_en']
 
         # Convert to list of dicts
         result = final_df.to_dict(orient='records')
 
-        # Cast to strict TypedDict for type checkers (MyPy, Pyright)
         return cast(List[CleanedTransaction], result)
