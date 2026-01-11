@@ -74,19 +74,29 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message = 'Record not found';
         errorCode = 'DB_NOT_FOUND';
       } else {
-        message = `Database Error: ${exception.message}`;
+        // Security: Don't leak raw database errors for unknown codes
+        // message = `Database Error: ${exception.message}`;
+        message = 'Database operation failed';
         errorCode = `DB_${code}`;
       }
     }
 
     // --- 3. Generic Error Handling ---
     else if (exception instanceof Error) {
-      message = exception.message;
+      // Security: Do NOT expose internal error messages to the client for 500 errors
+      // message = exception.message; // BAD
+      message = 'Internal server error'; // GOOD
     }
 
     // Logging
     if (httpStatus >= 500) {
-      this.logger.error(`Exception: ${message}`, (exception as Error).stack);
+      // Log the REAL message internally
+      const internalMessage =
+        exception instanceof Error ? exception.message : 'Unknown error';
+      this.logger.error(
+        `Exception: ${internalMessage}`,
+        (exception as Error).stack,
+      );
     } else {
       this.logger.warn(`Exception: ${message}`);
     }
