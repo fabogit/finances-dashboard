@@ -11,15 +11,20 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
-// export const SortOrder = {
-//   ASC: 'asc',
-//   DESC: 'desc',
-// } as const;
+export enum GroupByOption {
+  CATEGORY = 'category',
+  SUB_CATEGORY = 'subCategory',
+}
 
 export enum SortOrder {
   ASC = 'asc',
   DESC = 'desc',
 }
+
+// export const SortOrder = {
+//   ASC: 'asc',
+//   DESC: 'desc',
+// } as const;
 
 export class GetTransactionsFilterDto {
   // --- Filters ---
@@ -64,8 +69,8 @@ export class GetTransactionsFilterDto {
   maxAmount?: number;
 
   @ApiPropertyOptional({
-    description: 'Filter by categories (comma separated)',
-    example: 'FOOD,HOME',
+    description: 'Filter by categories (comma separated, case insensitive)',
+    example: 'food,HOME',
     type: String, // Swagger -> string, Transform -> array
   })
   @IsOptional()
@@ -74,11 +79,27 @@ export class GetTransactionsFilterDto {
   @Type(() => String)
   @Transform(({ value }: { value: unknown }) => {
     if (typeof value === 'string') {
-      return value.split(',');
+      return value.split(',').map((v) => v.trim().toUpperCase());
     }
-    return value as string[];
+
+    if (Array.isArray(value)) {
+      return value.map((v: unknown) =>
+        typeof v === 'string' ? v.trim().toUpperCase() : v,
+      ) as string[];
+    }
+
+    return value;
   })
   categories?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Field to group results by (for distribution charts)',
+    enum: GroupByOption,
+    default: GroupByOption.CATEGORY,
+  })
+  @IsOptional()
+  @IsEnum(GroupByOption)
+  groupBy: GroupByOption = GroupByOption.CATEGORY;
 
   // --- Pagination ---
   @ApiPropertyOptional({ description: 'Page number', default: 1, minimum: 1 })

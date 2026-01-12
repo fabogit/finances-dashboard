@@ -1,13 +1,14 @@
 import { Module } from '@nestjs/common';
-import { TransactionsService } from './transactions.service';
-import { TransactionsController } from './transactions.controller';
-import { TransactionsRepository } from './transactions.repository';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { ScienceModule } from 'src/science/science.module';
+import { TransactionsController } from './transactions.controller';
+import { TransactionsService } from './transactions.service';
+import { TransactionsRepository } from './transactions.repository';
 
 @Module({
-  imports: [PrismaModule, ScienceModule],
   controllers: [TransactionsController],
+  exports: [TransactionsRepository],
+  imports: [PrismaModule, ScienceModule],
   providers: [TransactionsService, TransactionsRepository],
 })
 export class TransactionsModule {}
