@@ -11,15 +11,20 @@ import {
 import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
-// export const SortOrder = {
-//   ASC: 'asc',
-//   DESC: 'desc',
-// } as const;
+export enum GroupByOption {
+  CATEGORY = 'category',
+  SUB_CATEGORY = 'subCategory',
+}
 
 export enum SortOrder {
   ASC = 'asc',
   DESC = 'desc',
 }
+
+// export const SortOrder = {
+//   ASC: 'asc',
+//   DESC: 'desc',
+// } as const;
 
 export class GetTransactionsFilterDto {
   // --- Filters ---
@@ -86,6 +91,15 @@ export class GetTransactionsFilterDto {
     return value;
   })
   categories?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Field to group results by (for distribution charts)',
+    enum: GroupByOption,
+    default: GroupByOption.CATEGORY,
+  })
+  @IsOptional()
+  @IsEnum(GroupByOption)
+  groupBy: GroupByOption = GroupByOption.CATEGORY;
 
   // --- Pagination ---
   @ApiPropertyOptional({ description: 'Page number', default: 1, minimum: 1 })

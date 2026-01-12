@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsRepository } from '../transactions/transactions.repository';
-import { GetTransactionsFilterDto } from '../transactions/dto/get-transactions.dto';
+import {
+  GetTransactionsFilterDto,
+  GroupByOption,
+} from '../transactions/dto/get-transactions.dto';
 
 @Injectable()
 export class AnalyticsService {
@@ -44,9 +47,9 @@ export class AnalyticsService {
   // 2. CATEGORY PIE CHART
   async getCategoryDistribution(filters: GetTransactionsFilterDto) {
     const where = this.transactionsRepo.buildWhereClause(filters);
-
+    const groupField = filters.groupBy || GroupByOption.CATEGORY;
     const result = await this.prisma.enrichedTransaction.groupBy({
-      by: ['category'],
+      by: [groupField],
       _sum: { amount: true },
       where: { ...where, amount: { lt: 0 } },
       orderBy: {
@@ -61,14 +64,16 @@ export class AnalyticsService {
 
     return result.map((item) => {
       const value = Math.abs(item._sum.amount || 0);
-      let percentage = 0;
+      const rawLabel = item[groupField];
+      const label = rawLabel ? String(rawLabel) : 'Unspecified';
 
+      let percentage = 0;
       if (totalValue > 0) {
         percentage = parseFloat(((value / totalValue) * 100).toFixed(2));
       }
 
       return {
-        label: item.category,
+        label: label,
         value: value,
         percentage: percentage,
       };
