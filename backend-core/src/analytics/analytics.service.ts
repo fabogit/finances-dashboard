@@ -54,10 +54,25 @@ export class AnalyticsService {
       },
     });
 
-    return result.map((item) => ({
-      label: item.category,
-      value: Math.abs(item._sum.amount || 0),
-    }));
+    const totalValue = result.reduce(
+      (acc, item) => acc + Math.abs(item._sum.amount || 0),
+      0,
+    );
+
+    return result.map((item) => {
+      const value = Math.abs(item._sum.amount || 0);
+      let percentage = 0;
+
+      if (totalValue > 0) {
+        percentage = parseFloat(((value / totalValue) * 100).toFixed(2));
+      }
+
+      return {
+        label: item.category,
+        value: value,
+        percentage: percentage,
+      };
+    });
   }
 
   // 3. TREND BAR CHART (Daily)

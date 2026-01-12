@@ -23,6 +23,12 @@ export class CategoryDistributionDto {
 
   @ApiProperty({ example: 450.0, description: 'Total absolute amount spent' })
   value: number;
+
+  @ApiProperty({
+    example: 45.5,
+    description: 'Percentage relative to total filtered expenses',
+  })
+  percentage: number;
 }
 
 export class DailyTrendDto {
