@@ -64,8 +64,8 @@ export class GetTransactionsFilterDto {
   maxAmount?: number;
 
   @ApiPropertyOptional({
-    description: 'Filter by categories (comma separated)',
-    example: 'FOOD,HOME',
+    description: 'Filter by categories (comma separated, case insensitive)',
+    example: 'food,HOME',
     type: String, // Swagger -> string, Transform -> array
   })
   @IsOptional()
@@ -74,9 +74,16 @@ export class GetTransactionsFilterDto {
   @Type(() => String)
   @Transform(({ value }: { value: unknown }) => {
     if (typeof value === 'string') {
-      return value.split(',');
+      return value.split(',').map((v) => v.trim().toUpperCase());
     }
-    return value as string[];
+
+    if (Array.isArray(value)) {
+      return value.map((v: unknown) =>
+        typeof v === 'string' ? v.trim().toUpperCase() : v,
+      ) as string[];
+    }
+
+    return value;
   })
   categories?: string[];
 
