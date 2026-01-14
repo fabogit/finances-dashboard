@@ -1,4 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, RawTransaction } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { v4 as uuidv4 } from 'uuid';
@@ -7,16 +12,28 @@ import { BankExportRow } from './interfaces/bank-export-row.interface';
 import { ScienceService } from 'src/science/science.service';
 import { ProcessedTransaction } from 'src/science/interfaces/processed-transaction.interface';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
+import {
+  CreateTransactionDto,
+  UpdateTransactionDto,
+} from './dto/create-update-transaction.dto';
 
 @Injectable()
 export class TransactionsService {
   private readonly logger = new Logger(TransactionsService.name);
 
   constructor(
-    private readonly repository: TransactionsRepository,
+    private readonly transactionsRepository: TransactionsRepository,
     private readonly scienceService: ScienceService,
   ) {}
 
+  private getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return String(error);
+  }
+
+  // --- UPLOAD FLOW ---
   async uploadFile(file: Express.Multer.File) {
     this.logger.log(`Starting file processing. Size: ${file.size} bytes`);
 
@@ -61,7 +78,7 @@ export class TransactionsService {
 
     // --- 3. RAW SAVING ---
     if (transactionsToSave.length > 0) {
-      await this.repository.createManyRaw(transactionsToSave);
+      await this.transactionsRepository.createManyRaw(transactionsToSave);
     }
 
     // --- 4. PYTHON INTEGRATION & ENRICHED SAVING ---
@@ -99,7 +116,9 @@ export class TransactionsService {
 
           // WRITING TO DB
           const result =
-            await this.repository.createManyEnriched(enrichedToSave);
+            await this.transactionsRepository.createManyEnriched(
+              enrichedToSave,
+            );
           savedEnrichedCount = result.count;
 
           this.logger.log(
@@ -133,22 +152,84 @@ export class TransactionsService {
       },
     };
   }
-  async getAllTransactionsRaw() {
-    return this.repository.findAllRaw();
+
+  // --- READ OPERATIONS ---
+
+  async getAllRaw() {
+    try {
+      return await this.transactionsRepository.findAllRaw();
+    } catch (error) {
+      const msg = this.getErrorMessage(error);
+      this.logger.error(`Failed to fetch raw transactions: ${msg}`);
+      throw new InternalServerErrorException();
+    }
   }
 
-  async getTransactionsEnriched(filters: GetTransactionsFilterDto) {
-    const { total, transactions } =
-      await this.repository.findAllEnriched(filters);
+  async getAllEnriched(filters: GetTransactionsFilterDto) {
+    // Rinominato per coerenza
+    try {
+      const { total, transactions } =
+        await this.transactionsRepository.findAllEnriched(filters);
+      return {
+        data: transactions,
+        meta: {
+          total,
+          page: filters.page,
+          lastPage: Math.ceil(total / filters.limit),
+          count: transactions.length,
+        },
+      };
+    } catch (error) {
+      const msg = this.getErrorMessage(error);
+      this.logger.error(`Failed to fetch transactions: ${msg}`);
+      throw new InternalServerErrorException();
+    }
+  }
 
-    return {
-      data: transactions,
-      meta: {
-        total,
-        page: filters.page,
-        lastPage: Math.ceil(total / filters.limit),
-        count: transactions.length,
-      },
-    };
+  // --- CRUD OPERATIONS ---
+
+  async create(dto: CreateTransactionDto) {
+    try {
+      this.logger.log(`Creating manual transaction: ${dto.details}`);
+      return await this.transactionsRepository.create(dto);
+    } catch (error) {
+      const msg = this.getErrorMessage(error);
+      this.logger.error(`Create failed: ${msg}`);
+      throw new InternalServerErrorException('Could not create transaction');
+    }
+  }
+
+  async update(id: string, dto: UpdateTransactionDto) {
+    try {
+      const existing = await this.transactionsRepository.findById(id);
+      if (!existing) {
+        this.logger.warn(`Update failed: Transaction ${id} not found`);
+        throw new NotFoundException(`Transaction with ID ${id} not found`);
+      }
+
+      return await this.transactionsRepository.update(id, dto);
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      const msg = this.getErrorMessage(error);
+      this.logger.error(`Update failed for ${id}: ${msg}`);
+      throw new InternalServerErrorException('Could not update transaction');
+    }
+  }
+
+  async delete(id: string) {
+    try {
+      const existing = await this.transactionsRepository.findById(id);
+      if (!existing) {
+        this.logger.warn(`Delete failed: Transaction ${id} not found`);
+        throw new NotFoundException(`Transaction with ID ${id} not found`);
+      }
+
+      return await this.transactionsRepository.delete(id);
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      const msg = this.getErrorMessage(error);
+      this.logger.error(`Delete failed for ${id}: ${msg}`);
+      throw new InternalServerErrorException('Could not delete transaction');
+    }
   }
 }
