@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
+import {
+  CreateTransactionDto,
+  UpdateTransactionDto,
+} from './dto/create-update-transaction.dto';
 
 @Injectable()
 export class TransactionsRepository {
@@ -36,19 +40,16 @@ export class TransactionsRepository {
 
     return conditions.length > 0 ? { AND: conditions } : {};
   }
-
+  // --- BULK OPERATIONS ---
   async createManyEnriched(data: Prisma.EnrichedTransactionCreateManyInput[]) {
-    return this.prisma.enrichedTransaction.createMany({
-      data,
-    });
+    return this.prisma.enrichedTransaction.createMany({ data });
   }
 
   async createManyRaw(data: Prisma.RawTransactionCreateManyInput[]) {
-    return this.prisma.rawTransaction.createMany({
-      data,
-    });
+    return this.prisma.rawTransaction.createMany({ data });
   }
 
+  // --- READ OPERATIONS ---
   async findAllEnriched(filters: GetTransactionsFilterDto) {
     const where = this.buildWhereClause(filters);
 
@@ -67,9 +68,37 @@ export class TransactionsRepository {
 
   async findAllRaw() {
     return this.prisma.rawTransaction.findMany({
-      orderBy: {
-        createdAt: 'desc',
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findById(id: string) {
+    return this.prisma.enrichedTransaction.findUnique({
+      where: { id },
+    });
+  }
+
+  // --- SINGLE CRUD OPERATIONS ---
+  async create(dto: CreateTransactionDto) {
+    return this.prisma.enrichedTransaction.create({
+      data: {
+        ...dto,
+        importBatchId: 'MANUAL',
+        originalLine: -1,
       },
+    });
+  }
+
+  async update(id: string, dto: UpdateTransactionDto) {
+    return this.prisma.enrichedTransaction.update({
+      where: { id },
+      data: dto,
+    });
+  }
+
+  async delete(id: string) {
+    return this.prisma.enrichedTransaction.delete({
+      where: { id },
     });
   }
 }

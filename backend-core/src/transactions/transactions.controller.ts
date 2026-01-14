@@ -1,33 +1,46 @@
 import {
   Controller,
   Post,
-  Get,
   UseInterceptors,
   UploadedFile,
+  Get,
+  Query,
+  Body,
+  Param,
+  Patch,
+  Delete,
+  ValidationPipe,
+  UsePipes,
   ParseFilePipeBuilder,
   HttpStatus,
-  UsePipes,
-  Query,
-  ValidationPipe,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  ApiTags,
+  ApiOperation,
   ApiConsumes,
   ApiBody,
-  ApiOperation,
   ApiResponse,
-  ApiTags,
 } from '@nestjs/swagger';
 import { TransactionsService } from './transactions.service';
-import { UploadTransactionResponseDto } from './dto/upload-transaction-response.dto';
+import { UploadTransactionResponseDto } from './dto/upload-transaction.dto';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
-import { PaginatedTransactionsResponseDto } from './dto/transaction-response.dto';
+import {
+  PaginatedTransactionsResponseDto,
+  TransactionDto,
+} from './dto/transaction.dto';
+import {
+  CreateTransactionDto,
+  UpdateTransactionDto,
+} from './dto/create-update-transaction.dto';
 
 @ApiTags('Transactions')
 @Controller('transactions')
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
+  // --- UPLOAD ---
   @Post('upload')
   @ApiOperation({ summary: 'Upload Excel export file' })
   @ApiConsumes('multipart/form-data')
@@ -45,13 +58,10 @@ export class TransactionsController {
   })
   @ApiResponse({
     status: 201,
-    description: 'File processed successfully with science enrichment results',
+    description: 'File processed successfully',
     type: UploadTransactionResponseDto,
   })
-  @ApiResponse({
-    status: 422,
-    description: 'File validation failed (type or size)',
-  })
+  @ApiResponse({ status: 422, description: 'File validation failed' })
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(
     @UploadedFile(
@@ -60,28 +70,23 @@ export class TransactionsController {
           fileType:
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         })
-        .addMaxSizeValidator({
-          maxSize: 1024 * 1024 * 5, // 5MB
-        })
-        .build({
-          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
-        }),
+        .addMaxSizeValidator({ maxSize: 1024 * 1024 * 5 })
+        .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
     )
     file: Express.Multer.File,
   ): Promise<UploadTransactionResponseDto> {
     return this.transactionsService.uploadFile(file);
   }
 
+  // --- READ (RAW) ---
   @Get('raw')
   @ApiOperation({ summary: 'Get all RAW transactions (Debug only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of raw transactions direct from DB',
-  })
+  @ApiResponse({ status: 200, description: 'List of raw transactions' })
   async findAllRaw() {
-    return this.transactionsService.getAllTransactionsRaw();
+    return this.transactionsService.getAllRaw();
   }
 
+  // --- READ (ENRICHED) ---
   @Get()
   @ApiOperation({ summary: 'Search and filter enriched transactions' })
   @ApiResponse({
@@ -91,6 +96,49 @@ export class TransactionsController {
   })
   @UsePipes(new ValidationPipe({ transform: true }))
   async findAllEnriched(@Query() filters: GetTransactionsFilterDto) {
-    return this.transactionsService.getTransactionsEnriched(filters);
+    return this.transactionsService.getAllEnriched(filters);
+  }
+
+  // --- CREATE ---
+  @Post()
+  @ApiOperation({ summary: 'Manually create a new transaction' })
+  @ApiResponse({
+    status: 201,
+    description: 'Transaction created successfully',
+    type: TransactionDto,
+  })
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async create(@Body() createDto: CreateTransactionDto) {
+    return this.transactionsService.create(createDto);
+  }
+
+  // --- UPDATE ---
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update an existing transaction' })
+  @ApiResponse({
+    status: 200,
+    description: 'Transaction updated successfully',
+    type: TransactionDto,
+  })
+  @ApiResponse({ status: 404, description: 'Transaction not found' })
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateDto: UpdateTransactionDto,
+  ) {
+    return this.transactionsService.update(id, updateDto);
+  }
+
+  // --- DELETE ---
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a transaction' })
+  @ApiResponse({
+    status: 200,
+    description: 'Transaction deleted successfully',
+    type: TransactionDto,
+  })
+  @ApiResponse({ status: 404, description: 'Transaction not found' })
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.transactionsService.delete(id);
   }
 }
