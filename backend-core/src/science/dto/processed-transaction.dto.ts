@@ -1,4 +1,4 @@
-export interface ProcessedTransaction {
+export class ProcessedTransactionDto {
   id: string;
   date: string;
   operation: string;

@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TransactionsRepository } from './transactions.repository';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
 import { ScienceService } from 'src/science/science.service';
-import { ProcessedTransaction } from 'src/science/interfaces/processed-transaction.interface';
+import { ProcessedTransactionDto } from 'src/science/dto/processed-transaction.dto';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
 import {
   CreateTransactionDto,
@@ -82,7 +82,8 @@ export class TransactionsService {
     }
 
     // --- 4. PYTHON INTEGRATION & ENRICHED SAVING ---
-    let scienceResult: ProcessedTransaction[] | { error: string } | null = null;
+    let scienceResult: ProcessedTransactionDto[] | { error: string } | null =
+      null;
     let scienceStatus = 'skipped';
     let savedEnrichedCount = 0;
 
@@ -143,11 +144,11 @@ export class TransactionsService {
       science: {
         status: scienceStatus,
         processedCount: isSuccess
-          ? (scienceResult as ProcessedTransaction[]).length
+          ? (scienceResult as ProcessedTransactionDto[]).length
           : 0,
         savedToDb: savedEnrichedCount,
         preview: isSuccess
-          ? (scienceResult as ProcessedTransaction[])[0]
+          ? (scienceResult as ProcessedTransactionDto[])[0]
           : null,
       },
     };
