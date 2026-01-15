@@ -38,7 +38,7 @@ async function bootstrap() {
   const httpAdapter = app.get(HttpAdapterHost);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
 
-  const swaggerPath = 'doc';
+  const swaggerPath = 'docs';
   const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
