@@ -13,11 +13,33 @@ import {
   CategoryDistributionDto,
   DailyTrendDto,
 } from './dto/analytics-response.dto';
+import {
+  MonthlyForecastDto,
+  ForecastErrorDto,
+} from './dto/forecast-response.dto';
 
 @ApiTags('Analytics')
 @Controller('analytics')
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
+
+  @Get('forecast')
+  @ApiOperation({ summary: 'Predict financial flows for the next 3 months' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Returns a list of 3 monthly forecasts (Income, Expense, Balance)',
+    type: [MonthlyForecastDto], // Array response
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns error object if data is insufficient',
+    type: ForecastErrorDto,
+  })
+  @UsePipes(new ValidationPipe({ transform: true }))
+  async getForecast() {
+    return this.analyticsService.getForecast();
+  }
 
   @Get('summary')
   @ApiOperation({ summary: 'Get total income, expense and balance KPIs' })

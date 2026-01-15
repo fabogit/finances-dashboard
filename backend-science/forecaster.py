@@ -6,6 +6,7 @@ This module utilizes historical transaction data to predict future financial flo
 Linear Regression for variable trends.
 """
 from typing import List, Dict, TypedDict, Tuple
+import re
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -139,31 +140,32 @@ class Forecaster:
     def _analyze_flow(df: pd.DataFrame, months_to_predict: int = 3) -> Tuple[List[float], float]:
         """
         Helper method to calculate Fixed vs Variable trend and project future totals.
-
-        Args:
-            df: DataFrame filtered for either income or expenses.
-            months_to_predict: Number of future months to forecast.
-
-        Returns:
-            A tuple containing:
-            1. A list of predicted totals for the next N months.
-            2. The estimated fixed/recurring portion (constant).
         """
         if df.empty:
             return [0.0] * months_to_predict, 0.0
 
         # --- A. DETECT FIXED EXPENSES (Recurring) ---
-        df['details'] = df['details'].fillna('Unknown')
 
-        recurrence = df.groupby('details').agg(
+        # 1. CLEANING & GROUPING KEY STRATEGY
+
+        def clean_details(text):
+            if not isinstance(text, str):
+                return "Unknown"
+            # Es: "AMAZON*123-45" -> "AMAZON"
+            return re.sub(r'\d+', '', text).strip().upper()
+
+        df['group_key'] = df['subCategory'].fillna(
+            df['details'].apply(clean_details)
+        )
+
+        recurrence = df.groupby('group_key').agg(
             count=('amount', 'count'),
             mean_amount=('amount', 'mean'),
             std_amount=('amount', 'std')
         )
 
-        # Rule: At least 3 occurrences AND Standard Deviation < 10% of mean
-        # Used to identify subscriptions, rent, salaries, etc.
-        std_threshold = recurrence['mean_amount'].abs() * 0.1
+        # Rule: At least 3 occurrences AND Standard Deviation < 20% of mean
+        std_threshold = recurrence['mean_amount'].abs() * 0.2
         fixed_mask = (recurrence['count'] >= 3) & (
             recurrence['std_amount'].fillna(0) < std_threshold)
 

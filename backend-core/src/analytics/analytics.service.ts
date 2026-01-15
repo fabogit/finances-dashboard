@@ -5,15 +5,21 @@ import {
   GetTransactionsFilterDto,
   GroupByOption,
 } from '../transactions/dto/get-transactions.dto';
+import { ScienceService } from 'src/science/science.service';
+import {
+  MonthlyForecastDto,
+  ForecastErrorDto,
+} from './dto/forecast-response.dto';
+import { ForecastTransactionInputDto } from 'src/science/dto/forecast-transaction-input.dto';
 
 @Injectable()
 export class AnalyticsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly transactionsRepo: TransactionsRepository,
+    private readonly scienceService: ScienceService,
   ) {}
 
-  // 1. KPI SUMMARY
   async getSummary(filters: GetTransactionsFilterDto) {
     const where = this.transactionsRepo.buildWhereClause(filters);
 
@@ -44,7 +50,6 @@ export class AnalyticsService {
     };
   }
 
-  // 2. CATEGORY PIE CHART
   async getCategoryDistribution(filters: GetTransactionsFilterDto) {
     const where = this.transactionsRepo.buildWhereClause(filters);
     const groupField = filters.groupBy || GroupByOption.CATEGORY;
@@ -80,7 +85,6 @@ export class AnalyticsService {
     });
   }
 
-  // 3. TREND BAR CHART (Daily)
   async getDailyTrend(filters: GetTransactionsFilterDto) {
     const where = this.transactionsRepo.buildWhereClause(filters);
 
@@ -107,5 +111,47 @@ export class AnalyticsService {
       income: parseFloat(values.income.toFixed(2)),
       expense: parseFloat(values.expense.toFixed(2)),
     }));
+  }
+
+  async getForecast(): Promise<MonthlyForecastDto[] | ForecastErrorDto> {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 14);
+
+    const transactions = await this.prisma.enrichedTransaction.findMany({
+      where: {
+        date: { gte: startDate, lte: endDate },
+      },
+      orderBy: { date: 'asc' },
+      select: {
+        id: true,
+        date: true,
+        amount: true,
+        details: true,
+        category: true,
+        subCategory: true,
+        operation: true,
+        account: true,
+      },
+    });
+
+    if (transactions.length === 0) {
+      return { error: 'No data available in DB for forecast' };
+    }
+
+    // 2. Mapping: Prisma -> Python DTO
+    // Date -> String(YYYY-MM-DD)
+    const payload: ForecastTransactionInputDto[] = transactions.map((t) => ({
+      id: t.id,
+      date: t.date.toISOString().split('T')[0], // "2025-01-01"
+      amount: t.amount,
+      details: t.details,
+      category: t.category,
+      subCategory: t.subCategory || null,
+      operation: t.operation || 'System',
+      account: t.account || 'Default',
+    }));
+
+    return this.scienceService.getForecast(payload);
   }
 }
