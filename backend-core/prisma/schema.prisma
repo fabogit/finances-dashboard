@@ -32,12 +32,12 @@ model Category {
   id   String @id @default(uuid())
   name String
 
-  // Gerarchia
+  // Hierarchy
   parentId String?
   parent   Category?  @relation("Hierarchy", fields: [parentId], references: [id])
   children Category[] @relation("Hierarchy")
 
-  // Props
+  // Properties
   type  ExpenseType @default(UNCLASSIFIED)
   icon  String?
   color String?
@@ -52,7 +52,7 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Vincolo univocità: Nome univoco all'interno dello stesso genitore (o tra le macro se parentId è null)
+  // Uniqueness constraint: Unique name within the same parent (or among root categories if parentId is null)
   @@unique([name, parentId])
 }
 
@@ -89,13 +89,13 @@ model EnrichedTransaction {
   originalLine  Int
 
   date   DateTime
-  amount Decimal  @db.Decimal(10, 2) // Usiamo Decimal su Postgres per precisione soldi
+  amount Decimal  @db.Decimal(10, 2) // Using Decimal on Postgres for currency precision
 
   operation String?
   details   String?
   account   String?
 
-  // --- NUOVO SISTEMA CATEGORIE ---
+  // --- NEW CATEGORY SYSTEM ---
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
 
