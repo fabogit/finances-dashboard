@@ -9,47 +9,96 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
-model RawTransaction {
-  id String @id @default(uuid())
+// --- ENUMS ---
 
-  // Import Metadata
-  importBatchId String // UUID
-  originalLine  Int // row
-
-  // Data
-  date             String
-  operation        String
-  details          String
-  account          String
-  accountingStatus String
-  category         String?
-  currency         String
-  amount           String
-
-  createdAt DateTime @default(now())
+enum ExpenseType {
+  NEEDS
+  WANTS
+  SAVINGS
+  UNCLASSIFIED
 }
 
-model EnrichedTransaction {
-  id        String   @id @default(uuid())
+enum BudgetRuleType {
+  FIXED_AMOUNT
+  PERCENTAGE_OF_INCOME
+}
+
+// --- MODELS ---
+
+model Category {
+  id   String @id @default(uuid())
+  name String
+
+  // Gerarchia
+  parentId String?
+  parent   Category?  @relation("Hierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("Hierarchy")
+
+  // Props
+  type  ExpenseType @default(UNCLASSIFIED)
+  icon  String?
+  color String?
+
+  // Flags
+  isSystem   Boolean @default(false)
+  isVerified Boolean @default(true)
+
+  budgetRule   BudgetRule?
+  transactions EnrichedTransaction[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Vincolo univocità: Nome univoco all'interno dello stesso genitore (o tra le macro se parentId è null)
+  @@unique([name, parentId])
+}
+
+model BudgetRule {
+  id String @id @default(uuid())
+
+  categoryId String   @unique
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  ruleType   BudgetRuleType
+  limitValue Decimal        @db.Decimal(10, 2)
+
+  updatedAt DateTime @updatedAt
+}
+
+model RawTransaction {
+  id               String   @id @default(uuid())
+  importBatchId    String
+  originalLine     Int
+  date             String
+  operation        String?
+  details          String?
+  account          String?
+  amount           String?
+  currency         String?
+  accountingStatus String?
+  category         String?
+  createdAt        DateTime @default(now())
+}
+
+model EnrichedTransaction {
+  id            String @id @default(uuid())
   importBatchId String
   originalLine  Int
 
-  date        DateTime
-  amount      Float
-  operation   String
-  details     String
-  account     String
-  category    String
-  subCategory String?
+  date   DateTime
+  amount Decimal  @db.Decimal(10, 2) // Usiamo Decimal su Postgres per precisione soldi
 
-  @@index([importBatchId])
-  @@index([date])
-  @@index([category])
-  @@index([subCategory])
+  operation String?
+  details   String?
+  account   String?
+
+  // --- NUOVO SISTEMA CATEGORIE ---
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

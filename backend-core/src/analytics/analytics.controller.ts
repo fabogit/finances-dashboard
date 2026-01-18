@@ -11,7 +11,7 @@ import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import {
   AnalyticsSummaryDto,
   CategoryDistributionDto,
-  DailyTrendDto,
+  MonthlyTrendDto,
 } from './dto/analytics-response.dto';
 import {
   MonthlyForecastDto,
@@ -71,17 +71,17 @@ export class AnalyticsController {
     return this.analyticsService.getCategoryDistribution(filters);
   }
 
-  @Get('trend')
-  @ApiOperation({ summary: 'Get daily income/expense trend (for Bar Chart)' })
+  @Get('trends/monthly')
+  @ApiOperation({ summary: 'Get monthly income/expense trends' })
   @ApiResponse({
     status: 200,
-    description: 'Time series data grouped by day',
-    type: [DailyTrendDto], // Array
+    description: 'Returns list of monthly totals',
+    type: [MonthlyTrendDto],
   })
   @UsePipes(new ValidationPipe({ transform: true }))
-  async getTrend(
+  async getMonthlyTrends(
     @Query() filters: GetTransactionsFilterDto,
-  ): Promise<DailyTrendDto[]> {
-    return this.analyticsService.getDailyTrend(filters);
+  ): Promise<MonthlyTrendDto[]> {
+    return this.analyticsService.getMonthlyTrends(filters);
   }
 }

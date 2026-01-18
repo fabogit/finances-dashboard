@@ -31,19 +31,19 @@ export class CategoryDistributionDto {
   percentage: number;
 }
 
-export class DailyTrendDto {
+export class MonthlyTrendDto {
   @ApiProperty({
-    example: '2025-01-01',
-    description: 'Date in ISO format (YYYY-MM-DD)',
+    example: '2025-01',
+    description: 'Target month in YYYY-MM format',
   })
-  date: string;
+  month: string;
 
-  @ApiProperty({ example: 100.0, description: 'Income for the day' })
+  @ApiProperty({ example: 2500.0, description: 'Total Income for the month' })
   income: number;
 
   @ApiProperty({
-    example: 50.0,
-    description: 'Expense for the day (absolute or positive)',
+    example: 1200.5,
+    description: 'Total Expense for the month (absolute value)',
   })
   expense: number;
 }
