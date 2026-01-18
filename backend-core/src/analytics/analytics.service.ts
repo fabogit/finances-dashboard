@@ -1,16 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { TransactionsRepository } from '../transactions/transactions.repository';
+import { ScienceService } from '../science/science.service';
 import {
   GetTransactionsFilterDto,
   GroupByOption,
 } from '../transactions/dto/get-transactions.dto';
-import { ScienceService } from 'src/science/science.service';
-import {
-  MonthlyForecastDto,
-  ForecastErrorDto,
-} from './dto/forecast-response.dto';
-import { ForecastTransactionInputDto } from 'src/science/dto/forecast-transaction-input.dto';
+import { ForecastTransactionInputDto } from '../science/dto/forecast-transaction-input.dto';
 
 @Injectable()
 export class AnalyticsService {
@@ -20,72 +16,98 @@ export class AnalyticsService {
     private readonly scienceService: ScienceService,
   ) {}
 
+  // 1. KPI SUMMARY
   async getSummary(filters: GetTransactionsFilterDto) {
     const where = this.transactionsRepo.buildWhereClause(filters);
 
-    const [incomeAgg, expenseAgg] = await Promise.all([
-      // In (Amount > 0)
-      this.prisma.enrichedTransaction.aggregate({
-        _sum: { amount: true },
-        where: { ...where, amount: { gt: 0 } },
-      }),
-      // Out (Amount < 0)
-      this.prisma.enrichedTransaction.aggregate({
-        _sum: { amount: true },
-        where: { ...where, amount: { lt: 0 } },
-      }),
-    ]);
+    const aggregations = await this.prisma.enrichedTransaction.aggregate({
+      _sum: { amount: true },
+      where: where,
+    });
 
-    const totalIncome = incomeAgg._sum.amount || 0;
-    const totalExpense = expenseAgg._sum.amount || 0;
+    const incomeAgg = await this.prisma.enrichedTransaction.aggregate({
+      _sum: { amount: true },
+      where: { ...where, amount: { gt: 0 } },
+    });
+
+    const expenseAgg = await this.prisma.enrichedTransaction.aggregate({
+      _sum: { amount: true },
+      where: { ...where, amount: { lt: 0 } },
+    });
+
+    const totalIncome = incomeAgg._sum.amount
+      ? incomeAgg._sum.amount.toNumber()
+      : 0;
+    const totalExpense = expenseAgg._sum.amount
+      ? expenseAgg._sum.amount.toNumber()
+      : 0;
+    const balance = aggregations._sum.amount
+      ? aggregations._sum.amount.toNumber()
+      : 0;
+
+    let savingsRate = 0;
+    if (totalIncome > 0) {
+      savingsRate = (balance / totalIncome) * 100;
+    }
 
     return {
       income: totalIncome,
       expense: totalExpense,
-      balance: totalIncome + totalExpense,
-      savingsRate:
-        totalIncome > 0
-          ? ((totalIncome + totalExpense) / totalIncome) * 100
-          : 0,
+      balance: balance,
+      savingsRate: parseFloat(savingsRate.toFixed(2)),
     };
   }
 
+  // 2. CATEGORY PIE CHART
   async getCategoryDistribution(filters: GetTransactionsFilterDto) {
     const where = this.transactionsRepo.buildWhereClause(filters);
-    const groupField = filters.groupBy || GroupByOption.CATEGORY;
-    const result = await this.prisma.enrichedTransaction.groupBy({
-      by: [groupField],
-      _sum: { amount: true },
+
+    const transactions = await this.prisma.enrichedTransaction.findMany({
       where: { ...where, amount: { lt: 0 } },
-      orderBy: {
-        _sum: { amount: 'asc' },
+      select: {
+        amount: true,
+        category: {
+          select: { name: true, parent: { select: { name: true } } },
+        },
       },
     });
 
-    const totalValue = result.reduce(
-      (acc, item) => acc + Math.abs(item._sum.amount || 0),
-      0,
-    );
+    const groupMap = new Map<string, number>();
 
-    return result.map((item) => {
-      const value = Math.abs(item._sum.amount || 0);
-      const rawLabel = item[groupField];
-      const label = rawLabel ? String(rawLabel) : 'Unspecified';
+    for (const t of transactions) {
+      if (!t.category) continue;
 
-      let percentage = 0;
-      if (totalValue > 0) {
-        percentage = parseFloat(((value / totalValue) * 100).toFixed(2));
+      let key = 'Unspecified';
+
+      if (filters.groupBy === GroupByOption.SUB_CATEGORY) {
+        key = t.category.name;
+      } else {
+        // Default: Macro
+        key = t.category.parent ? t.category.parent.name : t.category.name;
       }
 
-      return {
-        label: label,
-        value: value,
-        percentage: percentage,
-      };
-    });
+      const val = t.amount.toNumber(); // Convert Decimal -> Number
+      groupMap.set(key, (groupMap.get(key) || 0) + Math.abs(val));
+    }
+
+    let totalValue = 0;
+    groupMap.forEach((v) => (totalValue += v));
+
+    // Map -> Array (DTO)
+    const result = Array.from(groupMap.entries()).map(([label, value]) => ({
+      label,
+      value: parseFloat(value.toFixed(2)),
+      percentage:
+        totalValue > 0
+          ? parseFloat(((value / totalValue) * 100).toFixed(2))
+          : 0,
+    }));
+
+    return result.sort((a, b) => b.value - a.value);
   }
 
-  async getDailyTrend(filters: GetTransactionsFilterDto) {
+  // 3. MONTHLY BAR CHART
+  async getMonthlyTrends(filters: GetTransactionsFilterDto) {
     const where = this.transactionsRepo.buildWhereClause(filters);
 
     const transactions = await this.prisma.enrichedTransaction.findMany({
@@ -94,29 +116,35 @@ export class AnalyticsService {
       orderBy: { date: 'asc' },
     });
 
-    const trendMap = new Map<string, { income: number; expense: number }>();
+    const map = new Map<string, { income: number; expense: number }>();
 
     for (const t of transactions) {
-      const dayKey = t.date.toISOString().split('T')[0]; // "2025-01-01"
-      if (!trendMap.has(dayKey)) {
-        trendMap.set(dayKey, { income: 0, expense: 0 });
+      const monthKey = t.date.toISOString().slice(0, 7); // "2025-01"
+
+      let entry = map.get(monthKey);
+      if (!entry) {
+        entry = { income: 0, expense: 0 };
+        map.set(monthKey, entry);
       }
-      const entry = trendMap.get(dayKey)!;
-      if (t.amount > 0) entry.income += t.amount;
-      else entry.expense += Math.abs(t.amount);
+
+      const val = t.amount.toNumber();
+
+      if (val > 0) entry.income += val;
+      else entry.expense += Math.abs(val);
     }
 
-    return Array.from(trendMap.entries()).map(([date, values]) => ({
-      date,
-      income: parseFloat(values.income.toFixed(2)),
-      expense: parseFloat(values.expense.toFixed(2)),
+    return Array.from(map.entries()).map(([monthKey, data]) => ({
+      month: monthKey,
+      income: parseFloat(data.income.toFixed(2)),
+      expense: parseFloat(data.expense.toFixed(2)),
     }));
   }
 
-  async getForecast(): Promise<MonthlyForecastDto[] | ForecastErrorDto> {
+  // 4. FORECAST (Integration)
+  async getForecast() {
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 14);
+    startDate.setMonth(startDate.getMonth() - 18);
 
     const transactions = await this.prisma.enrichedTransaction.findMany({
       where: {
@@ -128,10 +156,14 @@ export class AnalyticsService {
         date: true,
         amount: true,
         details: true,
-        category: true,
-        subCategory: true,
         operation: true,
         account: true,
+        category: {
+          select: {
+            name: true,
+            parent: { select: { name: true } },
+          },
+        },
       },
     });
 
@@ -139,18 +171,33 @@ export class AnalyticsService {
       return { error: 'No data available in DB for forecast' };
     }
 
-    // 2. Mapping: Prisma -> Python DTO
-    // Date -> String(YYYY-MM-DD)
-    const payload: ForecastTransactionInputDto[] = transactions.map((t) => ({
-      id: t.id,
-      date: t.date.toISOString().split('T')[0], // "2025-01-01"
-      amount: t.amount,
-      details: t.details,
-      category: t.category,
-      subCategory: t.subCategory || null,
-      operation: t.operation || 'System',
-      account: t.account || 'Default',
-    }));
+    const payload: ForecastTransactionInputDto[] = transactions.map((t) => {
+      let cat = 'Uncategorized';
+      let sub: string | null = null;
+
+      if (t.category) {
+        if (t.category.parent) {
+          // its sub
+          cat = t.category.parent.name;
+          sub = t.category.name;
+        } else {
+          // its macro
+          cat = t.category.name;
+          sub = null;
+        }
+      }
+
+      return {
+        id: t.id,
+        date: t.date.toISOString().split('T')[0],
+        amount: t.amount.toNumber(),
+        details: t.details || '',
+        operation: t.operation || 'System',
+        account: t.account || 'Default',
+        category: cat,
+        subCategory: sub,
+      };
+    });
 
     return this.scienceService.getForecast(payload);
   }

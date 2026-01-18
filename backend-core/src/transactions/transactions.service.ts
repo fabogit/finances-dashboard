@@ -102,18 +102,17 @@ export class TransactionsService {
           );
 
           // MAPPING: JSON (Python) -> DB Object (Prisma)
-          const enrichedToSave: Prisma.EnrichedTransactionCreateManyInput[] =
-            scienceResult.map((item) => ({
-              importBatchId: batchId, // Use the ID generated at the start
-              originalLine: parseInt(item.id), // Python returns the row as a string ID
-              date: new Date(item.date), // "2024-12-29" -> Date Object
-              amount: item.amount,
-              operation: item.operation,
-              details: item.details,
-              account: item.account,
-              category: item.category,
-              subCategory: item.subCategory,
-            }));
+          const enrichedToSave = scienceResult.map((item) => ({
+            importBatchId: batchId, // Use the ID generated at the start
+            originalLine: parseInt(item.id), // Python returns the row as a string ID
+            date: new Date(item.date), // "2024-12-29" -> Date Object
+            amount: item.amount,
+            operation: item.operation,
+            details: item.details,
+            account: item.account,
+            category: item.category,
+            subCategory: item.subCategory,
+          }));
 
           // WRITING TO DB
           const result =
@@ -155,7 +154,6 @@ export class TransactionsService {
   }
 
   // --- READ OPERATIONS ---
-
   async getAllRaw() {
     try {
       return await this.transactionsRepository.findAllRaw();
@@ -167,7 +165,6 @@ export class TransactionsService {
   }
 
   async getAllEnriched(filters: GetTransactionsFilterDto) {
-    // Rinominato per coerenza
     try {
       const { total, transactions } =
         await this.transactionsRepository.findAllEnriched(filters);
@@ -188,7 +185,6 @@ export class TransactionsService {
   }
 
   // --- CRUD OPERATIONS ---
-
   async create(dto: CreateTransactionDto) {
     try {
       this.logger.log(`Creating manual transaction: ${dto.details}`);

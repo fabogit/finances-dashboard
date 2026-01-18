@@ -38,7 +38,6 @@ async function bootstrap() {
   const httpAdapter = app.get(HttpAdapterHost);
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
 
-  const swaggerPath = 'docs';
   const document = SwaggerModule.createDocument(
     app,
     new DocumentBuilder()
@@ -48,11 +47,12 @@ async function bootstrap() {
       .addTag('Transactions')
       .build(),
   );
+  const swaggerPath = 'docs';
   SwaggerModule.setup(swaggerPath, app, document);
 
   const PORT = process.env.PORT || 3000;
   await app.listen(PORT);
-  logger.log(`✅ Swagger documentation: ${await app.getUrl()}/${swaggerPath}`);
   logger.log(`✅ Application is running on: ${await app.getUrl()}`);
+  logger.log(`✅ Swagger documentation: ${await app.getUrl()}/${swaggerPath}`);
 }
 void bootstrap();
