@@ -14,7 +14,7 @@ import logging
 import traceback
 from typing import Dict, List, Optional, Union, cast
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from processor import DataProcessor, RawTransactionInput
 from forecaster import Forecaster, TransactionInput
 
@@ -22,37 +22,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Finance Science Service")
-
-# --- INPUT DTOs ---
-
-
-class RawTransactionDto(BaseModel):
-    """
-    Represents the raw transaction data received from external sources.
-
-    This model handles incoming data that may not yet be strictly typed,
-    such as dates in Excel serial format or amounts as strings.
-
-    Attributes:
-        importBatchId (str): Identifier for the bulk import batch.
-        originalLine (int): Line number from the source file (used for ID generation).
-        date (str): Raw date string (e.g., Excel serial date "46020").
-        operation (str): The type of operation performed.
-        details (str): Specific details or description of the transaction.
-        account (str): The associated account identifier.
-        amount (str): The transaction amount as a string (e.g., "-747.6").
-        category (Optional[str]): Optional category label for the transaction.
-    """
-    # id: str
-    importBatchId: str
-    originalLine: int
-    date: str          # e.g., "46020"
-    operation: str
-    details: str
-    account: str
-    amount: str        # e.g., "-747.6"
-    category: Optional[str] = None
-    model_config = ConfigDict(extra='ignore')
 
 # --- OUTPUT DTOs ---
 
@@ -110,8 +79,53 @@ class MonthlyForecastDto(BaseModel):
     expense: ForecastFlowDto
     balance: float
 
+# --- INPUT DTOs ---
+
+
+class RawTransactionDto(BaseModel):
+    """
+    Represents the raw transaction data received from external sources.
+
+    This model handles incoming data that may not yet be strictly typed,
+    such as dates in Excel serial format or amounts as strings.
+
+    Attributes:
+        importBatchId (str): Identifier for the bulk import batch.
+        originalLine (int): Line number from the source file (used for ID generation).
+        date (str): Raw date string (e.g., Excel serial date "46020").
+        operation (str): The type of operation performed.
+        details (str): Specific details or description of the transaction.
+        account (str): The associated account identifier.
+        amount (str): The transaction amount as a string (e.g., "-747.6").
+        category (Optional[str]): Optional category label for the transaction.
+    """
+    # id: str
+    importBatchId: str
+    originalLine: int
+    date: str          # e.g., "46020"
+    operation: str
+    details: str
+    account: str
+    amount: str        # e.g., "-747.6"
+    category: Optional[str] = None
+    model_config = ConfigDict(extra='ignore')
+
+
+class ForecastRequest(BaseModel):
+    """
+    Input payload for the forecast endpoint.
+    Contains the transaction history and configuration parameters.
+    """
+    transactions: List[ProcessedTransactionDto]
+    std_deviation_threshold: float = Field(
+        default=0.2,
+        ge=0.0,
+        le=1.0,
+        description="Threshold (0.0-1.0) to identify fixed expenses. Higher = looser detection."
+    )
 
 # --- ENDPOINTS ---
+
 
 @app.get("/health")
 def health_check():
@@ -165,35 +179,41 @@ async def process_transactions(transactions: List[RawTransactionDto]):
 
 
 @app.post("/forecast", response_model=Union[List[MonthlyForecastDto], Dict[str, str]])
-def forecast_transactions(transactions: List[ProcessedTransactionDto]):
+def forecast_transactions(payload: ForecastRequest):
     """
-    Predicts financial flows for the next 3 months based on transaction history.
+    Predicts financial flows for the next 3 months based on transaction history and configuration.
 
     It utilizes the Forecaster service which applies:
     - Linear Regression for variable cost trends.
     - Statistical analysis (variance/frequency) for fixed/recurring costs.
 
     Args:
-        transactions (List[ProcessedTransactionDto]): List of cleaned and enriched transactions.
+        payload (ForecastRequest): Input object containing:
+            - transactions (List[ProcessedTransactionDto]): List of cleaned and enriched transactions.
+            - std_deviation_threshold (float): Configurable threshold (0.0-1.0) for identifying fixed expenses.
+              Higher values make the detection looser/more inclusive.
 
     Returns:
         Union[List[MonthlyForecastDto], Dict[str, str]]:
             - A list of 3 monthly forecasts (Income, Expense, Balance) on success.
             - An error dictionary (e.g., {"error": "..."}) if data is insufficient.
     """
-    # 1. Convert Pydantic Models to generic Dicts
+    transactions = payload.transactions
+
+    # 2. Convert Pydantic Models to generic Dicts
     raw_data = [t.model_dump() for t in transactions]
 
-    # 2. Strict Typing: Cast generic Dicts to the expected TypedDict (TransactionInput)
-    # We use 'cast' because we know ProcessedTransactionDto matches the structure
-    # of TransactionInput, but the static analyzer needs explicit confirmation.
+    # 3. Strict Typing
     typed_data = cast(List[TransactionInput], raw_data)
 
     try:
-        # Now 'typed_data' is accepted as List[TransactionInput]
-        result = Forecaster.predict_next_3_months(typed_data)
+        # 4. Pass BOTH data AND the threshold to the Forecaster
+        result = Forecaster.predict_next_3_months(
+            typed_data,
+            std_deviation_threshold=payload.std_deviation_threshold
+        )
         return result
     except Exception as e:
-        traceback.print_exc()  # Print stack trace to docker logs for debug
+        traceback.print_exc()
         logger.error("Forecast failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e

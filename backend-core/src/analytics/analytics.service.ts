@@ -141,7 +141,7 @@ export class AnalyticsService {
   }
 
   // 4. FORECAST (Integration)
-  async getForecast() {
+  async getForecast(threshold: number = 0.2) {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - 18);
@@ -199,6 +199,6 @@ export class AnalyticsService {
       };
     });
 
-    return this.scienceService.getForecast(payload);
+    return this.scienceService.getForecast(payload, threshold);
   }
 }

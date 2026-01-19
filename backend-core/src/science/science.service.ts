@@ -6,10 +6,9 @@ import { RawTransaction } from '@prisma/client';
 import { isAxiosError } from 'axios';
 import { ProcessedTransactionDto } from './dto/processed-transaction.dto';
 import { ForecastTransactionInputDto } from './dto/forecast-transaction-input.dto';
-import {
-  MonthlyForecastDto,
-  ForecastErrorDto,
-} from '../analytics/dto/forecast-response.dto';
+import { MonthlyForecastDto } from '../analytics/dto/forecast-response.dto';
+import { ForecastResponse } from './dto/forecast-response.dto';
+import { ForecastRequestPayload } from './dto/forecast-request.dto';
 
 interface FastApiErrorResponse {
   detail?: string; // FastAPI returns { detail: "..." }
@@ -34,23 +33,23 @@ export class ScienceService {
    */
   async getForecast(
     transactions: ForecastTransactionInputDto[],
-  ): Promise<MonthlyForecastDto[] | ForecastErrorDto> {
-    const url = `${this.scienceUrl}/forecast`;
-
+    threshold: number = 0.2,
+  ): Promise<ForecastResponse> {
     try {
-      this.logger.debug(
-        `Sending ${transactions.length} transactions to Forecast Service...`,
-      );
+      const payload: ForecastRequestPayload = {
+        transactions: transactions,
+        std_deviation_threshold: threshold,
+      };
 
-      const { data } = await firstValueFrom(
-        this.httpService.post<MonthlyForecastDto[] | ForecastErrorDto>(
-          url,
-          transactions,
+      const response = await firstValueFrom(
+        this.httpService.post<MonthlyForecastDto[]>(
+          `${this.scienceUrl}/forecast`,
+          payload,
         ),
       );
 
-      return data;
-    } catch (error: unknown) {
+      return response.data;
+    } catch (error) {
       const msg = this.extractErrorMessage(error);
       this.logger.error(`Error connecting to Forecast Service: ${msg}`);
 

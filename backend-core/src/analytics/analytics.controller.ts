@@ -17,6 +17,8 @@ import {
   MonthlyForecastDto,
   ForecastErrorDto,
 } from './dto/forecast-response.dto';
+import { GetForecastDto } from './dto/get-forecast.dto';
+import { ForecastResponse } from 'src/science/dto/forecast-response.dto';
 
 @ApiTags('Analytics')
 @Controller('analytics')
@@ -37,8 +39,8 @@ export class AnalyticsController {
     type: ForecastErrorDto,
   })
   @UsePipes(new ValidationPipe({ transform: true }))
-  async getForecast() {
-    return this.analyticsService.getForecast();
+  async getForecast(@Query() query: GetForecastDto): Promise<ForecastResponse> {
+    return this.analyticsService.getForecast(query.threshold ?? 0.2);
   }
 
   @Get('summary')
