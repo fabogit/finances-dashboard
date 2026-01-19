@@ -4,6 +4,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { ScienceModule } from './science/science.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     PrismaModule,
     ScienceModule,
     AnalyticsModule,
+    CategoriesModule,
   ],
   controllers: [],
   providers: [],
