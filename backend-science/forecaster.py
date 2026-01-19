@@ -48,20 +48,17 @@ class Forecaster:
     """
 
     @staticmethod
-    def predict_next_3_months(transactions: List[TransactionInput]) -> List[MonthlyForecast] | Dict[str, str]:
+    def predict_next_3_months(
+        transactions: List[TransactionInput],
+        std_deviation_threshold: float = 0.2
+    ) -> List[MonthlyForecast] | Dict[str, str]:
         """
         Analyzes past transactions to forecast the balance for the next 3 months.
 
-        It processes the data to distinguish between:
-        1. Fixed/Recurring items (statistical consistency).
-        2. Variable trends (Linear Regression over time).
-
         Args:
             transactions: A list of past transactions.
-
-        Returns:
-            A list of 3 MonthlyForecast objects (one for each future month),
-            or a dictionary containing an error message if data is insufficient.
+            std_deviation_threshold: Threshold ratio (std/mean) to consider an expense 'Fixed'.
+            Default is 0.2 (20%). Higher values make detection looser.
         """
         if not transactions:
             return {"error": "No data available for forecast"}
@@ -81,10 +78,7 @@ class Forecaster:
 
         # 2. Date Filtering (Last 12 Months Strategy)
         last_date = df['date'].max()
-
-        # Safe subtraction (approx 365 days to cover full seasonality if needed)
         start_date = last_date - pd.Timedelta(days=365)
-
         df = df[df['date'] >= start_date].copy()
 
         if df.empty:
@@ -95,27 +89,27 @@ class Forecaster:
         expense_df = df[df['amount'] < 0].copy()
 
         # 4. Analyze flows (Get 3 future points for each)
-        # Returns: ([month1_total, month2_total, month3_total], fixed_val)
         inc_preds, fixed_inc = Forecaster._analyze_flow(
-            income_df, months_to_predict=3)
+            income_df,
+            months_to_predict=3,
+            std_threshold_pct=std_deviation_threshold
+        )
         exp_preds, fixed_exp = Forecaster._analyze_flow(
-            expense_df, months_to_predict=3)
+            expense_df,
+            months_to_predict=3,
+            std_threshold_pct=std_deviation_threshold
+        )
 
         # 5. Build Result List
         results: List[MonthlyForecast] = []
 
         for i in range(3):
-            # Calculate dates: Month + 1, Month + 2, Month + 3
             future_date = last_date + pd.DateOffset(months=i + 1)
             date_str = future_date.strftime('%Y-%m')
 
-            # Get totals for this specific month index
             curr_inc_total = inc_preds[i]
             curr_exp_total = exp_preds[i]
 
-            # Calculate variables (Total - Fixed)
-            # Variable cannot be less than 0 logically for calculation splitting,
-            # but mathematically we just subtract.
             var_inc = curr_inc_total - fixed_inc
             var_exp = curr_exp_total - fixed_exp
 
@@ -137,7 +131,11 @@ class Forecaster:
         return results
 
     @staticmethod
-    def _analyze_flow(df: pd.DataFrame, months_to_predict: int = 3) -> Tuple[List[float], float]:
+    def _analyze_flow(
+        df: pd.DataFrame,
+        months_to_predict: int = 3,
+        std_threshold_pct: float = 0.2
+    ) -> Tuple[List[float], float]:
         """
         Helper method to calculate Fixed vs Variable trend and project future totals.
         """
@@ -145,13 +143,9 @@ class Forecaster:
             return [0.0] * months_to_predict, 0.0
 
         # --- A. DETECT FIXED EXPENSES (Recurring) ---
-
-        # 1. CLEANING & GROUPING KEY STRATEGY
-
         def clean_details(text):
             if not isinstance(text, str):
                 return "Unknown"
-            # Es: "AMAZON*123-45" -> "AMAZON"
             return re.sub(r'\d+', '', text).strip().upper()
 
         df['group_key'] = df['subCategory'].fillna(
@@ -164,8 +158,9 @@ class Forecaster:
             std_amount=('amount', 'std')
         )
 
-        # Rule: At least 3 occurrences AND Standard Deviation < 20% of mean
-        std_threshold = recurrence['mean_amount'].abs() * 0.2
+        # Rule: At least 3 occurrences AND Standard Deviation < threshold % of mean
+        std_threshold = recurrence['mean_amount'].abs() * std_threshold_pct
+
         fixed_mask = (recurrence['count'] >= 3) & (
             recurrence['std_amount'].fillna(0) < std_threshold)
 
