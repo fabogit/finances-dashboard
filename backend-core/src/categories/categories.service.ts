@@ -1,26 +1,117 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { SetBudgetDto } from './dto/set-budget.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CategoriesService {
-  create(createCategoryDto: CreateCategoryDto) {
-    return 'This action adds a new category';
+  constructor(private readonly prisma: PrismaService) {}
+
+  // --- 1. GET TREE (Macro -> Subs) ---
+  async findAll() {
+    return this.prisma.category.findMany({
+      where: { parentId: null },
+      include: {
+        budgetRule: true,
+        children: {
+          include: {
+            budgetRule: true,
+          },
+          orderBy: { name: 'asc' },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
   }
 
-  findAll() {
-    return `This action returns all categories`;
+  // --- 2. CREATE ---
+  async create(dto: CreateCategoryDto) {
+    try {
+      return await this.prisma.category.create({
+        data: {
+          name: dto.name,
+          parentId: dto.parentId || null,
+          type: dto.type,
+          icon: dto.icon,
+          color: dto.color,
+          isSystem: false,
+          isVerified: true,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        // P2002: Unique constraint failed
+        if (error.code === 'P2002') {
+          throw new ConflictException(
+            'Category with this name already exists in this level.',
+          );
+        }
+      }
+      throw error;
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} category`;
+  // --- 3. UPDATE ---
+  async update(id: string, dto: UpdateCategoryDto) {
+    await this.checkExistence(id);
+
+    return this.prisma.category.update({
+      where: { id },
+      data: {
+        ...dto,
+      },
+    });
   }
 
-  update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    return `This action updates a #${id} category`;
+  // --- 4. DELETE ---
+  async remove(id: string) {
+    await this.checkExistence(id);
+
+    try {
+      return await this.prisma.category.delete({
+        where: { id },
+      });
+    } catch (error) {
+      // Code P2003: Foreign key constraint failed
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new ConflictException(
+          'Cannot delete category: it has sub-categories or linked transactions. Please reassign or delete them first.',
+        );
+      }
+      throw error;
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} category`;
+  // --- 5. SET BUDGET (Upsert) ---
+  async setBudget(categoryId: string, dto: SetBudgetDto) {
+    await this.checkExistence(categoryId);
+
+    return this.prisma.budgetRule.upsert({
+      where: { categoryId },
+      create: {
+        categoryId,
+        ruleType: dto.ruleType,
+        limitValue: new Prisma.Decimal(dto.limitValue),
+      },
+      update: {
+        ruleType: dto.ruleType,
+        limitValue: new Prisma.Decimal(dto.limitValue),
+      },
+    });
+  }
+
+  // Helper
+  private async checkExistence(id: string) {
+    const exists = await this.prisma.category.findUnique({ where: { id } });
+    if (!exists) throw new NotFoundException(`Category ${id} not found`);
   }
 }
