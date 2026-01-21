@@ -109,6 +109,18 @@ export class CategoriesController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a category' })
   @ApiResponse({ status: HttpStatus.OK, type: CategoryResponseDto })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Category not found',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'System categories cannot be deleted',
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Cannot delete: Category has sub-categories or transactions',
+  })
   async remove(@Param('id') id: string) {
     const rawData = await this.categoriesService.remove(id);
     return this.mapToDto(rawData);

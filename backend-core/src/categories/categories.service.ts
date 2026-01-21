@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -71,20 +72,29 @@ export class CategoriesService {
 
   // --- 4. DELETE ---
   async remove(id: string) {
-    await this.checkExistence(id);
+    const category = await this.prisma.category.findUnique({ where: { id } });
+
+    if (!category) {
+      throw new NotFoundException(`Category ${id} not found`);
+    }
+
+    if (category.isSystem) {
+      throw new ForbiddenException(
+        'System categories cannot be deleted. You can only hide or edit them.',
+      );
+    }
 
     try {
       return await this.prisma.category.delete({
         where: { id },
       });
     } catch (error) {
-      // Code P2003: Foreign key constraint failed
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2003'
       ) {
         throw new ConflictException(
-          'Cannot delete category: it has sub-categories or linked transactions. Please reassign or delete them first.',
+          'Cannot delete category: it has sub-categories or linked transactions.',
         );
       }
       throw error;
