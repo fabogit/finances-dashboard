@@ -4,7 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { CategoriesRepository } from './categories.repository';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { SetBudgetDto } from './dto/set-budget.dto';
@@ -12,39 +12,17 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly categoriesRepository: CategoriesRepository) {}
 
   // --- 1. GET TREE (Macro -> Subs) ---
   async findAll() {
-    return this.prisma.category.findMany({
-      where: { parentId: null },
-      include: {
-        budgetRule: true,
-        children: {
-          include: {
-            budgetRule: true,
-          },
-          orderBy: { name: 'asc' },
-        },
-      },
-      orderBy: { name: 'asc' },
-    });
+    return this.categoriesRepository.findAllTree();
   }
 
   // --- 2. CREATE ---
   async create(dto: CreateCategoryDto) {
     try {
-      return await this.prisma.category.create({
-        data: {
-          name: dto.name,
-          parentId: dto.parentId || null,
-          type: dto.type,
-          icon: dto.icon,
-          color: dto.color,
-          isSystem: false,
-          isVerified: true,
-        },
-      });
+      return await this.categoriesRepository.create(dto);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         // P2002: Unique constraint failed
@@ -61,18 +39,12 @@ export class CategoriesService {
   // --- 3. UPDATE ---
   async update(id: string, dto: UpdateCategoryDto) {
     await this.checkExistence(id);
-
-    return this.prisma.category.update({
-      where: { id },
-      data: {
-        ...dto,
-      },
-    });
+    return this.categoriesRepository.update(id, dto);
   }
 
   // --- 4. DELETE ---
   async remove(id: string) {
-    const category = await this.prisma.category.findUnique({ where: { id } });
+    const category = await this.categoriesRepository.findById(id);
 
     if (!category) {
       throw new NotFoundException(`Category ${id} not found`);
@@ -85,9 +57,7 @@ export class CategoriesService {
     }
 
     try {
-      return await this.prisma.category.delete({
-        where: { id },
-      });
+      return await this.categoriesRepository.delete(id);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -104,24 +74,13 @@ export class CategoriesService {
   // --- 5. SET BUDGET (Upsert) ---
   async setBudget(categoryId: string, dto: SetBudgetDto) {
     await this.checkExistence(categoryId);
-
-    return this.prisma.budgetRule.upsert({
-      where: { categoryId },
-      create: {
-        categoryId,
-        ruleType: dto.ruleType,
-        limitValue: new Prisma.Decimal(dto.limitValue),
-      },
-      update: {
-        ruleType: dto.ruleType,
-        limitValue: new Prisma.Decimal(dto.limitValue),
-      },
-    });
+    return this.categoriesRepository.upsertBudget(categoryId, dto);
   }
 
   // Helper
   private async checkExistence(id: string) {
-    const exists = await this.prisma.category.findUnique({ where: { id } });
+    const exists = await this.categoriesRepository.findById(id);
     if (!exists) throw new NotFoundException(`Category ${id} not found`);
+    return exists;
   }
 }
