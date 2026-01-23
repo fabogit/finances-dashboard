@@ -11,13 +11,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN apk add --no-cache python3 make g++
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-
 RUN pnpm install --frozen-lockfile
-
 COPY . .
 
 RUN pnpm prisma generate
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "pnpm dlx prisma db push && pnpm run start:dev"]
+CMD ["sh", "-c", "pnpm prisma db push && pnpm prisma db seed && pnpm run start:dev"]

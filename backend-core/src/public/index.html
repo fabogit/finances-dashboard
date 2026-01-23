@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Finance Dashboard API - Manage and analyze your personal expenses">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+  <title>Finance Dashboard API</title>
+  <style>
+    :root {
+      /* Palette Light */
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg-light: #f8fafc;
+      --surface-light: #ffffff;
+      --text-main-light: #1e293b;
+      --text-muted-light: #64748b;
+      --border-light: #e2e8f0;
+
+      /* Palette Dark */
+      --bg-dark: #0f172a;
+      --surface-dark: #1e293b;
+      --text-main-dark: #f1f5f9;
+      --text-muted-dark: #94a3b8;
+      --border-dark: #334155;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+
+    .theme-control {
+      display: none;
+    }
+
+    .page-wrapper {
+      background-color: var(--bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s, color 0.3s;
+      position: relative;
+
+      --bg: var(--bg-light);
+      --surface: var(--surface-light);
+      --text-main: var(--text-main-light);
+      --text-muted: var(--text-muted-light);
+      --border: var(--border-light);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .page-wrapper {
+        --bg: var(--bg-dark);
+        --surface: var(--surface-dark);
+        --text-main: var(--text-main-dark);
+        --text-muted: var(--text-muted-dark);
+        --border: var(--border-dark);
+      }
+    }
+
+    #t-light:checked~.page-wrapper {
+      --bg: var(--bg-light);
+      --surface: var(--surface-light);
+      --text-main: var(--text-main-light);
+      --text-muted: var(--text-muted-light);
+      --border: var(--border-light);
+    }
+
+    #t-dark:checked~.page-wrapper {
+      --bg: var(--bg-dark);
+      --surface: var(--surface-dark);
+      --text-main: var(--text-main-dark);
+      --text-muted: var(--text-muted-dark);
+      --border: var(--border-dark);
+    }
+
+    .theme-toggle-ui {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 4px;
+      border-radius: 999px;
+      display: flex;
+      gap: 2px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .theme-btn {
+      cursor: pointer;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-weight: 500;
+      user-select: none;
+      transition: all 0.2s;
+    }
+
+    .theme-btn:hover {
+      color: var(--text-main);
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    #t-system:checked~.page-wrapper .lbl-system,
+    #t-light:checked~.page-wrapper .lbl-light,
+    #t-dark:checked~.page-wrapper .lbl-dark {
+      background-color: var(--primary);
+      color: white;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .card {
+      background: var(--surface);
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+      border: 1px solid var(--border);
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-main);
+    }
+
+    p {
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem 1.5rem;
+      background-color: var(--primary);
+      color: white;
+      text-decoration: none;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      transition: background-color 0.2s;
+      outline: 2px solid transparent;
+      outline-offset: 2px;
+    }
+
+    .btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .icon {
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+
+<body>
+  <input type="radio" name="theme" id="t-system" class="theme-control" checked>
+  <input type="radio" name="theme" id="t-light" class="theme-control">
+  <input type="radio" name="theme" id="t-dark" class="theme-control">
+
+  <div class="page-wrapper">
+
+    <div class="theme-toggle-ui" role="radiogroup" aria-label="Theme Switcher">
+      <label for="t-light" class="theme-btn lbl-light" title="Light Mode">☀︎</label>
+      <label for="t-system" class="theme-btn lbl-system" title="System Default">Auto</label>
+      <label for="t-dark" class="theme-btn lbl-dark" title="Dark Mode">☾</label>
+    </div>
+
+    <main class="card">
+      <div role="img" aria-label="Finance Dashboard Logo" style="font-size: 3rem; margin-bottom: 1rem;">
+        📊
+      </div>
+      <h1>Finance Dashboard API</h1>
+      <p>
+        Welcome to the backend service for your personal finance manager.
+        The system is running and ready to process your transactions.
+      </p>
+
+      <a href="/docs" class="btn">
+        <span class="icon" aria-hidden="true">📑</span>
+        Explore the Finance Dashboard API Documentation
+      </a>
+    </main>
+  </div>
+</body>
+
+</html>
