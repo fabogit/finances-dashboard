@@ -5,6 +5,7 @@ import { PrismaService } from './prisma.service';
 @Global()
 @Module({
   imports: [],
+  exports: [PrismaService],
   providers: [
     {
       provide: PrismaService,
@@ -17,6 +18,5 @@ import { PrismaService } from './prisma.service';
       inject: [ConfigService],
     },
   ],
-  exports: [PrismaService],
 })
 export class PrismaModule {}

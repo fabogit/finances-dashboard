@@ -9,25 +9,96 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
+}
+
+// --- ENUMS ---
+
+enum ExpenseType {
+  NEEDS
+  WANTS
+  SAVINGS
+  UNCLASSIFIED
+}
+
+enum BudgetRuleType {
+  FIXED_AMOUNT
+  PERCENTAGE_OF_INCOME
+}
+
+// --- MODELS ---
+
+model Category {
+  id   String @id @default(uuid())
+  name String
+
+  // Hierarchy
+  parentId String?
+  parent   Category?  @relation("Hierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("Hierarchy")
+
+  // Properties
+  type  ExpenseType @default(UNCLASSIFIED)
+  icon  String?
+  color String?
+
+  // Flags
+  isSystem   Boolean @default(false)
+  isVerified Boolean @default(true)
+
+  budgetRule   BudgetRule?
+  transactions EnrichedTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Uniqueness constraint: Unique name within the same parent (or among root categories if parentId is null)
+  @@unique([name, parentId])
+}
+
+model BudgetRule {
+  id String @id @default(uuid())
+
+  categoryId String   @unique
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  ruleType   BudgetRuleType
+  limitValue Decimal        @db.Decimal(10, 2)
+
+  updatedAt DateTime @updatedAt
 }
 
 model RawTransaction {
-  id String @id @default(uuid())
-
-  // Import Metadata
-  importBatchId String // UUID
-  originalLine  Int // row
-
-  // Data
+  id               String   @id @default(uuid())
+  importBatchId    String
+  originalLine     Int
   date             String
-  operation        String
-  details          String
-  account          String
-  accountingStatus String
+  operation        String?
+  details          String?
+  account          String?
+  amount           String?
+  currency         String?
+  accountingStatus String?
   category         String?
-  currency         String
-  amount           String
+  createdAt        DateTime @default(now())
+}
+
+model EnrichedTransaction {
+  id            String @id @default(uuid())
+  importBatchId String
+  originalLine  Int
+
+  date   DateTime
+  amount Decimal  @db.Decimal(10, 2) // Using Decimal on Postgres for currency precision
+
+  operation String?
+  details   String?
+  account   String?
+
+  // --- NEW CATEGORY SYSTEM ---
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

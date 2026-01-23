@@ -1,4 +1,4 @@
-export interface ProcessedTransaction {
+export class ProcessedTransactionDto {
   id: string;
   date: string;
   operation: string;
@@ -6,4 +6,5 @@ export interface ProcessedTransaction {
   account: string;
   amount: number;
   category: string;
+  subCategory: string;
 }
