@@ -21,8 +21,6 @@ interface CategoryWithTree extends Category {
   children: CategoryWithTree[];
 }
 
-// 2. Definiamo il tipo di ritorno interno della funzione ricorsiva
-// Estende il DTO pubblico aggiungendo 'rawSpent' che serve per i calcoli del padre
 type InternalNodeAnalysis = CategoryBudgetStatusDto & {
   rawSpent: number;
 };
