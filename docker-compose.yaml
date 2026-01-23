@@ -55,8 +55,7 @@ services:
       - "${SCIENCE_PORT}:8000"
     volumes:
       - ./backend-science:/app
-      - /app/__pycache__
-      - /app/.venv
+      - backend-science-cache:/app/__pycache__
     networks:
       - fn-network
 
@@ -69,3 +68,4 @@ volumes:
   postgres_data:
   backend_core_modules:
   backend_core_dist:
+  backend-science-cache:
