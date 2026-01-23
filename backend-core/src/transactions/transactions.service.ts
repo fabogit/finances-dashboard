@@ -22,7 +22,7 @@ export class TransactionsService {
   private readonly logger = new Logger(TransactionsService.name);
 
   constructor(
-    private readonly transactionsRepository: TransactionsRepository,
+    private readonly transactionsRepo: TransactionsRepository,
     private readonly scienceService: ScienceService,
   ) {}
 
@@ -78,7 +78,7 @@ export class TransactionsService {
 
     // --- 3. RAW SAVING ---
     if (transactionsToSave.length > 0) {
-      await this.transactionsRepository.createManyRaw(transactionsToSave);
+      await this.transactionsRepo.createManyRaw(transactionsToSave);
     }
 
     // --- 4. PYTHON INTEGRATION & ENRICHED SAVING ---
@@ -116,9 +116,7 @@ export class TransactionsService {
 
           // WRITING TO DB
           const result =
-            await this.transactionsRepository.createManyEnriched(
-              enrichedToSave,
-            );
+            await this.transactionsRepo.createManyEnriched(enrichedToSave);
           savedEnrichedCount = result.count;
 
           this.logger.log(
@@ -156,7 +154,7 @@ export class TransactionsService {
   // --- READ OPERATIONS ---
   async getAllRaw() {
     try {
-      return await this.transactionsRepository.findAllRaw();
+      return await this.transactionsRepo.findAllRaw();
     } catch (error) {
       const msg = this.getErrorMessage(error);
       this.logger.error(`Failed to fetch raw transactions: ${msg}`);
@@ -167,7 +165,7 @@ export class TransactionsService {
   async getAllEnriched(filters: GetTransactionsFilterDto) {
     try {
       const { total, transactions } =
-        await this.transactionsRepository.findAllEnriched(filters);
+        await this.transactionsRepo.findAllEnriched(filters);
       return {
         data: transactions,
         meta: {
@@ -188,7 +186,7 @@ export class TransactionsService {
   async create(dto: CreateTransactionDto) {
     try {
       this.logger.log(`Creating manual transaction: ${dto.details}`);
-      return await this.transactionsRepository.create(dto);
+      return await this.transactionsRepo.create(dto);
     } catch (error) {
       const msg = this.getErrorMessage(error);
       this.logger.error(`Create failed: ${msg}`);
@@ -198,13 +196,13 @@ export class TransactionsService {
 
   async update(id: string, dto: UpdateTransactionDto) {
     try {
-      const existing = await this.transactionsRepository.findById(id);
+      const existing = await this.transactionsRepo.findById(id);
       if (!existing) {
         this.logger.warn(`Update failed: Transaction ${id} not found`);
         throw new NotFoundException(`Transaction with ID ${id} not found`);
       }
 
-      return await this.transactionsRepository.update(id, dto);
+      return await this.transactionsRepo.update(id, dto);
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       const msg = this.getErrorMessage(error);
@@ -215,13 +213,13 @@ export class TransactionsService {
 
   async delete(id: string) {
     try {
-      const existing = await this.transactionsRepository.findById(id);
+      const existing = await this.transactionsRepo.findById(id);
       if (!existing) {
         this.logger.warn(`Delete failed: Transaction ${id} not found`);
         throw new NotFoundException(`Transaction with ID ${id} not found`);
       }
 
-      return await this.transactionsRepository.delete(id);
+      return await this.transactionsRepo.delete(id);
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       const msg = this.getErrorMessage(error);

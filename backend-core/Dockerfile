@@ -16,7 +16,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN pnpm dlx prisma generate
+RUN pnpm prisma generate
 
 EXPOSE 3000
 
