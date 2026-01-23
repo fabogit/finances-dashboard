@@ -12,17 +12,17 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly categoriesRepository: CategoriesRepository) {}
+  constructor(private readonly categoriesRepo: CategoriesRepository) {}
 
   // --- 1. GET TREE (Macro -> Subs) ---
   async findAll() {
-    return this.categoriesRepository.findAllTree();
+    return this.categoriesRepo.findAllTree();
   }
 
   // --- 2. CREATE ---
   async create(dto: CreateCategoryDto) {
     try {
-      return await this.categoriesRepository.create(dto);
+      return await this.categoriesRepo.create(dto);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         // P2002: Unique constraint failed
@@ -39,12 +39,12 @@ export class CategoriesService {
   // --- 3. UPDATE ---
   async update(id: string, dto: UpdateCategoryDto) {
     await this.checkExistence(id);
-    return this.categoriesRepository.update(id, dto);
+    return this.categoriesRepo.update(id, dto);
   }
 
   // --- 4. DELETE ---
   async remove(id: string) {
-    const category = await this.categoriesRepository.findById(id);
+    const category = await this.categoriesRepo.findById(id);
 
     if (!category) {
       throw new NotFoundException(`Category ${id} not found`);
@@ -57,7 +57,7 @@ export class CategoriesService {
     }
 
     try {
-      return await this.categoriesRepository.delete(id);
+      return await this.categoriesRepo.delete(id);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -74,12 +74,12 @@ export class CategoriesService {
   // --- 5. SET BUDGET (Upsert) ---
   async setBudget(categoryId: string, dto: SetBudgetDto) {
     await this.checkExistence(categoryId);
-    return this.categoriesRepository.upsertBudget(categoryId, dto);
+    return this.categoriesRepo.upsertBudget(categoryId, dto);
   }
 
   // Helper
   private async checkExistence(id: string) {
-    const exists = await this.categoriesRepository.findById(id);
+    const exists = await this.categoriesRepo.findById(id);
     if (!exists) throw new NotFoundException(`Category ${id} not found`);
     return exists;
   }
