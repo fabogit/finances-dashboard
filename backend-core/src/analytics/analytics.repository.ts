@@ -82,4 +82,29 @@ export class AnalyticsRepository {
       },
     });
   }
+
+  // --- BUDGET ANALYSIS QUERIES ---
+
+  async getMonthlyIncome(start: Date, end: Date): Promise<number> {
+    const agg = await this.prisma.enrichedTransaction.aggregate({
+      _sum: { amount: true },
+      where: {
+        date: { gte: start, lte: end },
+        amount: { gt: 0 },
+      },
+    });
+    return agg._sum.amount ? agg._sum.amount.toNumber() : 0;
+  }
+
+  async getMonthlyExpensesByCategory(start: Date, end: Date) {
+    return this.prisma.enrichedTransaction.groupBy({
+      by: ['categoryId'],
+      _sum: { amount: true },
+      where: {
+        date: { gte: start, lte: end },
+        amount: { lt: 0 },
+        categoryId: { not: null },
+      },
+    });
+  }
 }

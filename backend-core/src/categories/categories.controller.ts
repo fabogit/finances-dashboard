@@ -7,8 +7,6 @@ import {
   Param,
   Delete,
   Put,
-  UsePipes,
-  ValidationPipe,
   HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
@@ -84,7 +82,6 @@ export class CategoriesController {
     status: HttpStatus.CONFLICT,
     description: 'Category name already exists',
   })
-  @UsePipes(new ValidationPipe({ transform: true }))
   async create(@Body() dto: CreateCategoryDto) {
     const rawData = await this.categoriesService.create(dto);
     return this.mapToDto(rawData);
@@ -99,7 +96,6 @@ export class CategoriesController {
     status: HttpStatus.NOT_FOUND,
     description: 'Category not found',
   })
-  @UsePipes(new ValidationPipe({ transform: true }))
   async update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
     const rawData = await this.categoriesService.update(id, dto);
     return this.mapToDto(rawData);
@@ -135,7 +131,6 @@ export class CategoriesController {
     description: 'The updated or created budget rule',
     type: BudgetRuleResponseDto,
   })
-  @UsePipes(new ValidationPipe({ transform: true }))
   async setBudget(@Param('id') id: string, @Body() dto: SetBudgetDto) {
     const rawData = await this.categoriesService.setBudget(id, dto);
 

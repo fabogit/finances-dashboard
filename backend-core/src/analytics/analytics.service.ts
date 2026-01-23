@@ -8,12 +8,29 @@ import {
 } from '../transactions/dto/get-transactions.dto';
 import { ForecastTransactionInputDto } from '../science/dto/forecast-transaction-input.dto';
 import { ForecastResponse } from '../science/dto/forecast-response.dto';
+import {
+  BudgetAnalysisResponseDto,
+  CategoryBudgetStatusDto,
+  GetBudgetAnalysisDto,
+} from './dto/budget-analysis.dto';
+import { CategoriesRepository } from 'src/categories/categories.repository';
+import { BudgetRule, BudgetRuleType, Category } from '@prisma/client';
+
+interface CategoryWithTree extends Category {
+  budgetRule: BudgetRule | null;
+  children: CategoryWithTree[];
+}
+
+type InternalNodeAnalysis = CategoryBudgetStatusDto & {
+  rawSpent: number;
+};
 
 @Injectable()
 export class AnalyticsService {
   constructor(
     private readonly analyticsRepo: AnalyticsRepository,
     private readonly transactionsRepo: TransactionsRepository,
+    private readonly categoriesRepo: CategoriesRepository,
     private readonly scienceService: ScienceService,
   ) {}
 
@@ -157,5 +174,90 @@ export class AnalyticsService {
     });
 
     return this.scienceService.getForecast(payload, threshold);
+  }
+
+  // --- 5. BUDGET ANALYSIS ---
+  async getBudgetAnalysis(
+    dto: GetBudgetAnalysisDto,
+  ): Promise<BudgetAnalysisResponseDto> {
+    const [year, month] = dto.month.split('-').map(Number);
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59);
+
+    const [categoryTree, monthlyIncome, expensesGroups] = await Promise.all([
+      this.categoriesRepo.findAllTree() as Promise<CategoryWithTree[]>,
+      this.analyticsRepo.getMonthlyIncome(startDate, endDate),
+      this.analyticsRepo.getMonthlyExpensesByCategory(startDate, endDate),
+    ]);
+
+    const expenseMap = new Map<string, number>();
+    expensesGroups.forEach((entry) => {
+      if (entry.categoryId && entry._sum.amount) {
+        expenseMap.set(
+          entry.categoryId,
+          Math.abs(entry._sum.amount.toNumber()),
+        );
+      }
+    });
+
+    const processNode = (category: CategoryWithTree): InternalNodeAnalysis => {
+      const directSpent = expenseMap.get(category.id) || 0;
+
+      let childrenDtos: InternalNodeAnalysis[] = [];
+      let childrenTotalSpent = 0;
+
+      if (category.children && category.children.length > 0) {
+        childrenDtos = category.children.map((child) => processNode(child));
+        childrenTotalSpent = childrenDtos.reduce(
+          (acc, child) => acc + child.rawSpent,
+          0,
+        );
+      }
+      const totalSpent = directSpent + childrenTotalSpent;
+
+      let limit: number | null = null;
+      if (category.budgetRule) {
+        const ruleVal = Number(category.budgetRule.limitValue);
+
+        if (category.budgetRule.ruleType === BudgetRuleType.FIXED_AMOUNT) {
+          limit = ruleVal;
+        } else if (
+          category.budgetRule.ruleType === BudgetRuleType.PERCENTAGE_OF_INCOME
+        ) {
+          limit = (monthlyIncome * ruleVal) / 100;
+        }
+      }
+
+      let status: 'OK' | 'WARNING' | 'EXCEEDED' | 'NO_BUDGET' = 'NO_BUDGET';
+      let remaining: number | null = null;
+
+      if (limit !== null) {
+        remaining = limit - totalSpent;
+
+        const ratio = limit > 0 ? totalSpent / limit : totalSpent > 0 ? 999 : 0;
+
+        if (ratio > 1) status = 'EXCEEDED';
+        else if (ratio >= 0.8) status = 'WARNING';
+        else status = 'OK';
+      }
+
+      return {
+        categoryName: category.name,
+        spent: parseFloat(totalSpent.toFixed(2)),
+        limit: limit ? parseFloat(limit.toFixed(2)) : null,
+        remaining: remaining ? parseFloat(remaining.toFixed(2)) : null,
+        status,
+        children: childrenDtos.length > 0 ? childrenDtos : undefined,
+        rawSpent: totalSpent,
+      };
+    };
+
+    const analysisTree = categoryTree.map((macro) => processNode(macro));
+
+    return {
+      month: dto.month,
+      totalIncome: parseFloat(monthlyIncome.toFixed(2)),
+      categories: analysisTree,
+    };
   }
 }

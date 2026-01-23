@@ -9,8 +9,6 @@ import {
   Param,
   Patch,
   Delete,
-  ValidationPipe,
-  UsePipes,
   ParseFilePipeBuilder,
   HttpStatus,
   ParseUUIDPipe,
@@ -94,7 +92,6 @@ export class TransactionsController {
     description: 'Paginated list of enriched transactions',
     type: PaginatedTransactionsResponseDto,
   })
-  @UsePipes(new ValidationPipe({ transform: true }))
   async findAllEnriched(@Query() filters: GetTransactionsFilterDto) {
     return this.transactionsService.getAllEnriched(filters);
   }
@@ -107,7 +104,6 @@ export class TransactionsController {
     description: 'Transaction created successfully',
     type: TransactionDto,
   })
-  @UsePipes(new ValidationPipe({ transform: true }))
   async create(@Body() createDto: CreateTransactionDto) {
     return this.transactionsService.create(createDto);
   }
@@ -121,7 +117,6 @@ export class TransactionsController {
     type: TransactionDto,
   })
   @ApiResponse({ status: 404, description: 'Transaction not found' })
-  @UsePipes(new ValidationPipe({ transform: true }))
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDto: UpdateTransactionDto,

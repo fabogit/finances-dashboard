@@ -1,13 +1,14 @@
 import {
+  ClassSerializerInterceptor,
   Controller,
   Get,
   Query,
-  UsePipes,
-  ValidationPipe,
+  UseInterceptors,
 } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { GetTransactionsFilterDto } from '../transactions/dto/get-transactions.dto';
-import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 import {
   AnalyticsSummaryDto,
   CategoryDistributionDto,
@@ -19,6 +20,10 @@ import {
 } from './dto/forecast-response.dto';
 import { GetForecastDto } from './dto/get-forecast.dto';
 import { ForecastResponse } from 'src/science/dto/forecast-response.dto';
+import {
+  BudgetAnalysisResponseDto,
+  GetBudgetAnalysisDto,
+} from './dto/budget-analysis.dto';
 
 @ApiTags('Analytics')
 @Controller('analytics')
@@ -38,7 +43,6 @@ export class AnalyticsController {
     description: 'Returns error object if data is insufficient',
     type: ForecastErrorDto,
   })
-  @UsePipes(new ValidationPipe({ transform: true }))
   async getForecast(@Query() query: GetForecastDto): Promise<ForecastResponse> {
     return this.analyticsService.getForecast(query.threshold ?? 0.2);
   }
@@ -50,7 +54,6 @@ export class AnalyticsController {
     description: 'Financial summary based on filters',
     type: AnalyticsSummaryDto,
   })
-  @UsePipes(new ValidationPipe({ transform: true }))
   async getSummary(
     @Query() filters: GetTransactionsFilterDto,
   ): Promise<AnalyticsSummaryDto> {
@@ -66,7 +69,6 @@ export class AnalyticsController {
     description: 'List of categories and values',
     type: [CategoryDistributionDto], // Array response
   })
-  @UsePipes(new ValidationPipe({ transform: true }))
   async getDistribution(
     @Query() filters: GetTransactionsFilterDto,
   ): Promise<CategoryDistributionDto[]> {
@@ -80,10 +82,26 @@ export class AnalyticsController {
     description: 'Returns list of monthly totals',
     type: [MonthlyTrendDto],
   })
-  @UsePipes(new ValidationPipe({ transform: true }))
   async getMonthlyTrends(
     @Query() filters: GetTransactionsFilterDto,
   ): Promise<MonthlyTrendDto[]> {
     return this.analyticsService.getMonthlyTrends(filters);
+  }
+
+  @Get('budget-analysis')
+  @ApiOperation({
+    summary: 'Compare actual spending vs budget rules for a specific month',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Hierarchical budget health status',
+    type: BudgetAnalysisResponseDto,
+  })
+  @UseInterceptors(ClassSerializerInterceptor)
+  async getBudgetAnalysis(
+    @Query() query: GetBudgetAnalysisDto,
+  ): Promise<BudgetAnalysisResponseDto> {
+    const result = await this.analyticsService.getBudgetAnalysis(query);
+    return plainToInstance(BudgetAnalysisResponseDto, result);
   }
 }
