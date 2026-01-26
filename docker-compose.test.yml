@@ -1,0 +1,24 @@
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    container_name: fn-postgres-test
+    environment:
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_DB: finance_test_db
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d finance_test_db"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+    restart: always
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge

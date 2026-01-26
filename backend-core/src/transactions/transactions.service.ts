@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, RawTransaction } from '@prisma/client';
 import * as XLSX from 'xlsx';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { TransactionsRepository } from './transactions.repository';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
 import { ScienceService } from 'src/science/science.service';
@@ -54,7 +54,7 @@ export class TransactionsService {
     this.logger.log(`Total XLSX rows: ${rawData.length}`);
 
     // --- 2. DATA PREPARATION ---
-    const batchId = uuidv4();
+    const batchId = randomUUID();
     const transactionsToSave: Prisma.RawTransactionCreateManyInput[] = [];
 
     for (const [index, row] of rawData.entries()) {
