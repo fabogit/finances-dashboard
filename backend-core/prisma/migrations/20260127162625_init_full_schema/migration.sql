@@ -56,6 +56,7 @@ CREATE TABLE "EnrichedTransaction" (
     "originalLine" INTEGER NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
     "amount" DECIMAL(10,2) NOT NULL,
+    "currency" VARCHAR(3) NOT NULL DEFAULT 'EUR',
     "operation" TEXT,
     "details" TEXT,
     "account" TEXT,
