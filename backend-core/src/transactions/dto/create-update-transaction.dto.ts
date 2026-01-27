@@ -4,6 +4,7 @@ import {
   IsDate,
   IsOptional,
   IsNotEmpty,
+  Length,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
@@ -25,6 +26,12 @@ export class CreateTransactionDto {
   @IsNotEmpty()
   @IsNumber()
   amount: number;
+
+  @ApiProperty({ example: 'USD', description: 'Currency code', default: 'EUR' })
+  @IsOptional()
+  @IsString()
+  @Length(3, 3)
+  currency?: string;
 
   @ApiProperty({ example: 'LEISURE', description: 'Macro Category' })
   @IsNotEmpty()

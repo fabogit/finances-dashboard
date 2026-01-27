@@ -1,9 +1,11 @@
 services:
   # --- 1. DATABASE (Postgres) ---
-  postgres:
+  db-postgres:
     container_name: fn-postgres
     image: postgres:17-alpine
     restart: unless-stopped
+    env_file:
+      - .env.compose
     ports:
       - "${POSTGRES_PORT}:5432"
     environment:
@@ -27,6 +29,8 @@ services:
       context: ./backend-core
       dockerfile: Dockerfile
     restart: unless-stopped
+    env_file:
+      - .env.compose
     ports:
       - "${SERVER_PORT}:3000"
     volumes:
@@ -34,12 +38,13 @@ services:
       - backend_core_modules:/app/node_modules
       - backend_core_dist:/app/dist
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@fn-postgres:5432/${POSTGRES_DB}?schema=public
+      # - DATABASE_URL=${DATABASE_URL}
       - SCIENCE_SERVICE_URL=${SCIENCE_SERVICE_URL}
     networks:
       - fn-network
     depends_on:
-      postgres:
+      db-postgres:
         condition: service_healthy
       backend-science:
         condition: service_started
@@ -51,6 +56,8 @@ services:
       context: ./backend-science
       dockerfile: Dockerfile
     restart: unless-stopped
+    env_file:
+      - .env.compose
     ports:
       - "${SCIENCE_PORT}:8000"
     volumes:

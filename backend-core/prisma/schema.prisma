@@ -88,8 +88,9 @@ model EnrichedTransaction {
   importBatchId String
   originalLine  Int
 
-  date   DateTime
-  amount Decimal  @db.Decimal(10, 2) // Using Decimal on Postgres for currency precision
+  date     DateTime
+  amount   Decimal  @db.Decimal(10, 2) // Using Decimal on Postgres for currency precision
+  currency String   @default("EUR") @db.VarChar(3) // ISO 4217 (EUR, USD, etc.)
 
   operation String?
   details   String?

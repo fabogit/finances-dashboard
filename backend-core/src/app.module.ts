@@ -12,7 +12,8 @@ import { CategoriesModule } from './categories/categories.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath:
+        process.env.NODE_ENV === 'production' ? undefined : '.env.local',
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
