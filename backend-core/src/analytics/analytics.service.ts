@@ -7,14 +7,13 @@ import {
   GroupByOption,
 } from '../transactions/dto/get-transactions.dto';
 import { ForecastTransactionInputDto } from '../science/dto/forecast-transaction-input.dto';
-import { ForecastResponse } from '../science/dto/forecast-response.dto';
 import {
   BudgetAnalysisResponseDto,
   CategoryBudgetStatusDto,
   GetBudgetAnalysisDto,
 } from './dto/budget-analysis.dto';
-import { CategoriesRepository } from 'src/categories/categories.repository';
 import { BudgetRule, BudgetRuleType, Category } from '@prisma/client';
+import { CategoriesRepository } from '../categories/categories.repository';
 
 interface CategoryWithTree extends Category {
   budgetRule: BudgetRule | null;
@@ -132,7 +131,7 @@ export class AnalyticsService {
   }
 
   // 4. FORECAST (Integration)
-  async getForecast(threshold: number = 0.2): Promise<ForecastResponse> {
+  async getForecast(threshold: number = 0.2) {
     const endDate = new Date();
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - 18);
@@ -217,8 +216,7 @@ export class AnalyticsService {
 
       let limit: number | null = null;
       if (category.budgetRule) {
-        const ruleVal = Number(category.budgetRule.limitValue);
-
+        const ruleVal = category.budgetRule.limitValue.toNumber();
         if (category.budgetRule.ruleType === BudgetRuleType.FIXED_AMOUNT) {
           limit = ruleVal;
         } else if (
