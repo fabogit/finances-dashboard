@@ -65,6 +65,7 @@ model BudgetRule {
   ruleType   BudgetRuleType
   limitValue Decimal        @db.Decimal(10, 2)
 
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
