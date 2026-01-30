@@ -9,8 +9,8 @@ import * as XLSX from 'xlsx';
 import { randomUUID } from 'crypto';
 import { TransactionsRepository } from './transactions.repository';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
-import { ScienceService } from 'src/science/science.service';
-import { ProcessedTransactionDto } from 'src/science/dto/processed-transaction.dto';
+import { ScienceService } from '../science/science.service';
+import { ProcessedTransactionDto } from '../science/dto/processed-transaction.dto';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
 import {
   CreateTransactionDto,

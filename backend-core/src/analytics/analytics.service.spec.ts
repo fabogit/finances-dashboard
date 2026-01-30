@@ -10,7 +10,7 @@ import {
   Category,
   BudgetRule,
 } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/client'; // Nota: library è meglio di client per i tipi
+import { Decimal } from '@prisma/client/runtime/client';
 import { GetTransactionsFilterDto } from '../transactions/dto/get-transactions.dto';
 
 // --- TYPE HELPERS ---
@@ -264,7 +264,6 @@ describe('AnalyticsService (Unit)', () => {
         },
       ];
 
-      // Use ' ' per il ritorno strutturale del mock
       analyticsRepo.findForCategoryDistribution.mockResolvedValue(mockTx);
       transactionsRepo.buildWhereClause.mockReturnValue({});
 
@@ -282,7 +281,6 @@ describe('AnalyticsService (Unit)', () => {
     });
   });
 
-  // --- NUOVO TEST: Monthly Trends ---
   describe('getMonthlyTrends', () => {
     it('Should group transactions by Month and Type', async () => {
       // 01: +1000 Income, -500 Expense
