@@ -1,138 +1,203 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
-import { ScienceService } from './science.service';
+import { HttpService } from '@nestjs/axios';
+import {
+  AxiosResponse,
+  AxiosError,
+  InternalAxiosRequestConfig,
+  AxiosHeaders,
+} from 'axios';
 import { of, throwError } from 'rxjs';
-import { AxiosResponse, AxiosError, AxiosHeaders } from 'axios';
+import { ScienceService } from './science.service';
 import { RawTransaction } from '@prisma/client';
-import { ProcessedTransaction } from './interfaces/processed-transaction.interface';
+import { ForecastTransactionInputDto } from './dto/forecast-transaction-input.dto';
+import { MonthlyForecastDto } from './dto/forecast-response.dto';
+import { ProcessedTransactionDto } from './dto/processed-transaction.dto';
+
+const createAxiosResponse = <T>(data: T): AxiosResponse<T> => ({
+  data,
+  status: 200,
+  statusText: 'OK',
+  headers: {},
+  config: {
+    headers: new AxiosHeaders(),
+  } as InternalAxiosRequestConfig,
+});
+
+const createAxiosError = (
+  status: number,
+  message: string,
+  detail?: unknown,
+): AxiosError => {
+  const config = { headers: new AxiosHeaders() } as InternalAxiosRequestConfig;
+  const response = {
+    data: detail ? { detail } : {},
+    status,
+    statusText: 'Error',
+    headers: {},
+    config,
+  } as AxiosResponse;
+
+  return new AxiosError(message, String(status), config, undefined, response);
+};
 
 describe('ScienceService', () => {
   let service: ScienceService;
-  let httpService: HttpService;
-
-  // Mock data objects
-  const mockRawTransactions: RawTransaction[] = [
-    {
-      id: '1',
-      date: '46020',
-      operation: 'Payment',
-      details: 'Test Details',
-      account: 'Account A',
-      amount: '-100',
-      category: null,
-      originalLine: 1,
-    } as unknown as RawTransaction,
-  ];
-
-  const mockProcessedTransactions: ProcessedTransaction[] = [
-    {
-      id: '1',
-      date: '2025-12-29',
-      operation: 'Payment',
-      details: 'Test Details',
-      account: 'Account A',
-      amount: -100.0,
-      category: 'Uncategorized',
-    },
-  ];
-
-  const mockAxiosResponse: AxiosResponse<ProcessedTransaction[]> = {
-    data: mockProcessedTransactions,
-    status: 200,
-    statusText: 'OK',
-    headers: {},
-    config: {
-      headers: new AxiosHeaders(),
-    },
-  };
+  let httpService: jest.Mocked<HttpService>;
 
   beforeEach(async () => {
+    const mockHttpService = {
+      post: jest.fn(),
+    };
+
+    const mockConfigService = {
+      get: jest.fn((key: string) => {
+        if (key === 'SCIENCE_SERVICE_URL') return 'http://mock-science:8000';
+        return null;
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ScienceService,
-        {
-          provide: HttpService,
-          useValue: {
-            post: jest.fn(),
-          },
-        },
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockReturnValue('http://test-url'),
-          },
-        },
+        { provide: HttpService, useValue: mockHttpService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
     service = module.get<ScienceService>(ScienceService);
-    httpService = module.get<HttpService>(HttpService);
+    httpService = module.get(HttpService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  describe('getForecast', () => {
+    const mockInput: ForecastTransactionInputDto[] = [
+      {
+        id: 'tx_1',
+        date: '2025-01-01',
+        amount: -50,
+        category: 'Food',
+        subCategory: null,
+        account: 'Main',
+        details: 'Pizza',
+        operation: 'Payment',
+      },
+    ];
+
+    it('Should return forecast data on SUCCESS', async () => {
+      const mockForecast: MonthlyForecastDto[] = [
+        {
+          date: '2026-02',
+          balance: 500.5,
+          income: { total: 1000, fixed: 1000, variable: 0 },
+          expense: { total: 500, fixed: 200, variable: 300 },
+        },
+      ];
+
+      httpService.post.mockReturnValue(of(createAxiosResponse(mockForecast)));
+
+      const result = await service.getForecast(mockInput);
+
+      if ('error' in result) {
+        throw new Error('Should not return error object');
+      }
+
+      expect(result).toEqual(mockForecast);
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('Should HANDLE errors gracefully when Service is DOWN', async () => {
+      const error = createAxiosError(
+        503,
+        'Service Unavailable',
+        'Connection refused',
+      );
+      httpService.post.mockReturnValue(throwError(() => error));
+
+      const result = await service.getForecast(mockInput);
+
+      if (!('error' in result)) {
+        throw new Error('Should return error object');
+      }
+
+      expect(result.error).toContain('Science Service Unavailable');
+      expect(result.error).toContain('503');
+    });
+
+    it('Should capture FastAPI details if provided', async () => {
+      const validationDetail = [
+        { loc: ['body', 'amount'], msg: 'field required' },
+      ];
+      const error = createAxiosError(
+        422,
+        'Unprocessable Entity',
+        validationDetail,
+      );
+
+      httpService.post.mockReturnValue(throwError(() => error));
+
+      const result = await service.getForecast(mockInput);
+
+      if (!('error' in result)) {
+        throw new Error('Should return error object');
+      }
+
+      expect(result.error).toContain('422');
+      expect(result.error).toContain('field required');
+    });
   });
 
   describe('processTransactions', () => {
-    it('should successfully send transactions and return processed data', async () => {
-      // Arrange
-      const postSpy = jest
-        .spyOn(httpService, 'post')
-        .mockReturnValue(of(mockAxiosResponse));
+    const mockRawTx: RawTransaction[] = [
+      {
+        id: 'raw_1',
+        importBatchId: 'batch_1',
+        originalLine: 1,
+        date: '2025-01-01',
+        amount: '-20.50',
+        details: 'Test Raw',
+        operation: null,
+        account: null,
+        currency: 'EUR',
+        category: null,
+        accountingStatus: 'PENDING',
+        createdAt: new Date(),
+      },
+    ];
 
-      // Act
-      const result = await service.processTransactions(mockRawTransactions);
+    it('Should return processed transactions on SUCCESS', async () => {
+      const mockProcessed: ProcessedTransactionDto[] = [
+        {
+          id: 'processed_1',
+          date: '2025-01-01',
+          amount: -20,
+          category: 'Food',
+          subCategory: 'Groceries',
+          account: 'Bank',
+          details: 'Coop',
+          operation: 'POS',
+        },
+      ];
 
-      // Assert
-      expect(postSpy).toHaveBeenCalledWith(
-        'http://test-url/process',
-        mockRawTransactions,
+      httpService.post.mockReturnValue(of(createAxiosResponse(mockProcessed)));
+
+      const result = await service.processTransactions(mockRawTx);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].category).toBe('Food');
+    });
+
+    it('Should THROW Error when Service fails', async () => {
+      const error = createAxiosError(
+        500,
+        'Internal Server Error',
+        'Python script crashed',
       );
-      expect(result).toEqual(mockProcessedTransactions);
-    });
 
-    it('should handle and throw formatted error when Axios request fails', async () => {
-      // Arrange
-      const errorResponse = {
-        message: 'Internal Server Error',
-        response: { status: 500 },
-      };
+      httpService.post.mockReturnValue(throwError(() => error));
 
-      const postSpy = jest
-        .spyOn(httpService, 'post')
-        .mockReturnValue(
-          throwError(
-            () =>
-              new AxiosError(
-                errorResponse.message,
-                '500',
-                undefined,
-                undefined,
-                { status: 500 } as unknown as AxiosResponse,
-              ),
-          ),
-        );
-
-      // Act & Assert
-      await expect(
-        service.processTransactions(mockRawTransactions),
-      ).rejects.toThrow('Internal Server Error (Status: 500)');
-
-      expect(postSpy).toHaveBeenCalled();
-    });
-
-    it('should handle generic errors unrelated to Axios', async () => {
-      // Arrange
-      const genericError = new Error('Network unreachable');
-      jest
-        .spyOn(httpService, 'post')
-        .mockReturnValue(throwError(() => genericError));
-
-      // Act & Assert
-      await expect(
-        service.processTransactions(mockRawTransactions),
-      ).rejects.toThrow('Network unreachable');
+      await expect(service.processTransactions(mockRawTx)).rejects.toThrow(
+        'HTTP 500: "Python script crashed"',
+      );
     });
   });
 });

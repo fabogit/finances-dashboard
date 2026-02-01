@@ -85,7 +85,7 @@ export class AnalyticsRepository {
 
   // --- BUDGET ANALYSIS QUERIES ---
 
-  async getMonthlyIncome(start: Date, end: Date): Promise<number> {
+  async getMonthlyIncome(start: Date, end: Date) {
     const agg = await this.prisma.enrichedTransaction.aggregate({
       _sum: { amount: true },
       where: {
