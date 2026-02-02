@@ -34,7 +34,7 @@ model Category {
 
   // Hierarchy
   parentId String?
-  parent   Category?  @relation("Hierarchy", fields: [parentId], references: [id])
+  parent   Category?  @relation("Hierarchy", fields: [parentId], references: [id], onDelete: Restrict)
   children Category[] @relation("Hierarchy")
 
   // Properties
@@ -97,9 +97,9 @@ model EnrichedTransaction {
   details   String?
   account   String?
 
-  // --- NEW CATEGORY SYSTEM ---
+  // Hierarchy
   categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id])
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
