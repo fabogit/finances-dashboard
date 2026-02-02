@@ -4,18 +4,16 @@ import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { EnrichedTransaction, ExpenseType } from '@prisma/client';
+import { ExpenseType } from '@prisma/client';
+import {
+  TransactionDto,
+  PaginatedTransactionsResponseDto,
+} from '../src/transactions/dto/transaction.dto';
 
-// Interfacce di risposta
 interface NestErrorResponse {
   statusCode: number;
   message: string | string[];
   error: string;
-}
-
-interface PaginatedResponse<T> {
-  data: T[];
-  meta?: unknown;
 }
 
 describe('TransactionsModule (E2E)', () => {
@@ -24,7 +22,6 @@ describe('TransactionsModule (E2E)', () => {
   let server: Server;
 
   let createdTxId: string;
-  // Nota: Salviamo il NOME della categoria, perché il tuo DTO lavora con i nomi, non gli ID
   const testCategoryName = 'Test Grocery';
 
   beforeAll(async () => {
@@ -41,12 +38,10 @@ describe('TransactionsModule (E2E)', () => {
     prisma = app.get<PrismaService>(PrismaService);
     server = app.getHttpServer() as Server;
 
-    // Pulizia
     await prisma.budgetRule.deleteMany();
     await prisma.enrichedTransaction.deleteMany();
     await prisma.category.deleteMany();
 
-    // Seed Categoria (La creiamo nel DB così il Service può trovarla se fa il lookup per nome)
     await prisma.category.create({
       data: {
         name: testCategoryName,
@@ -60,24 +55,19 @@ describe('TransactionsModule (E2E)', () => {
     await app.close();
   });
 
-  // --- 1. VALIDATION TESTS ---
-
   it('1. Should reject invalid payload (Validation Pipe)', async () => {
     const invalidPayload = {
       details: 'Invalid Tx',
-      // Manca amount, date, category...
     };
 
     const res = await request(server)
       .post('/transactions')
       .send(invalidPayload)
       .expect(400);
-
     const body = res.body as NestErrorResponse;
+
     expect(body.message).toBeInstanceOf(Array);
   });
-
-  // --- 2. CREATE TESTS ---
 
   it('2. Should create a valid transaction', async () => {
     const payload = {
@@ -86,7 +76,6 @@ describe('TransactionsModule (E2E)', () => {
       details: 'Supermarket Shopping',
       account: 'Main Account',
       currency: 'EUR',
-      // FIX: Usiamo il NOME come richiesto dal tuo DTO, non l'ID
       category: testCategoryName,
     };
 
@@ -94,24 +83,23 @@ describe('TransactionsModule (E2E)', () => {
       .post('/transactions')
       .send(payload)
       .expect(201);
+    const body = res.body as TransactionDto;
 
-    const body = res.body as EnrichedTransaction;
+    if (body.id) {
+      createdTxId = body.id;
+    }
 
     expect(body.id).toBeDefined();
     expect(Number(body.amount)).toBe(-50.5);
-    // Verifichiamo che il service abbia collegato correttamente la categoria (se il service lo fa)
-    // Se il tuo service ritorna il DTO di risposta con 'category' stringa, controlla quello.
-    // Assumiamo ritorni l'entity DB arricchita:
-    if (body.categoryId) {
-      expect(body.categoryId).toBeDefined();
-    }
 
-    createdTxId = body.id;
+    const categoryResponse = body.category as unknown as { name: string };
+    expect(categoryResponse.name).toBe(testCategoryName);
   });
 
-  // --- 3. UPDATE TESTS ---
-
   it('3. Should update transaction details', async () => {
+    if (!createdTxId)
+      throw new Error('Skipping update test: No Transaction ID created');
+
     const updatePayload = {
       details: 'Supermarket Shopping - Updated',
       amount: -55.0,
@@ -121,17 +109,14 @@ describe('TransactionsModule (E2E)', () => {
       .patch(`/transactions/${createdTxId}`)
       .send(updatePayload)
       .expect(200);
+    const body = res.body as TransactionDto;
 
-    const body = res.body as EnrichedTransaction;
     expect(body.details).toBe(updatePayload.details);
     expect(Number(body.amount)).toBe(-55.0);
   });
 
-  // --- 4. FILTER/SEARCH TESTS ---
-
   it('4. Should filter transactions by date range', async () => {
-    // Creazione diretta nel DB (bypassiamo il controller)
-    // QUI servono i campi obbligatori del DB perché non c'è il Service a mettere i default
+    // Seed
     await prisma.enrichedTransaction.create({
       data: {
         amount: -100,
@@ -139,7 +124,6 @@ describe('TransactionsModule (E2E)', () => {
         details: 'Old Tx',
         account: 'Main Account',
         currency: 'EUR',
-        // FIX: Campi obbligatori a livello di Schema DB
         importBatchId: 'TEST_MANUAL_SEED',
         originalLine: 999,
       },
@@ -150,23 +134,30 @@ describe('TransactionsModule (E2E)', () => {
       .query({ startDate: '2025-01-01', endDate: '2025-12-31' })
       .expect(200);
 
-    const body = res.body as
-      | EnrichedTransaction[]
-      | PaginatedResponse<EnrichedTransaction>;
-    let results: EnrichedTransaction[];
-
-    if (Array.isArray(body)) {
-      results = body;
-    } else {
-      results = body.data;
-    }
+    const body = res.body as PaginatedTransactionsResponseDto;
+    const results = body.data;
 
     expect(results.length).toBeGreaterThanOrEqual(1);
 
-    const found = results.find((t) => t.id === createdTxId);
-    expect(found).toBeDefined();
+    if (createdTxId) {
+      const found = results.find((t) => t.id === createdTxId);
+      expect(found).toBeDefined();
+    }
 
     const oldFound = results.find((t) => t.details === 'Old Tx');
     expect(oldFound).toBeUndefined();
+  });
+
+  it('5. Should search transactions by text (details)', async () => {
+    const res = await request(server)
+      .get('/transactions')
+      .query({ search: 'Supermarket' }) // Query param
+      .expect(200);
+    const body = res.body as PaginatedTransactionsResponseDto;
+    const results = body.data;
+
+    expect(results.length).toBe(1);
+    expect(results[0].id).toBe(createdTxId);
+    expect(results[0].details).toContain('Supermarket');
   });
 });

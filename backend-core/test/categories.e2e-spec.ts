@@ -4,14 +4,8 @@ import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { Category, ExpenseType } from '@prisma/client';
-
-interface CategoryResponse extends Category {
-  subs?: CategoryResponse[];
-  _count?: {
-    transactions: number;
-  };
-}
+import { ExpenseType } from '@prisma/client';
+import { CategoryResponseDto } from '../src/categories/dto/category-response.dto';
 
 describe('CategoriesModule (E2E)', () => {
   let app: INestApplication;
@@ -55,11 +49,11 @@ describe('CategoriesModule (E2E)', () => {
       .post('/categories')
       .send(payload)
       .expect(201);
+    const body = res.body as CategoryResponseDto;
 
-    const body = res.body as CategoryResponse;
-
-    expect(body).toHaveProperty('id');
+    expect(body.id).toBeDefined();
     expect(body.name).toBe(payload.name);
+    expect(body.isSystem).toBe(false);
 
     macroId = body.id;
   });
@@ -77,7 +71,7 @@ describe('CategoriesModule (E2E)', () => {
       .send(payload)
       .expect(201);
 
-    const body = res.body as CategoryResponse;
+    const body = res.body as CategoryResponseDto;
     expect(body.parentId).toBe(macroId);
   });
 
@@ -94,14 +88,20 @@ describe('CategoriesModule (E2E)', () => {
 
   it('4. Should retrieve the Category Tree structure', async () => {
     const res = await request(server).get('/categories').expect(200);
+    const tree = res.body as CategoryResponseDto[];
 
-    const tree = res.body as CategoryResponse[];
     expect(Array.isArray(tree)).toBe(true);
     const myMacro = tree.find((c) => c.id === macroId);
     expect(myMacro).toBeDefined();
 
-    if (myMacro?.subs && myMacro.subs.length > 0) {
-      expect(myMacro.subs[0].name).toBe('Test Sub');
+    if (myMacro?.children && myMacro.children.length > 0) {
+      expect(myMacro.children[0].name).toBe('Test Sub');
+    } else {
+      throw new Error('Children not found or empty');
     }
+  });
+
+  it('5. Should Prevent Deletion of Category with Children', async () => {
+    await request(server).delete(`/categories/${macroId}`).expect(409); // ConflictException
   });
 });

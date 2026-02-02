@@ -99,20 +99,137 @@ export class TransactionsRepository {
 
   // --- BULK CREATE (Enriched) ---
   async createManyEnriched(data: EnrichedDataInput[]) {
+    const uniqueMacros = new Set<string>();
+    const uniqueSubs = new Set<string>();
+
+    for (const item of data) {
+      if (item.category) uniqueMacros.add(item.category);
+      if (item.category && item.subCategory) {
+        uniqueSubs.add(`${item.category}:${item.subCategory}`);
+      }
+    }
+
+    let fallbackCat = await this.prisma.category.findFirst({
+      where: { name: 'UNCATEGORIZED', parentId: null },
+    });
+
+    if (!fallbackCat) {
+      this.logger.log('Creating system fallback category: UNCATEGORIZED');
+      fallbackCat = await this.prisma.category.create({
+        data: {
+          name: 'UNCATEGORIZED',
+          isSystem: true,
+          isVerified: true,
+          type: 'UNCLASSIFIED',
+          icon: '❓',
+        },
+      });
+    }
+    const fallbackId = fallbackCat.id;
+
+    const existingMacros = await this.prisma.category.findMany({
+      where: { name: { in: Array.from(uniqueMacros) }, parentId: null },
+    });
+
+    const existingMacroNames = new Set(existingMacros.map((c) => c.name));
+    const missingMacros = Array.from(uniqueMacros).filter(
+      (name) => !existingMacroNames.has(name),
+    );
+
+    if (missingMacros.length > 0) {
+      await this.prisma.category.createMany({
+        data: missingMacros.map((name) => ({
+          name,
+          isSystem: false,
+          isVerified: false,
+          parentId: null,
+          type: 'UNCLASSIFIED',
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    const allMacros = await this.prisma.category.findMany({
+      where: { name: { in: Array.from(uniqueMacros) }, parentId: null },
+    });
+    const macroMap = new Map<string, string>();
+    allMacros.forEach((c) => macroMap.set(c.name, c.id));
+
+    const subNamesOnly = Array.from(uniqueSubs).map((s) => s.split(':')[1]);
+    const existingSubs = await this.prisma.category.findMany({
+      where: { name: { in: subNamesOnly }, parentId: { not: null } },
+      include: { parent: true },
+    });
+
+    const existingSubKeys = new Set(
+      existingSubs.map((s) => `${s.parent?.name}:${s.name}`),
+    );
+
+    const transactionsToCreateSubs: Prisma.CategoryCreateManyInput[] = [];
+    for (const key of uniqueSubs) {
+      if (!existingSubKeys.has(key)) {
+        const [macroName, subName] = key.split(':');
+        const parentId = macroMap.get(macroName);
+        if (parentId) {
+          transactionsToCreateSubs.push({
+            name: subName,
+            parentId: parentId,
+            isSystem: false,
+            isVerified: false,
+            type: 'UNCLASSIFIED',
+          });
+        }
+      }
+    }
+
+    if (transactionsToCreateSubs.length > 0) {
+      await this.prisma.category.createMany({
+        data: transactionsToCreateSubs,
+        skipDuplicates: true,
+      });
+    }
+
+    const allSubs = await this.prisma.category.findMany({
+      where: {
+        name: { in: subNamesOnly },
+        parentId: { in: Array.from(macroMap.values()) },
+      },
+      include: { parent: true },
+    });
+    const subMap = new Map<string, string>();
+    allSubs.forEach((s) => {
+      if (s.parent) subMap.set(`${s.parent.name}:${s.name}`, s.id);
+    });
+
     const transactionsToInsert: Prisma.EnrichedTransactionCreateManyInput[] =
       [];
 
     for (const item of data) {
-      const categoryId = await this.resolveCategoryId(
-        item.category,
-        item.subCategory,
-      );
+      let categoryId: string | undefined;
+
+      // 1. Sub
+      if (item.subCategory) {
+        categoryId = subMap.get(`${item.category}:${item.subCategory}`);
+      }
+
+      // 2. Macro
+      if (!categoryId) {
+        categoryId = macroMap.get(item.category);
+      }
+
+      // 3. FALLBACK
+      if (!categoryId) {
+        this.logger.warn(
+          `Mapping failed for ${item.category} -> ${item.subCategory}. Using fallback.`,
+        );
+        categoryId = fallbackId;
+      }
 
       transactionsToInsert.push({
         importBatchId: item.importBatchId,
         originalLine: item.originalLine,
         date: item.date,
-        amount: new Prisma.Decimal(item.amount), // number -> Decimal (Postgres)
+        amount: new Prisma.Decimal(item.amount),
         operation: item.operation,
         details: item.details,
         account: item.account,

@@ -4,6 +4,7 @@ import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { AnalyticsSummaryDto } from '../src/analytics/dto/analytics-response.dto';
 
 describe('AppController (E2E)', () => {
   let app: INestApplication;
@@ -32,7 +33,6 @@ describe('AppController (E2E)', () => {
 
   it('Should connect to the TEST database', () => {
     const dbUrl = process.env.DATABASE_URL;
-    console.log('🧪 Testing against DB:', dbUrl);
     expect(dbUrl).toContain('finance_test_db');
   });
 
@@ -43,13 +43,11 @@ describe('AppController (E2E)', () => {
       .get('/analytics/summary')
       .expect(200);
 
-    expect(response.body).toEqual(
-      expect.objectContaining({
-        balance: 0,
-        expense: 0,
-        income: 0,
-        savingsRate: 0,
-      }),
-    );
+    const body = response.body as AnalyticsSummaryDto;
+
+    expect(body.balance).toBe(0);
+    expect(body.expense).toBe(0);
+    expect(body.income).toBe(0);
+    expect(body.savingsRate).toBe(0);
   });
 });

@@ -98,7 +98,7 @@
     "test": "jest",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json --detectOpenHandles",
+    "test:e2e": "jest --config ./test/jest-e2e.json --detectOpenHandles --runInBand",
     "test:e2e:docker": "pnpm run db:test:up && pnpm run db:test:migrate && pnpm run test:e2e && pnpm run db:test:down",
     "test:watch": "jest --watch"
   },

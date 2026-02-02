@@ -26,6 +26,7 @@ CREATE TABLE "BudgetRule" (
     "categoryId" TEXT NOT NULL,
     "ruleType" "BudgetRuleType" NOT NULL,
     "limitValue" DECIMAL(10,2) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "BudgetRule_pkey" PRIMARY KEY ("id")
@@ -74,10 +75,10 @@ CREATE UNIQUE INDEX "Category_name_parentId_key" ON "Category"("name", "parentId
 CREATE UNIQUE INDEX "BudgetRule_categoryId_key" ON "BudgetRule"("categoryId");
 
 -- AddForeignKey
-ALTER TABLE "Category" ADD CONSTRAINT "Category_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Category" ADD CONSTRAINT "Category_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "BudgetRule" ADD CONSTRAINT "BudgetRule_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EnrichedTransaction" ADD CONSTRAINT "EnrichedTransaction_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "EnrichedTransaction" ADD CONSTRAINT "EnrichedTransaction_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
