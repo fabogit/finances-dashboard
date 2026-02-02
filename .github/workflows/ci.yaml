@@ -1,14 +1,18 @@
 name: Backend CI
 
 on:
+  workflow_dispatch:
+  
   push:
     branches: ["main", "develop"]
     paths:
       - "backend-core/**"
+      - ".github/workflows/**"
   pull_request:
     branches: ["main", "develop"]
     paths:
       - "backend-core/**"
+      - ".github/workflows/**"
 
 jobs:
   # --- JOB 1: QUALITY CHECK (Linting & Formatting) ---
