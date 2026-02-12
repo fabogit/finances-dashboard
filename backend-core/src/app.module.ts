@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
-import { TransactionsModule } from './transactions/transactions.module';
-import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
-import { ScienceModule } from './science/science.module';
+import { PrismaModule } from './prisma/prisma.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AssetsModule } from './assets/assets.module';
 import { CategoriesModule } from './categories/categories.module';
+import { GoalsModule } from './goals/goals.module';
+import { ScienceModule } from './science/science.module';
+import { TransactionsModule } from './transactions/transactions.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { CategoriesModule } from './categories/categories.module';
     ScienceModule,
     AnalyticsModule,
     CategoriesModule,
+    AssetsModule,
+    GoalsModule,
   ],
   controllers: [],
   providers: [],
