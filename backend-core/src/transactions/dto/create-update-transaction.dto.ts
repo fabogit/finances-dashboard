@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsNotEmpty,
   Length,
+  IsUUID,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
@@ -26,6 +27,16 @@ export class CreateTransactionDto {
   @IsNotEmpty()
   @IsNumber()
   amount: number;
+
+  @ApiProperty({
+    description:
+      'UUID of the Asset linked to this transaction (e.g., Bank Account)',
+    required: false,
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsOptional()
+  @IsUUID()
+  assetId?: string;
 
   @ApiProperty({ example: 'USD', description: 'Currency code', default: 'EUR' })
   @IsOptional()
@@ -64,6 +75,15 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsString()
   operation: string = 'MANUAL_ENTRY';
+
+  @ApiProperty({
+    description: 'UUID of the Savings Goal linked to this transaction',
+    required: false,
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsOptional()
+  @IsUUID()
+  savingsGoalId?: string;
 
   @ApiProperty({ example: 'Leisure Misc', required: false })
   @IsOptional()

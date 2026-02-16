@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from 'src/prisma/prisma.module';
+import { AssetsModule } from 'src/assets/assets.module';
+import { GoalsModule } from 'src/goals/goals.module';
 import { ScienceModule } from 'src/science/science.module';
 import { TransactionsController } from './transactions.controller';
 import { TransactionsService } from './transactions.service';
@@ -8,7 +10,7 @@ import { TransactionsRepository } from './transactions.repository';
 @Module({
   controllers: [TransactionsController],
   exports: [TransactionsRepository],
-  imports: [PrismaModule, ScienceModule],
+  imports: [AssetsModule, GoalsModule, PrismaModule, ScienceModule],
   providers: [TransactionsService, TransactionsRepository],
 })
 export class TransactionsModule {}
