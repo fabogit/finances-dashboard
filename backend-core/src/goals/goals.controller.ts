@@ -30,12 +30,22 @@ export class GoalsController {
 
   @Get()
   @ApiOperation({ summary: 'List all goals (Active first)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all savings goals',
+    type: [CreateGoalDto],
+  })
   findAll() {
     return this.goalsService.findAll();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get Goal details with recent transactions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Goal details including recent transactions',
+  })
+  @ApiResponse({ status: 404, description: 'Goal not found' })
   @UsePipes(new ValidationPipe({ transform: true }))
   findOne(@Param('id') id: string, @Query() query: GetGoalQueryDto) {
     return this.goalsService.findOne(id, query.transactionLimit);
@@ -43,12 +53,16 @@ export class GoalsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update goal details (name, target, deadline)' })
+  @ApiResponse({ status: 200, description: 'Goal updated successfully' })
+  @ApiResponse({ status: 404, description: 'Goal not found' })
   update(@Param('id') id: string, @Body() body: UpdateGoalDto) {
     return this.goalsService.update(id, body);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a goal' })
+  @ApiResponse({ status: 200, description: 'Goal deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Goal not found' })
   remove(@Param('id') id: string) {
     return this.goalsService.remove(id);
   }

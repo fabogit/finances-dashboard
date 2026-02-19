@@ -76,9 +76,9 @@ export class GoalsRepository {
   async updateProgress(
     id: string,
     deltaAmount: number,
-    transactionClient?: Prisma.TransactionClient,
+    tx?: Prisma.TransactionClient,
   ) {
-    const client = transactionClient || this.prisma;
+    const client = tx || this.prisma;
 
     return client.savingsGoal.update({
       where: {
