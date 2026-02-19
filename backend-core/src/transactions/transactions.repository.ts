@@ -279,16 +279,20 @@ export class TransactionsRepository {
   }
 
   // --- CRUD SINGLE ---
-  async create(dto: CreateTransactionDto) {
+  async create(dto: CreateTransactionDto, tx?: Prisma.TransactionClient) {
+    const client = tx || this.prisma; // Usa la transazione se presente
+
+    // Nota: resolveCategoryId usa internamente this.prisma.
+    // Per ora va bene così (creare categorie fuori dalla transazione principale è accettabile).
     const categoryId = await this.resolveCategoryId(
       dto.category,
       dto.subCategory,
     );
 
-    // If the user doesn't manually pass an assetId, we check if the category has a default one
     let finalAssetId = dto.assetId;
     if (!finalAssetId) {
-      const category = await this.prisma.category.findUnique({
+      // Usiamo 'client' per leggere, così se siamo in una tx vediamo dati coerenti
+      const category = await client.category.findUnique({
         where: { id: categoryId },
         select: { defaultAssetId: true },
       });
@@ -297,7 +301,7 @@ export class TransactionsRepository {
       }
     }
 
-    return this.prisma.enrichedTransaction.create({
+    return client.enrichedTransaction.create({
       data: {
         date: dto.date,
         amount: new Prisma.Decimal(dto.amount),
@@ -358,8 +362,9 @@ export class TransactionsRepository {
     });
   }
 
-  async delete(id: string) {
-    return this.prisma.enrichedTransaction.delete({ where: { id } });
+  async delete(id: string, tx?: Prisma.TransactionClient) {
+    const client = tx || this.prisma;
+    return client.enrichedTransaction.delete({ where: { id } });
   }
 
   async findById(id: string) {

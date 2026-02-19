@@ -80,6 +80,7 @@ export class TransactionsController {
   @Get('raw')
   @ApiOperation({ summary: 'Get all RAW transactions (Debug only)' })
   @ApiResponse({ status: 200, description: 'List of raw transactions' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async findAllRaw() {
     return this.transactionsService.getAllRaw();
   }
@@ -92,6 +93,7 @@ export class TransactionsController {
     description: 'Paginated list of enriched transactions',
     type: PaginatedTransactionsResponseDto,
   })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async findAllEnriched(@Query() filters: GetTransactionsFilterDto) {
     return this.transactionsService.getAllEnriched(filters);
   }
@@ -104,6 +106,7 @@ export class TransactionsController {
     description: 'Transaction created successfully',
     type: TransactionDto,
   })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async create(@Body() createDto: CreateTransactionDto) {
     return this.transactionsService.create(createDto);
   }
@@ -117,6 +120,7 @@ export class TransactionsController {
     type: TransactionDto,
   })
   @ApiResponse({ status: 404, description: 'Transaction not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDto: UpdateTransactionDto,
@@ -133,6 +137,7 @@ export class TransactionsController {
     type: TransactionDto,
   })
   @ApiResponse({ status: 404, description: 'Transaction not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.transactionsService.delete(id);
   }

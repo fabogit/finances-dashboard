@@ -1,4 +1,5 @@
 import {
+  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -8,8 +9,11 @@ import { Prisma, RawTransaction } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { randomUUID } from 'crypto';
 import { TransactionsRepository } from './transactions.repository';
-import { BankExportRow } from './interfaces/bank-export-row.interface';
+import { AssetsService } from 'src/assets/assets.service';
+import { GoalsService } from 'src/goals/goals.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { ScienceService } from '../science/science.service';
+import { BankExportRow } from './interfaces/bank-export-row.interface';
 import { ProcessedTransactionDto } from '../science/dto/processed-transaction.dto';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
 import {
@@ -24,6 +28,9 @@ export class TransactionsService {
   constructor(
     private readonly transactionsRepo: TransactionsRepository,
     private readonly scienceService: ScienceService,
+    private readonly assetsService: AssetsService,
+    private readonly goalsService: GoalsService,
+    private readonly prisma: PrismaService,
   ) {}
 
   private getErrorMessage(error: unknown): string {
@@ -186,14 +193,42 @@ export class TransactionsService {
   async create(dto: CreateTransactionDto) {
     try {
       this.logger.log(`Creating manual transaction: ${dto.details}`);
-      return await this.transactionsRepo.create(dto);
+
+      // AVVIO TRANSAZIONE ATOMICA
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Crea la Transazione
+        const transaction = await this.transactionsRepo.create(dto, tx);
+
+        // 2. Aggiorna Asset (se collegato)
+        if (transaction.assetId) {
+          const amount = transaction.amount.toNumber();
+          await this.assetsService.updateBalanceWithDelta(
+            transaction.assetId,
+            amount,
+            tx,
+          );
+        }
+
+        // 3. Aggiorna Goal (se collegato)
+        if (transaction.savingsGoalId) {
+          const amount = transaction.amount.toNumber();
+          await this.goalsService.updateProgress(
+            transaction.savingsGoalId,
+            amount,
+            tx,
+          );
+        }
+
+        return transaction;
+      });
     } catch (error) {
       const msg = this.getErrorMessage(error);
       this.logger.error(`Create failed: ${msg}`);
+      // Rilancia eccezioni HTTP (es. NotFound) così il controller risponde giusto
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Could not create transaction');
     }
   }
-
   async update(id: string, dto: UpdateTransactionDto) {
     try {
       const existing = await this.transactionsRepo.findById(id);
@@ -213,13 +248,41 @@ export class TransactionsService {
 
   async delete(id: string) {
     try {
+      // 1. Leggi transazione per sapere cosa stornare
       const existing = await this.transactionsRepo.findById(id);
       if (!existing) {
-        this.logger.warn(`Delete failed: Transaction ${id} not found`);
         throw new NotFoundException(`Transaction with ID ${id} not found`);
       }
 
-      return await this.transactionsRepo.delete(id);
+      // AVVIO TRANSAZIONE ATOMICA
+      await this.prisma.$transaction(async (tx) => {
+        // 2. Elimina la Transazione
+        await this.transactionsRepo.delete(id, tx);
+
+        // 3. Storna Asset (Inverti segno)
+        if (existing.assetId) {
+          const amountToRevert = existing.amount.toNumber() * -1;
+          await this.assetsService.updateBalanceWithDelta(
+            existing.assetId,
+            amountToRevert,
+            tx,
+          );
+        }
+
+        // 4. Storna Goal (Inverti segno)
+        if (existing.savingsGoalId) {
+          const amountToRevert = existing.amount.toNumber() * -1;
+          await this.goalsService.updateProgress(
+            existing.savingsGoalId,
+            amountToRevert,
+            tx,
+          );
+        }
+      });
+
+      return {
+        message: 'Transaction deleted and balances reverted successfully',
+      };
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       const msg = this.getErrorMessage(error);
