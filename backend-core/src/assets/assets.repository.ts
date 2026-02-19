@@ -21,7 +21,6 @@ export class AssetsRepository {
           currency: dto.currency || 'EUR',
         },
       });
-
       await tx.assetHistory.create({
         data: {
           assetId: asset.id,
@@ -29,7 +28,6 @@ export class AssetsRepository {
           date: new Date(),
         },
       });
-
       return asset;
     });
   }
@@ -62,25 +60,68 @@ export class AssetsRepository {
   }
 
   // --- UPDATE BALANCE (With History) ---
-  async updateBalance(id: string, asset: UpdateAssetBalanceDto) {
-    return this.prisma.$transaction(async (tx) => {
-      const updatedAsset = await tx.asset.update({
+  async updateBalance(
+    id: string,
+    dto: UpdateAssetBalanceDto,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const logic = async (transactionClient: Prisma.TransactionClient) => {
+      const updatedAsset = await transactionClient.asset.update({
         where: { id },
         data: {
-          balance: new Prisma.Decimal(asset.balance),
+          balance: new Prisma.Decimal(dto.balance),
         },
       });
 
-      await tx.assetHistory.create({
+      await transactionClient.assetHistory.create({
         data: {
           assetId: id,
-          balance: new Prisma.Decimal(asset.balance),
-          date: asset.date ? new Date(asset.date) : new Date(),
+          balance: new Prisma.Decimal(dto.balance),
+          date: dto.date ? new Date(dto.date) : new Date(),
         },
       });
 
       return updatedAsset;
-    });
+    };
+
+    if (tx) {
+      return logic(tx);
+    } else {
+      return this.prisma.$transaction(logic);
+    }
+  }
+
+  // --- UPDATE BALANCE WITH DELTA (For Transactions) ---
+  async updateBalanceWithDelta(
+    id: string,
+    delta: number,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const logic = async (transactionClient: Prisma.TransactionClient) => {
+      const updatedAsset = await transactionClient.asset.update({
+        where: { id },
+        data: {
+          balance: { increment: new Prisma.Decimal(delta) },
+        },
+      });
+
+      // Snapshot
+      await transactionClient.assetHistory.create({
+        data: {
+          assetId: id,
+          balance: updatedAsset.balance,
+          date: new Date(),
+        },
+      });
+
+      return updatedAsset;
+    };
+
+    if (tx) {
+      return logic(tx);
+    } else {
+      return this.prisma.$transaction(logic);
+    }
   }
 
   // --- DELETE ---

@@ -31,12 +31,19 @@ export class AssetsController {
 
   @Get()
   @ApiOperation({ summary: 'List all assets' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all assets',
+    type: [CreateAssetDto],
+  })
   findAll() {
     return this.assetsService.findAll();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get Asset details with history' })
+  @ApiResponse({ status: 200, description: 'Asset details including history' })
+  @ApiResponse({ status: 404, description: 'Asset not found' })
   @UsePipes(new ValidationPipe({ transform: true }))
   findOne(@Param('id') id: string, @Query() query: GetAssetQueryDto) {
     return this.assetsService.findOne(id, query.historyLimit);
@@ -44,18 +51,27 @@ export class AssetsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update asset details (name, institution, type)' })
+  @ApiResponse({ status: 200, description: 'Asset updated successfully' })
+  @ApiResponse({ status: 404, description: 'Asset not found' })
   update(@Param('id') id: string, @Body() body: UpdateAssetDto) {
     return this.assetsService.update(id, body);
   }
 
   @Patch(':id/balance')
   @ApiOperation({ summary: 'Update asset value and record history snapshot' })
+  @ApiResponse({
+    status: 200,
+    description: 'Asset balance updated successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Asset not found' })
   updateBalance(@Param('id') id: string, @Body() body: UpdateAssetBalanceDto) {
     return this.assetsService.updateBalance(id, body);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete asset and its history' })
+  @ApiResponse({ status: 200, description: 'Asset deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Asset not found' })
   remove(@Param('id') id: string) {
     return this.assetsService.remove(id);
   }
