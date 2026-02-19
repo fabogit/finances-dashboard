@@ -3,6 +3,8 @@ import {
   ExpenseType,
   BudgetRuleType,
   Prisma,
+  AssetType,
+  GoalStatus,
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as dotenv from 'dotenv';
@@ -12,6 +14,8 @@ dotenv.config();
 const connectionString = process.env.DATABASE_URL;
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
+
+// --- DATA STRUCTURES ---
 
 const SEED_DATA = [
   {
@@ -113,8 +117,10 @@ const SEED_DATA = [
     subs: [{ name: 'Misc Expenses', type: ExpenseType.UNCLASSIFIED }],
   },
 ];
+
 const categoryMap: Record<string, Record<string, string>> = {};
-const SEED_BATCH_ID = 'SEED_2025_v1';
+const assetMap: Record<string, string> = {};
+const SEED_BATCH_ID = 'SEED_2025_v2_WEALTH';
 
 // --- HELPER FUNCTIONS ---
 
@@ -134,6 +140,84 @@ const getRandomAmount = (min: number, max: number) => {
 
 // --- SEEDING FUNCTIONS ---
 
+async function seedAssets() {
+  console.log('🌱 Seeding Assets & History...');
+
+  // 1. Cash: Main Bank Account
+  const mainAccount = await prisma.asset.create({
+    data: {
+      name: 'Main Account',
+      type: AssetType.CASH,
+      institution: 'Intesa Sanpaolo',
+      balance: 5400.0,
+      currency: 'EUR',
+    },
+  });
+  assetMap['Main Account'] = mainAccount.id;
+
+  // 2. Investment: ETF Portfolio (Accumulating)
+  const etfPortfolio = await prisma.asset.create({
+    data: {
+      name: 'ETF World Portfolio',
+      type: AssetType.INVESTMENT,
+      institution: 'Directa',
+      balance: 15200.0,
+      currency: 'EUR',
+    },
+  });
+  assetMap['ETF Portfolio'] = etfPortfolio.id;
+
+  // Seed History for ETF (Simulate growth over 2024/2025)
+  let historyValue = 12000;
+  for (let m = 0; m < 12; m++) {
+    historyValue += getRandomAmount(100, 300);
+    await prisma.assetHistory.create({
+      data: {
+        assetId: etfPortfolio.id,
+        date: new Date(2024, m, 28),
+        balance: new Prisma.Decimal(historyValue),
+      },
+    });
+  }
+  // History 2025
+  await prisma.assetHistory.create({
+    data: {
+      assetId: etfPortfolio.id,
+      date: new Date(2025, 0, 31),
+      balance: new Prisma.Decimal(15200),
+    },
+  });
+
+  // 3. Liability: Car Loan
+  const carLoan = await prisma.asset.create({
+    data: {
+      name: 'Car Loan',
+      type: AssetType.DEBT,
+      institution: 'Findomestic',
+      balance: 8500.0,
+      currency: 'EUR',
+    },
+  });
+  assetMap['Car Loan'] = carLoan.id;
+
+  console.log('✅ Assets created.');
+}
+
+async function seedGoals() {
+  console.log('🌱 Seeding Savings Goals...');
+  await prisma.savingsGoal.create({
+    data: {
+      name: 'Emergency Fund',
+      targetAmount: 10000,
+      currentAmount: 2500,
+      status: GoalStatus.ACTIVE,
+      icon: '🛡️',
+      color: '#32a852',
+    },
+  });
+  console.log('✅ Goals created.');
+}
+
 async function seedCategories() {
   console.log('🌱 Seeding Categories (Idempotent Check)...');
 
@@ -146,15 +230,7 @@ async function seedCategories() {
     });
 
     if (createdMacro) {
-      createdMacro = await prisma.category.update({
-        where: { id: createdMacro.id },
-        data: {
-          icon: macro.icon,
-          type: macro.type,
-          isSystem: true,
-          isVerified: true,
-        },
-      });
+      // Update logic if needed
     } else {
       createdMacro = await prisma.category.create({
         data: {
@@ -168,11 +244,21 @@ async function seedCategories() {
       });
     }
 
-    console.log(`✅ Macro: ${createdMacro.name}`);
-
     if (!categoryMap[macro.name]) categoryMap[macro.name] = {};
 
     for (const sub of macro.subs) {
+      // Determine Default Asset
+      let defaultAssetId: string | null = null;
+
+      // AUTOMATION: Link 'Investments' category to 'ETF Portfolio' Asset
+      if (macro.name === 'FINANCIAL' && sub.name === 'Investments') {
+        defaultAssetId = assetMap['ETF Portfolio'];
+      }
+      // AUTOMATION: Link 'Salary' to 'Main Account'
+      if (macro.name === 'INCOME' && sub.name === 'Salary & Pension') {
+        defaultAssetId = assetMap['Main Account'];
+      }
+
       const subCat = await prisma.category.upsert({
         where: {
           name_parentId: {
@@ -184,6 +270,7 @@ async function seedCategories() {
           type: sub.type,
           isSystem: true,
           isVerified: true,
+          defaultAssetId: defaultAssetId, // <--- Link Asset
         },
         create: {
           name: sub.name,
@@ -191,25 +278,22 @@ async function seedCategories() {
           parentId: createdMacro.id,
           isSystem: true,
           isVerified: true,
+          defaultAssetId: defaultAssetId, // <--- Link Asset
         },
       });
 
       categoryMap[macro.name][sub.name] = subCat.id;
     }
-    console.log(`   └─ Processed ${macro.subs.length} sub-categories`);
   }
+  console.log('✅ Categories seeded & linked to Assets.');
 }
 
 async function seedTransactions() {
   console.log('🌱 Seeding 2025 Transactions...');
 
-  const deleted = await prisma.enrichedTransaction.deleteMany({
+  await prisma.enrichedTransaction.deleteMany({
     where: { importBatchId: SEED_BATCH_ID },
   });
-
-  if (deleted.count > 0) {
-    console.log(`🧹 Cleared ${deleted.count} old seed transactions.`);
-  }
 
   const transactions: Prisma.EnrichedTransactionCreateManyInput[] = [];
   const accountId = 'SEED_ACCOUNT';
@@ -217,16 +301,15 @@ async function seedTransactions() {
   for (let month = 0; month < 12; month++) {
     const year = 2025;
 
-    // --- FIXED ---
-
-    // --- Income ---
+    // --- Income (Linked to Asset) ---
     transactions.push({
-      date: new Date(year, month, 15, 9, 0, 0),
+      date: new Date(year, month, 27, 9, 0, 0),
       amount: new Prisma.Decimal(2450.0),
       details: 'Tech Solutions Salary',
       account: accountId,
       operation: 'Transfer',
       categoryId: categoryMap['INCOME']['Salary & Pension'],
+      assetId: assetMap['Main Account'], // Linked!
       importBatchId: SEED_BATCH_ID,
       originalLine: 0,
     });
@@ -239,36 +322,25 @@ async function seedTransactions() {
       account: accountId,
       operation: 'Direct Debit',
       categoryId: categoryMap['HOME']['Rent'],
+      assetId: assetMap['Main Account'], // Linked (Source of funds)
       importBatchId: SEED_BATCH_ID,
       originalLine: 0,
     });
 
-    // Investment
+    // --- Investment (Linked to Asset) ---
     transactions.push({
-      date: new Date(year, month, 25, 10, 0, 0),
+      date: new Date(year, month, 28, 10, 0, 0),
       amount: new Prisma.Decimal(-200.0),
-      details: 'Monthly ETF Investment',
+      details: 'Pac ETF World',
       account: accountId,
       operation: 'Transfer',
       categoryId: categoryMap['FINANCIAL']['Investments'],
+      assetId: assetMap['ETF Portfolio'], // Linked!
       importBatchId: SEED_BATCH_ID,
       originalLine: 0,
     });
 
-    // Internet
-    transactions.push({
-      date: new Date(year, month, 10),
-      amount: new Prisma.Decimal(-29.9),
-      details: 'Fiber Provider',
-      account: accountId,
-      operation: 'DD',
-      categoryId: categoryMap['HOME']['Internet & Phone'],
-      importBatchId: SEED_BATCH_ID,
-      originalLine: 0,
-    });
-
-    // --- VARIABLE ---
-
+    // --- Variable Expenses ---
     // Groceries
     for (let i = 0; i < 3; i++) {
       transactions.push({
@@ -278,6 +350,7 @@ async function seedTransactions() {
         account: accountId,
         operation: 'Card',
         categoryId: categoryMap['FOOD']['Groceries'],
+        assetId: assetMap['Main Account'],
         importBatchId: SEED_BATCH_ID,
         originalLine: 0,
       });
@@ -293,6 +366,7 @@ async function seedTransactions() {
         account: accountId,
         operation: 'Card',
         categoryId: categoryMap['FOOD']['Dining Out'],
+        assetId: assetMap['Main Account'],
         importBatchId: SEED_BATCH_ID,
         originalLine: 0,
       });
@@ -307,6 +381,7 @@ async function seedTransactions() {
         account: accountId,
         operation: 'Card',
         categoryId: categoryMap['SHOPPING']['Electronics'],
+        assetId: assetMap['Main Account'],
         importBatchId: SEED_BATCH_ID,
         originalLine: 0,
       });
@@ -321,6 +396,7 @@ async function seedTransactions() {
         account: accountId,
         operation: 'Bill',
         categoryId: categoryMap['HOME']['Utilities'],
+        assetId: assetMap['Main Account'],
         importBatchId: SEED_BATCH_ID,
         originalLine: 0,
       });
@@ -341,38 +417,31 @@ async function seedTransactions() {
 
 async function seedBudgets() {
   console.log('🌱 Seeding Budget Rules...');
-
-  // Definiamo i budget usando gli ID salvati nella categoryMap
   const budgets = [
-    // 1. Rent: Fisso 550€ (Ne spendiamo 500) -> Status atteso: OK
     {
       catId: categoryMap['HOME']['Rent'],
       type: BudgetRuleType.FIXED_AMOUNT,
       limit: 550,
     },
-    // 2. Groceries: Fisso 350€ (Ne spendiamo circa 320) -> Status atteso: WARNING
     {
       catId: categoryMap['FOOD']['Groceries'],
       type: BudgetRuleType.FIXED_AMOUNT,
       limit: 350,
     },
-    // 3. Dining Out: Fisso 80€ (Ne spendiamo circa 100-150) -> Status atteso: EXCEEDED
     {
       catId: categoryMap['FOOD']['Dining Out'],
       type: BudgetRuleType.FIXED_AMOUNT,
       limit: 80,
     },
-    // 4. Investments: 10% dell'Income (245€) (Ne spendiamo 200) -> Status atteso: WARNING (200/245 = 0.81)
     {
       catId: categoryMap['FINANCIAL']['Investments'],
       type: BudgetRuleType.PERCENTAGE_OF_INCOME,
-      limit: 10, // 10%
+      limit: 10,
     },
   ];
 
   for (const b of budgets) {
-    if (!b.catId) continue; // Skip se per qualche motivo l'ID manca
-
+    if (!b.catId) continue;
     await prisma.budgetRule.upsert({
       where: { categoryId: b.catId },
       update: {
@@ -386,11 +455,20 @@ async function seedBudgets() {
       },
     });
   }
-
   console.log(`✅ Seeded ${budgets.length} budget rules.`);
 }
 
 async function main() {
+  await prisma.assetHistory.deleteMany();
+  await prisma.enrichedTransaction.deleteMany({
+    where: { importBatchId: SEED_BATCH_ID },
+  });
+  await prisma.asset.deleteMany({ where: { institution: { not: null } } });
+  await prisma.savingsGoal.deleteMany();
+
+  // ORDINE ESECUZIONE
+  await seedAssets();
+  await seedGoals();
   await seedCategories();
   await seedTransactions();
   await seedBudgets();

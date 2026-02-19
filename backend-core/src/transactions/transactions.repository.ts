@@ -8,6 +8,11 @@ import {
 } from './dto/create-update-transaction.dto';
 import { EnrichedDataInput } from './interfaces/enriched-data-input.interface';
 
+type CategoryMapData = {
+  id: string;
+  defaultAssetId: string | null;
+};
+
 @Injectable()
 export class TransactionsRepository {
   private readonly logger = new Logger(TransactionsRepository.name);
@@ -109,12 +114,11 @@ export class TransactionsRepository {
       }
     }
 
+    // 2. Fallback Category
     let fallbackCat = await this.prisma.category.findFirst({
       where: { name: 'UNCATEGORIZED', parentId: null },
     });
-
     if (!fallbackCat) {
-      this.logger.log('Creating system fallback category: UNCATEGORIZED');
       fallbackCat = await this.prisma.category.create({
         data: {
           name: 'UNCATEGORIZED',
@@ -127,10 +131,11 @@ export class TransactionsRepository {
     }
     const fallbackId = fallbackCat.id;
 
+    // 3. Create missing Macro (Bulk)
     const existingMacros = await this.prisma.category.findMany({
       where: { name: { in: Array.from(uniqueMacros) }, parentId: null },
+      select: { id: true, name: true },
     });
-
     const existingMacroNames = new Set(existingMacros.map((c) => c.name));
     const missingMacros = Array.from(uniqueMacros).filter(
       (name) => !existingMacroNames.has(name),
@@ -151,16 +156,21 @@ export class TransactionsRepository {
 
     const allMacros = await this.prisma.category.findMany({
       where: { name: { in: Array.from(uniqueMacros) }, parentId: null },
+      select: { id: true, name: true, defaultAssetId: true },
     });
-    const macroMap = new Map<string, string>();
-    allMacros.forEach((c) => macroMap.set(c.name, c.id));
 
+    // Map: Name -> { id, defaultAssetId }
+    const macroMap = new Map<string, CategoryMapData>();
+    allMacros.forEach((c) =>
+      macroMap.set(c.name, { id: c.id, defaultAssetId: c.defaultAssetId }),
+    );
+
+    // 4. Create missing Sub (Bulk)
     const subNamesOnly = Array.from(uniqueSubs).map((s) => s.split(':')[1]);
     const existingSubs = await this.prisma.category.findMany({
       where: { name: { in: subNamesOnly }, parentId: { not: null } },
-      include: { parent: true },
+      select: { id: true, name: true, parent: { select: { name: true } } },
     });
-
     const existingSubKeys = new Set(
       existingSubs.map((s) => `${s.parent?.name}:${s.name}`),
     );
@@ -169,11 +179,11 @@ export class TransactionsRepository {
     for (const key of uniqueSubs) {
       if (!existingSubKeys.has(key)) {
         const [macroName, subName] = key.split(':');
-        const parentId = macroMap.get(macroName);
-        if (parentId) {
+        const macroData = macroMap.get(macroName);
+        if (macroData) {
           transactionsToCreateSubs.push({
             name: subName,
-            parentId: parentId,
+            parentId: macroData.id,
             isSystem: false,
             isVerified: false,
             type: 'UNCLASSIFIED',
@@ -181,7 +191,6 @@ export class TransactionsRepository {
         }
       }
     }
-
     if (transactionsToCreateSubs.length > 0) {
       await this.prisma.category.createMany({
         data: transactionsToCreateSubs,
@@ -189,35 +198,61 @@ export class TransactionsRepository {
       });
     }
 
+    // Ricarica Sub aggiornate
     const allSubs = await this.prisma.category.findMany({
       where: {
         name: { in: subNamesOnly },
-        parentId: { in: Array.from(macroMap.values()) },
+        parentId: { in: Array.from(macroMap.values()).map((v) => v.id) },
       },
-      include: { parent: true },
-    });
-    const subMap = new Map<string, string>();
-    allSubs.forEach((s) => {
-      if (s.parent) subMap.set(`${s.parent.name}:${s.name}`, s.id);
+      select: {
+        id: true,
+        name: true,
+        defaultAssetId: true,
+        parent: { select: { name: true } },
+      },
     });
 
+    const subMap = new Map<string, CategoryMapData>();
+    allSubs.forEach((s) => {
+      if (s.parent) {
+        subMap.set(`${s.parent.name}:${s.name}`, {
+          id: s.id,
+          defaultAssetId: s.defaultAssetId,
+        });
+      }
+    });
+
+    // 5. Preparazione Transazioni con Mapping Asset Automatico
     const transactionsToInsert: Prisma.EnrichedTransactionCreateManyInput[] =
       [];
 
     for (const item of data) {
       let categoryId: string | undefined;
+      let assetId: string | null = null; // Default null
 
-      // 1. Sub
+      // Tentativo 1: Sub Category
       if (item.subCategory) {
-        categoryId = subMap.get(`${item.category}:${item.subCategory}`);
+        const subData = subMap.get(`${item.category}:${item.subCategory}`);
+        if (subData) {
+          categoryId = subData.id;
+          // Automazione: Se la sub ha un asset, usalo
+          if (subData.defaultAssetId) assetId = subData.defaultAssetId;
+        }
       }
 
-      // 2. Macro
+      // Tentativo 2: Macro Category (se sub fallisce o non esiste)
       if (!categoryId) {
-        categoryId = macroMap.get(item.category);
+        const macroData = macroMap.get(item.category);
+        if (macroData) {
+          categoryId = macroData.id;
+          // Automazione: Se non abbiamo ancora un asset (dalla sub), prova con la macro
+          if (!assetId && macroData.defaultAssetId) {
+            assetId = macroData.defaultAssetId;
+          }
+        }
       }
 
-      // 3. FALLBACK
+      // Tentativo 3: Fallback
       if (!categoryId) {
         this.logger.warn(
           `Mapping failed for ${item.category} -> ${item.subCategory}. Using fallback.`,
@@ -234,52 +269,12 @@ export class TransactionsRepository {
         details: item.details,
         account: item.account,
         categoryId: categoryId,
+        assetId: assetId,
       });
     }
 
     return this.prisma.enrichedTransaction.createMany({
       data: transactionsToInsert,
-    });
-  }
-
-  async createManyRaw(data: Prisma.RawTransactionCreateManyInput[]) {
-    return this.prisma.rawTransaction.createMany({
-      data,
-    });
-  }
-
-  // --- READ OPERATIONS ---
-  async findAllEnriched(filters: GetTransactionsFilterDto) {
-    const where = this.buildWhereClause(filters);
-
-    const [total, transactions] = await this.prisma.$transaction([
-      this.prisma.enrichedTransaction.count({ where }),
-      this.prisma.enrichedTransaction.findMany({
-        where,
-        take: filters.limit,
-        skip: (filters.page - 1) * filters.limit,
-        orderBy: { [filters.sortBy]: filters.sortOrder },
-        include: {
-          category: {
-            include: { parent: true },
-          },
-        },
-      }),
-    ]);
-
-    return { total, transactions };
-  }
-
-  async findAllRaw() {
-    return this.prisma.rawTransaction.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  async findById(id: string) {
-    return this.prisma.enrichedTransaction.findUnique({
-      where: { id },
-      include: { category: { include: { parent: true } } },
     });
   }
 
@@ -290,26 +285,50 @@ export class TransactionsRepository {
       dto.subCategory,
     );
 
+    // If the user doesn't manually pass an assetId, we check if the category has a default one
+    let finalAssetId = dto.assetId;
+    if (!finalAssetId) {
+      const category = await this.prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { defaultAssetId: true },
+      });
+      if (category?.defaultAssetId) {
+        finalAssetId = category.defaultAssetId;
+      }
+    }
+
     return this.prisma.enrichedTransaction.create({
       data: {
         date: dto.date,
-        amount: dto.amount,
+        amount: new Prisma.Decimal(dto.amount),
         details: dto.details,
         account: dto.account || 'MANUAL',
         operation: dto.operation || 'Manual Entry',
         importBatchId: 'MANUAL',
         originalLine: -1,
         category: { connect: { id: categoryId } },
+        asset: finalAssetId ? { connect: { id: finalAssetId } } : undefined,
+        savingsGoal: dto.savingsGoalId
+          ? { connect: { id: dto.savingsGoalId } }
+          : undefined,
       },
-      include: { category: true },
+      include: {
+        category: true,
+        asset: true,
+        savingsGoal: true,
+      },
     });
   }
 
   async update(id: string, dto: UpdateTransactionDto) {
-    const { category, subCategory, ...scalarFields } = dto;
+    const { category, subCategory, assetId, savingsGoalId, ...scalarFields } =
+      dto;
 
     const updateData: Prisma.EnrichedTransactionUpdateInput = {
       ...scalarFields,
+      amount: scalarFields.amount
+        ? new Prisma.Decimal(scalarFields.amount)
+        : undefined,
     };
 
     if (category) {
@@ -317,16 +336,71 @@ export class TransactionsRepository {
       updateData.category = { connect: { id: categoryId } };
     }
 
+    if (assetId !== undefined) {
+      // Asset Management: null = disconnect, string = connect
+
+      updateData.asset = assetId
+        ? { connect: { id: assetId } }
+        : { disconnect: true };
+    }
+
+    if (savingsGoalId !== undefined) {
+      // Goal Management: null = disconnect, string = connect
+      updateData.savingsGoal = savingsGoalId
+        ? { connect: { id: savingsGoalId } }
+        : { disconnect: true };
+    }
+
     return this.prisma.enrichedTransaction.update({
       where: { id },
       data: updateData,
-      include: { category: true },
+      include: { category: true, asset: true, savingsGoal: true },
     });
   }
 
   async delete(id: string) {
-    return this.prisma.enrichedTransaction.delete({
+    return this.prisma.enrichedTransaction.delete({ where: { id } });
+  }
+
+  async findById(id: string) {
+    return this.prisma.enrichedTransaction.findUnique({
       where: { id },
+      include: {
+        category: { include: { parent: true } },
+        asset: true,
+        savingsGoal: true,
+      },
+    });
+  }
+
+  async findAllEnriched(filters: GetTransactionsFilterDto) {
+    const where = this.buildWhereClause(filters);
+    const [total, transactions] = await this.prisma.$transaction([
+      this.prisma.enrichedTransaction.count({ where }),
+      this.prisma.enrichedTransaction.findMany({
+        where,
+        take: filters.limit,
+        skip: (filters.page - 1) * filters.limit,
+        orderBy: { [filters.sortBy]: filters.sortOrder },
+        include: {
+          category: { include: { parent: true } },
+          asset: true,
+          savingsGoal: true,
+        },
+      }),
+    ]);
+    return { total, transactions };
+  }
+
+  async createManyRaw(data: Prisma.RawTransactionCreateManyInput[]) {
+    return this.prisma.rawTransaction.createMany({
+      data,
+    });
+  }
+
+  async findAllRaw() {
+    return this.prisma.rawTransaction.findMany({
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

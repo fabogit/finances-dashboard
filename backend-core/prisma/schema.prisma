@@ -14,11 +14,13 @@ datasource db {
 
 // --- ENUMS ---
 
-enum ExpenseType {
-  NEEDS
-  WANTS
-  SAVINGS
-  UNCLASSIFIED
+enum AssetType {
+  CASH // Liquidity, Current accounts, Cash on hand
+  INVESTMENT // Stocks, ETFs, Crypto, Funds
+  REAL_ESTATE // Property, Real Estate
+  VEHICLE // Cars, Bikes, Boats
+  DEBT // Mortgages, Personal loans (Liabilities)
+  OTHER // Jewelry, Art, Other valuables
 }
 
 enum BudgetRuleType {
@@ -26,7 +28,66 @@ enum BudgetRuleType {
   PERCENTAGE_OF_INCOME
 }
 
+enum ExpenseType {
+  NEEDS
+  WANTS
+  SAVINGS
+  UNCLASSIFIED
+}
+
+enum GoalStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
 // --- MODELS ---
+
+model Asset {
+  id     String @id @default(uuid())
+  userId String @default("demo_user") // Future-proofing
+
+  name        String
+  institution String? // e.g., "Chase", "Binance", "Coinbase"
+  type        AssetType
+  balance     Decimal   @default(0) @db.Decimal(15, 2) // Current value
+  currency    String    @default("EUR") @db.VarChar(3)
+
+  // Relations
+  history      AssetHistory[]
+  transactions EnrichedTransaction[] // Transactions affecting this asset
+
+  // Back-link for automation (Categories pointing to this asset by default)
+  defaultForCategories Category[] @relation("CategoryDefaultAsset")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AssetHistory {
+  id      String @id @default(uuid())
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  date    DateTime // Snapshot date
+  balance Decimal  @db.Decimal(15, 2)
+
+  createdAt DateTime @default(now())
+}
+
+model BudgetRule {
+  id String @id @default(uuid())
+
+  categoryId String   @unique
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  ruleType   BudgetRuleType
+  limitValue Decimal        @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
 
 model Category {
   id   String @id @default(uuid())
@@ -49,39 +110,13 @@ model Category {
   budgetRule   BudgetRule?
   transactions EnrichedTransaction[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  defaultAssetId String?
+  defaultAsset   Asset?   @relation("CategoryDefaultAsset", fields: [defaultAssetId], references: [id], onDelete: SetNull)
 
   // Uniqueness constraint: Unique name within the same parent (or among root categories if parentId is null)
   @@unique([name, parentId])
-}
-
-model BudgetRule {
-  id String @id @default(uuid())
-
-  categoryId String   @unique
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  ruleType   BudgetRuleType
-  limitValue Decimal        @db.Decimal(10, 2)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model RawTransaction {
-  id               String   @id @default(uuid())
-  importBatchId    String
-  originalLine     Int
-  date             String
-  operation        String?
-  details          String?
-  account          String?
-  amount           String?
-  currency         String?
-  accountingStatus String?
-  category         String?
-  createdAt        DateTime @default(now())
 }
 
 model EnrichedTransaction {
@@ -100,6 +135,46 @@ model EnrichedTransaction {
   // Hierarchy
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  assetId   String?
+  asset     Asset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
+
+  // Links the transaction to a Goal (e.g., Monthly savings -> Vacation Goal)
+  savingsGoalId String?
+  savingsGoal   SavingsGoal? @relation(fields: [savingsGoalId], references: [id], onDelete: SetNull)
+}
+
+model RawTransaction {
+  id               String   @id @default(uuid())
+  importBatchId    String
+  originalLine     Int
+  date             String
+  operation        String?
+  details          String?
+  account          String?
+  amount           String?
+  currency         String?
+  accountingStatus String?
+  category         String?
+  createdAt        DateTime @default(now())
+}
+
+model SavingsGoal {
+  id     String @id @default(uuid())
+  userId String @default("demo_user")
+
+  name          String
+  targetAmount  Decimal    @db.Decimal(15, 2)
+  currentAmount Decimal    @default(0) @db.Decimal(15, 2)
+  deadline      DateTime?
+  status        GoalStatus @default(ACTIVE)
+  icon          String? // Emoji 🏠
+  color         String? // Hex #FF0000
+
+  // Transactions contributing to this goal (Accumulation)
+  transactions EnrichedTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
