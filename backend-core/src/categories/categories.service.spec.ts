@@ -45,6 +45,8 @@ const mockCategory: Category = {
   type: ExpenseType.NEEDS,
   createdAt: new Date(),
   updatedAt: new Date(),
+  defaultAssetId: null,
+  defaultGoalId: null,
 };
 
 const mockSystemCategory: Category = {

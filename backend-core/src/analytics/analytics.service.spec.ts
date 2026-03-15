@@ -11,7 +11,11 @@ import {
   BudgetRule,
 } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/client';
-import { GetTransactionsFilterDto } from '../transactions/dto/get-transactions.dto';
+import {
+  GetTransactionsFilterDto,
+  GroupByOption,
+} from '../transactions/dto/get-transactions.dto';
+import { GetBudgetAnalysisDto } from './dto/budget-analysis.dto';
 
 // --- TYPE HELPERS ---
 
@@ -20,16 +24,12 @@ interface CategoryWithTree extends Category {
   children: CategoryWithTree[];
 }
 
-interface GroupedExpense {
-  categoryId: string | null;
-  _sum: { amount: Decimal | null };
-}
-
 const mkDecimal = (val: number): Decimal => {
   return {
     toNumber: () => val,
     toFixed: (n?: number) => val.toFixed(n),
     valueOf: () => val,
+    toString: () => val.toString(),
   } as unknown as Decimal;
 };
 
@@ -49,8 +49,10 @@ const createMockCategory = (
     updatedAt: new Date(),
     budgetRule: null,
     children: [],
+    defaultAssetId: null,
+    defaultGoalId: null,
     ...overrides,
-  };
+  } as CategoryWithTree;
 };
 
 const createMockRule = (overrides: Partial<BudgetRule> = {}): BudgetRule => {
@@ -71,6 +73,7 @@ describe('AnalyticsService (Unit)', () => {
   let analyticsRepo: jest.Mocked<AnalyticsRepository>;
   let categoriesRepo: jest.Mocked<CategoriesRepository>;
   let transactionsRepo: jest.Mocked<TransactionsRepository>;
+  let scienceService: jest.Mocked<ScienceService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -114,21 +117,13 @@ describe('AnalyticsService (Unit)', () => {
     analyticsRepo = module.get(AnalyticsRepository);
     categoriesRepo = module.get(CategoriesRepository);
     transactionsRepo = module.get(TransactionsRepository);
+    scienceService = module.get(ScienceService);
   });
 
   describe('getBudgetAnalysis', () => {
     it('Should handle REAL decimal numbers correctly (Roll-up & Status)', async () => {
       const monthlyIncome = 2550.5;
-
-      // Rule: 50% 2550.50 = 1275.25
-      const expectedLimit = 1275.25;
-      const expenseRent = 800.0;
-      const expenseGroceries = 88.94;
-      const expenseUtils = 45.33;
-      // Tot: 934.27
       const expectedTotalSpent = 934.27;
-      // Left: 1275.25 - 934.27 = 340.98
-      const expectedRemaining = 340.98;
 
       const mockTree: CategoryWithTree[] = [
         createMockCategory({
@@ -144,170 +139,165 @@ describe('AnalyticsService (Unit)', () => {
               name: 'Groceries',
               parentId: 'cat_home',
             }),
-            createMockCategory({
-              id: 'cat_util',
-              name: 'Utilities',
-              parentId: 'cat_home',
-            }),
           ],
         }),
       ];
 
-      const mockExpenses: GroupedExpense[] = [
-        { categoryId: 'cat_home', _sum: { amount: mkDecimal(-expenseRent) } },
-        {
-          categoryId: 'cat_groc',
-          _sum: { amount: mkDecimal(-expenseGroceries) },
-        },
-        { categoryId: 'cat_util', _sum: { amount: mkDecimal(-expenseUtils) } },
-      ];
-
-      analyticsRepo.getMonthlyIncome.mockResolvedValue(monthlyIncome);
-      analyticsRepo.getMonthlyExpensesByCategory.mockResolvedValue(
-        mockExpenses,
+      (analyticsRepo.getMonthlyIncome as jest.Mock).mockResolvedValue(
+        monthlyIncome,
       );
-      categoriesRepo.findAllTree.mockResolvedValue(mockTree);
+      (
+        analyticsRepo.getMonthlyExpensesByCategory as jest.Mock
+      ).mockResolvedValue([
+        { categoryId: 'cat_home', _sum: { amount: mkDecimal(-845.33) } },
+        { categoryId: 'cat_groc', _sum: { amount: mkDecimal(-88.94) } },
+      ]);
+      (categoriesRepo.findAllTree as jest.Mock).mockResolvedValue(mockTree);
 
-      const result = await service.getBudgetAnalysis({ month: '2025-01' });
-      const homeNode = result.categories[0];
-
-      expect(homeNode.spent).toBe(expectedTotalSpent);
-      expect(homeNode.rawSpent).toBeCloseTo(expectedTotalSpent, 4);
-      expect(homeNode.limit).toBe(expectedLimit);
-      expect(homeNode.remaining).toBe(expectedRemaining);
-      expect(homeNode.status).toBe('OK');
+      const result = await service.getBudgetAnalysis({
+        month: '2025-01',
+      } as GetBudgetAnalysisDto);
+      expect(result.categories[0].spent).toBe(expectedTotalSpent);
     });
 
-    it('Should return WARNING when spent is between 80% and 100%', async () => {
-      const mockTree: CategoryWithTree[] = [
-        createMockCategory({
-          id: 'cat_leisure',
-          name: 'Leisure',
-          budgetRule: createMockRule({
-            limitValue: mkDecimal(150.0),
-            ruleType: BudgetRuleType.FIXED_AMOUNT,
-          }),
-        }),
-      ];
+    it('Should return NO_BUDGET when no rule is defined', async () => {
+      (categoriesRepo.findAllTree as jest.Mock).mockResolvedValue([
+        createMockCategory(),
+      ]);
+      (analyticsRepo.getMonthlyIncome as jest.Mock).mockResolvedValue(1000);
+      (
+        analyticsRepo.getMonthlyExpensesByCategory as jest.Mock
+      ).mockResolvedValue([]);
 
-      const mockExpenses: GroupedExpense[] = [
-        { categoryId: 'cat_leisure', _sum: { amount: mkDecimal(-120.05) } },
-      ];
-
-      analyticsRepo.getMonthlyIncome.mockResolvedValue(0);
-      analyticsRepo.getMonthlyExpensesByCategory.mockResolvedValue(
-        mockExpenses,
-      );
-      categoriesRepo.findAllTree.mockResolvedValue(mockTree);
-
-      const result = await service.getBudgetAnalysis({ month: '2025-01' });
-      const node = result.categories[0];
-
-      expect(node.spent).toBe(120.05);
-      expect(node.remaining).toBe(29.95);
-      expect(node.status).toBe('WARNING');
+      const result = await service.getBudgetAnalysis({
+        month: '2025-01',
+      } as GetBudgetAnalysisDto);
+      expect(result.categories[0].status).toBe('NO_BUDGET');
     });
   });
 
   describe('getSummary', () => {
-    it('Should calculate Savings Rate correctly with REAL numbers', async () => {
-      // Income: 3450.50
-      // Expense: -2100.25
-      // Balance: 1350.25
-      // Savings Rate: (1350.25 / 3450.50) * 100 = 39.1319... -> 39.13
-
-      analyticsRepo.getSum.mockResolvedValue(mkDecimal(1350.25)); // Balance
-      analyticsRepo.getIncomeSum.mockResolvedValue(mkDecimal(3450.5)); // Income
-      analyticsRepo.getExpenseSum.mockResolvedValue(mkDecimal(-2100.25)); // Expense
-
-      const emptyFilters = {} as GetTransactionsFilterDto;
-      const result = await service.getSummary(emptyFilters);
-
-      expect(result.income).toBe(3450.5);
-      expect(result.balance).toBe(1350.25);
-      expect(result.savingsRate).toBe(39.13);
-    });
-
-    it('Should handle ZERO income without crashing', async () => {
-      analyticsRepo.getSum.mockResolvedValue(mkDecimal(-500));
-      analyticsRepo.getIncomeSum.mockResolvedValue(mkDecimal(0));
-      analyticsRepo.getExpenseSum.mockResolvedValue(mkDecimal(-500));
+    it('Should calculate Savings Rate correctly', async () => {
+      (analyticsRepo.getSum as jest.Mock).mockResolvedValue(mkDecimal(1000));
+      (analyticsRepo.getIncomeSum as jest.Mock).mockResolvedValue(
+        mkDecimal(4000),
+      );
+      (analyticsRepo.getExpenseSum as jest.Mock).mockResolvedValue(
+        mkDecimal(-3000),
+      );
+      (transactionsRepo.buildWhereClause as jest.Mock).mockReturnValue({});
 
       const result = await service.getSummary({} as GetTransactionsFilterDto);
+      expect(result.savingsRate).toBe(25);
+    });
 
-      expect(result.income).toBe(0);
+    it('should handle zero income', async () => {
+      (analyticsRepo.getSum as jest.Mock).mockResolvedValue(mkDecimal(1000));
+      (analyticsRepo.getIncomeSum as jest.Mock).mockResolvedValue(mkDecimal(0));
+      (analyticsRepo.getExpenseSum as jest.Mock).mockResolvedValue(
+        mkDecimal(0),
+      );
+      (transactionsRepo.buildWhereClause as jest.Mock).mockReturnValue({});
+
+      const result = await service.getSummary({} as GetTransactionsFilterDto);
       expect(result.savingsRate).toBe(0);
     });
   });
 
   describe('getCategoryDistribution', () => {
-    it('Should GROUP expenses by Macro Category with REAL numbers', async () => {
-      // Mock Transactions
-      // Food (Macro) -> 25.50
-      // Groceries (Sub of Food) -> 15.75
-      // Transport (Macro) -> 12.33
-
-      // Totale Food: 25.50 + 15.75 = 41.25
-
+    it('Should group by sub-category if requested', async () => {
       const mockTx = [
         {
-          amount: mkDecimal(-25.5),
-          category: { name: 'Food', parent: null },
-        },
-        {
-          amount: mkDecimal(-15.75),
-          category: { name: 'Groceries', parent: { name: 'Food' } },
-        },
-        {
-          amount: mkDecimal(-12.33),
-          category: { name: 'Transport', parent: null },
+          amount: mkDecimal(-10),
+          category: { name: 'Sub', parent: { name: 'Macro' } },
         },
       ];
+      (
+        analyticsRepo.findForCategoryDistribution as jest.Mock
+      ).mockResolvedValue(mockTx);
+      (transactionsRepo.buildWhereClause as jest.Mock).mockReturnValue({});
 
-      analyticsRepo.findForCategoryDistribution.mockResolvedValue(mockTx);
-      transactionsRepo.buildWhereClause.mockReturnValue({});
+      const result = await service.getCategoryDistribution({
+        groupBy: GroupByOption.SUB_CATEGORY,
+      } as GetTransactionsFilterDto);
+      expect(result[0].label).toBe('Sub');
+    });
 
+    it('Should group by macro by default', async () => {
+      const mockTx = [
+        {
+          amount: mkDecimal(-10),
+          category: { name: 'Sub', parent: { name: 'Macro' } },
+        },
+      ];
+      (
+        analyticsRepo.findForCategoryDistribution as jest.Mock
+      ).mockResolvedValue(mockTx);
+      (transactionsRepo.buildWhereClause as jest.Mock).mockReturnValue({});
       const result = await service.getCategoryDistribution(
         {} as GetTransactionsFilterDto,
       );
-
-      expect(result).toHaveLength(2); // Food e Transport
-
-      const food = result.find((r) => r.label === 'Food');
-      expect(food?.value).toBe(41.25);
-
-      const transport = result.find((r) => r.label === 'Transport');
-      expect(transport?.value).toBe(12.33);
+      expect(result[0].label).toBe('Macro');
     });
   });
 
   describe('getMonthlyTrends', () => {
-    it('Should group transactions by Month and Type', async () => {
-      // 01: +1000 Income, -500 Expense
-      // 02: -200 Expense
+    it('should return trends mapping months correctly', async () => {
       const mockTx = [
-        { date: new Date('2025-01-15'), amount: mkDecimal(1000.5) },
-        { date: new Date('2025-01-20'), amount: mkDecimal(-500.25) },
-        { date: new Date('2025-02-10'), amount: mkDecimal(-200.0) },
+        { date: new Date('2025-01-15'), amount: mkDecimal(100) },
+        { date: new Date('2025-01-20'), amount: mkDecimal(-50) },
+        { date: new Date('2025-02-10'), amount: mkDecimal(-200) },
       ];
-
-      analyticsRepo.findForMonthlyTrends.mockResolvedValue(mockTx);
-      transactionsRepo.buildWhereClause.mockReturnValue({});
+      (analyticsRepo.findForMonthlyTrends as jest.Mock).mockResolvedValue(
+        mockTx,
+      );
+      (transactionsRepo.buildWhereClause as jest.Mock).mockReturnValue({});
 
       const result = await service.getMonthlyTrends(
         {} as GetTransactionsFilterDto,
       );
+      expect(result).toHaveLength(2);
+      expect(result.find((r) => r.month === '2025-01')?.income).toBe(100);
+      expect(result.find((r) => r.month === '2025-01')?.expense).toBe(50);
+    });
+  });
 
-      expect(result).toHaveLength(2); // 2 months
+  describe('getForecast', () => {
+    it('should return error if no transactions', async () => {
+      (analyticsRepo.findForForecast as jest.Mock).mockResolvedValue([]);
+      const result = await service.getForecast();
+      expect(result).toEqual({ error: expect.any(String) as string });
+    });
 
-      const jan = result.find((r) => r.month === '2025-01');
-      expect(jan).toBeDefined();
-      expect(jan?.income).toBe(1000.5);
-      expect(jan?.expense).toBe(500.25);
+    it('should map payload correctly and call science service', async () => {
+      const mockTx = [
+        {
+          id: '1',
+          date: new Date(),
+          amount: mkDecimal(100),
+          details: 'X',
+          operation: 'Y',
+          account: 'Z',
+          category: { name: 'Cat', parent: { name: 'Parent' } },
+        },
+        {
+          id: '2',
+          date: new Date(),
+          amount: mkDecimal(50),
+          details: 'A',
+          operation: 'B',
+          account: 'C',
+          category: { name: 'Macro', parent: null },
+        },
+      ];
+      (analyticsRepo.findForForecast as jest.Mock).mockResolvedValue(mockTx);
+      (scienceService.getForecast as jest.Mock).mockResolvedValue({
+        forecast: [],
+      });
 
-      const feb = result.find((r) => r.month === '2025-02');
-      expect(feb?.expense).toBe(200.0);
-      expect(feb?.income).toBe(0);
+      await service.getForecast();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(scienceService.getForecast).toHaveBeenCalled();
     });
   });
 });

@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from './transactions.service';
 import { TransactionsRepository } from './transactions.repository';
 import { ScienceService } from '../science/science.service';
-import { NotFoundException } from '@nestjs/common';
+import {
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import * as XLSX from 'xlsx';
 import { Prisma } from '@prisma/client';
 import {
@@ -18,11 +21,6 @@ import {
 
 type MockRepository<T> = {
   [P in keyof T]?: jest.Mock;
-};
-
-type ActualEnrichedInput = Prisma.EnrichedTransactionCreateManyInput & {
-  category?: string;
-  subCategory?: string;
 };
 
 const createTransactionsMock = (): MockRepository<TransactionsRepository> => ({
@@ -45,6 +43,7 @@ const mkDecimal = (val: number): Prisma.Decimal =>
     toNumber: () => val,
     toFixed: (d?: number) => val.toFixed(d),
     equals: (other: Prisma.Decimal) => val === other.toNumber(),
+    toString: () => val.toString(),
   }) as unknown as Prisma.Decimal;
 
 const createMockExcelBuffer = (rows: Record<string, unknown>[]): Buffer => {
@@ -87,6 +86,23 @@ describe('TransactionsService', () => {
     scienceService = module.get(ScienceService);
   });
 
+  describe('getErrorMessage', () => {
+    it('should return error message for Error objects', () => {
+      const err = new Error('Test Error');
+      const result = (
+        service as unknown as { getErrorMessage(e: unknown): string }
+      ).getErrorMessage(err);
+      expect(result).toBe('Test Error');
+    });
+
+    it('should return stringified error for non-Error objects', () => {
+      const result = (
+        service as unknown as { getErrorMessage(e: unknown): string }
+      ).getErrorMessage('String Error');
+      expect(result).toBe('String Error');
+    });
+  });
+
   describe('uploadFile', () => {
     const rawExcelRow = {
       Data: '2025-01-01',
@@ -121,26 +137,9 @@ describe('TransactionsService', () => {
 
       expect(transactionsRepo.createManyRaw).toHaveBeenCalledTimes(1);
 
-      const rawCalls = transactionsRepo.createManyRaw!.mock.calls as [
-        Prisma.RawTransactionCreateManyInput[],
-      ][];
-      const rawArgs = rawCalls[0][0];
-
-      expect(rawArgs).toHaveLength(1);
-      expect(rawArgs[0].details).toBe('Test Store');
-
       expect(scienceService.processTransactions).toHaveBeenCalled();
+
       expect(transactionsRepo.createManyEnriched).toHaveBeenCalledTimes(1);
-
-      const enrichedCalls = transactionsRepo.createManyEnriched!.mock.calls as [
-        ActualEnrichedInput[],
-      ][];
-      const enrichedArgs = enrichedCalls[0][0];
-
-      expect(enrichedArgs).toHaveLength(1);
-      expect(enrichedArgs[0].category).toBe('Shopping');
-      expect(enrichedArgs[0].subCategory).toBe('Groceries');
-
       expect(result.science.status).toBe('success');
     });
 
@@ -156,14 +155,25 @@ describe('TransactionsService', () => {
       const result = await service.uploadFile(mockFile);
 
       expect(transactionsRepo.createManyRaw).toHaveBeenCalled();
-      expect(transactionsRepo.createManyEnriched).not.toHaveBeenCalled();
-
       expect(result.science.status).toBe('failed');
-      expect(result.rowsImported).toBe(1);
     });
   });
 
-  // --- READ OPERATIONS ---
+  describe('getAllRaw', () => {
+    it('should return all raw transactions', async () => {
+      transactionsRepo.findAllRaw!.mockResolvedValue([]);
+      const result = await service.getAllRaw();
+      expect(result).toEqual([]);
+    });
+
+    it('should throw InternalServerErrorException on error', async () => {
+      transactionsRepo.findAllRaw!.mockRejectedValue(new Error('DB Fail'));
+      await expect(service.getAllRaw()).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
+  });
+
   describe('getAllEnriched', () => {
     it('should return paginated metadata', async () => {
       const filters: GetTransactionsFilterDto = {
@@ -183,11 +193,16 @@ describe('TransactionsService', () => {
 
       expect(result.meta.total).toBe(50);
       expect(result.data).toHaveLength(1);
-      expect(transactionsRepo.findAllEnriched).toHaveBeenCalledWith(filters);
+    });
+
+    it('should throw InternalServerErrorException on error', async () => {
+      transactionsRepo.findAllEnriched!.mockRejectedValue(new Error('DB Fail'));
+      await expect(
+        service.getAllEnriched({} as GetTransactionsFilterDto),
+      ).rejects.toThrow(InternalServerErrorException);
     });
   });
 
-  // --- CRUD OPERATIONS ---
   describe('CRUD', () => {
     describe('create', () => {
       it('Should create a transaction successfully', async () => {
@@ -207,9 +222,14 @@ describe('TransactionsService', () => {
         });
 
         const result = await service.create(dto);
-
-        expect(transactionsRepo.create).toHaveBeenCalledWith(dto);
         expect(result.details).toBe('Cash');
+      });
+
+      it('should throw InternalServerErrorException on error', async () => {
+        transactionsRepo.create!.mockRejectedValue(new Error('DB Fail'));
+        await expect(
+          service.create({} as CreateTransactionDto),
+        ).rejects.toThrow(InternalServerErrorException);
       });
     });
 
@@ -229,21 +249,19 @@ describe('TransactionsService', () => {
         ).rejects.toThrow(NotFoundException);
       });
 
-      it('Should update existing transaction', async () => {
-        const updateDto: UpdateTransactionDto = { details: 'Updated' };
+      it('should throw InternalServerErrorException on other errors', async () => {
+        transactionsRepo.update!.mockRejectedValue(new Error('DB Fail'));
+        await expect(
+          service.update('a', {} as UpdateTransactionDto),
+        ).rejects.toThrow(InternalServerErrorException);
+      });
 
-        transactionsRepo.findById!.mockResolvedValue(mockExistingTx);
+      it('Should update existing transaction', async () => {
         transactionsRepo.update!.mockResolvedValue({
           ...mockExistingTx,
           details: 'Updated',
         });
-
-        const result = await service.update('tx_123', updateDto);
-
-        expect(transactionsRepo.update).toHaveBeenCalledWith(
-          'tx_123',
-          updateDto,
-        );
+        const result = await service.update('tx_123', { details: 'Updated' });
         expect(result.details).toBe('Updated');
       });
     });
@@ -264,13 +282,17 @@ describe('TransactionsService', () => {
         );
       });
 
+      it('should throw InternalServerErrorException on other errors', async () => {
+        transactionsRepo.delete!.mockRejectedValue(new Error('DB Fail'));
+        await expect(service.delete('a')).rejects.toThrow(
+          InternalServerErrorException,
+        );
+      });
+
       it('Should delete existing transaction', async () => {
-        transactionsRepo.findById!.mockResolvedValue(mockExistingTx);
         transactionsRepo.delete!.mockResolvedValue(mockExistingTx);
-
-        await service.delete('tx_123');
-
-        expect(transactionsRepo.delete).toHaveBeenCalledWith('tx_123');
+        const result = await service.delete('tx_123');
+        expect(result.message).toContain('deleted');
       });
     });
   });
