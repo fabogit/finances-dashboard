@@ -12,7 +12,7 @@ Key Components:
 """
 import logging
 import traceback
-from typing import Dict, List, Optional, Union, cast
+from typing import Optional, Union, cast
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from processor import DataProcessor, RawTransactionInput
@@ -47,7 +47,7 @@ class ProcessedTransactionDto(BaseModel):
     account: str
     amount: float      # e.g., -747.6
     category: str
-    subCategory: str
+    subCategory: Optional[str] = None
 
 
 class ForecastFlowDto(BaseModel):
@@ -116,13 +116,33 @@ class ForecastRequest(BaseModel):
     Input payload for the forecast endpoint.
     Contains the transaction history and configuration parameters.
     """
-    transactions: List[ProcessedTransactionDto]
+    transactions: list[ProcessedTransactionDto]
     std_deviation_threshold: float = Field(
         default=0.2,
         ge=0.0,
         le=1.0,
         description="Threshold (0.0-1.0) to identify fixed expenses. Higher = looser detection."
     )
+
+
+class GoalProjectionRequest(BaseModel):
+    """
+    Input payload for the goal projection endpoint.
+    """
+    transactions: list[ProcessedTransactionDto]
+    target_amount: float
+    current_amount: float
+
+
+class GoalProjectionResponse(BaseModel):
+    """
+    Response structure for goal completion projections.
+    """
+    estimated_date: Optional[str] = None
+    monthly_avg: Optional[float] = None
+    months_remaining: Optional[float] = None
+    confidence: Optional[str] = None
+    error: Optional[str] = None
 
 # --- ENDPOINTS ---
 
@@ -138,8 +158,8 @@ def health_check():
     return {"status": "healthy", "service": "backend-science"}
 
 
-@app.post("/process", response_model=List[ProcessedTransactionDto])
-async def process_transactions(transactions: List[RawTransactionDto]):
+@app.post("/process", response_model=list[ProcessedTransactionDto])
+async def process_transactions(transactions: list[RawTransactionDto]):
     """
     Receives raw transactions, cleans them with Pandas, and returns typed data.
 
@@ -147,11 +167,11 @@ async def process_transactions(transactions: List[RawTransactionDto]):
     encapsulated in the DataProcessor. It handles parsing, validation, and categorization.
 
     Args:
-        transactions (List[RawTransactionDto]): A list of raw transaction objects
+        transactions (list[RawTransactionDto]): A list of raw transaction objects
             containing unformatted data (e.g., string dates, string amounts).
 
     Returns:
-        List[ProcessedTransactionDto]: A list of processed transaction objects
+        list[ProcessedTransactionDto]: A list of processed transaction objects
             with standardized dates (ISO format) and numeric amounts.
 
     Raises:
@@ -161,12 +181,12 @@ async def process_transactions(transactions: List[RawTransactionDto]):
     try:
         logger.info("Received %s transactions to process", len(transactions))
 
-        # Pydantic returns Dict[str, Any], but DataProcessor expects List[RawTransactionInput].
+        # Pydantic returns dict[str, Any], but DataProcessor expects list[RawTransactionInput].
         # We use cast because we know the structure is compatible.
         raw_list = [t.model_dump() for t in transactions]
 
         cleaned_data = DataProcessor.clean_transactions(
-            cast(List[RawTransactionInput], raw_list)
+            cast(list[RawTransactionInput], raw_list)
         )
 
         logger.info("Processing completed successfully")
@@ -178,7 +198,7 @@ async def process_transactions(transactions: List[RawTransactionDto]):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/forecast", response_model=Union[List[MonthlyForecastDto], Dict[str, str]])
+@app.post("/forecast", response_model=Union[list[MonthlyForecastDto], dict[str, str]])
 def forecast_transactions(payload: ForecastRequest):
     """
     Predicts financial flows for the next 3 months based on transaction history and configuration.
@@ -189,12 +209,12 @@ def forecast_transactions(payload: ForecastRequest):
 
     Args:
         payload (ForecastRequest): Input object containing:
-            - transactions (List[ProcessedTransactionDto]): List of cleaned and enriched transactions.
+            - transactions (list[ProcessedTransactionDto]): list of cleaned and enriched transactions.
             - std_deviation_threshold (float): Configurable threshold (0.0-1.0) for identifying fixed expenses.
               Higher values make the detection looser/more inclusive.
 
     Returns:
-        Union[List[MonthlyForecastDto], Dict[str, str]]:
+        Union[list[MonthlyForecastDto], dict[str, str]]:
             - A list of 3 monthly forecasts (Income, Expense, Balance) on success.
             - An error dictionary (e.g., {"error": "..."}) if data is insufficient.
     """
@@ -204,7 +224,7 @@ def forecast_transactions(payload: ForecastRequest):
     raw_data = [t.model_dump() for t in transactions]
 
     # 3. Strict Typing
-    typed_data = cast(List[TransactionInput], raw_data)
+    typed_data = cast(list[TransactionInput], raw_data)
 
     try:
         # 4. Pass BOTH data AND the threshold to the Forecaster
@@ -216,4 +236,40 @@ def forecast_transactions(payload: ForecastRequest):
     except Exception as e:
         traceback.print_exc()
         logger.error("Forecast failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.post("/goals/projection", response_model=GoalProjectionResponse)
+def project_goal(payload: GoalProjectionRequest):
+    """
+    Predicts the expected completion date for a savings goal based on historical transaction data.
+
+    This endpoint calculates the monthly savings velocity (including trends) and
+    estimates how many months are remaining to reach a target amount.
+
+    Args:
+        payload (GoalProjectionRequest): Input object containing:
+            - transactions (list[ProcessedTransactionDto]): History of cleaned transactions.
+            - target_amount (float): The target savings goal amount.
+            - current_amount (float): The current amount already saved.
+
+    Returns:
+        GoalProjectionResponse: An object containing the estimated completion date,
+        monthly average savings, months remaining, and a confidence level indicator.
+    """
+    try:
+        raw_data = [t.model_dump() for t in payload.transactions]
+        typed_data = cast(list[TransactionInput], raw_data)
+
+        result = Forecaster.predict_goal_eta(
+            typed_data,
+            target_amount=payload.target_amount,
+            current_amount=payload.current_amount
+        )
+
+        return cast(dict, result)
+
+    except Exception as e:
+        traceback.print_exc()
+        logger.error("Goal projection failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e

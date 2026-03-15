@@ -5,7 +5,7 @@ This module encapsulates the logic for cleaning, transforming, and validating
 raw financial transaction data. It leverages Pandas to handle common data
 inconsistencies found in exports and applies categorization rules.
 """
-from typing import List, TypedDict, cast, Union, Optional
+from typing import TypedDict, cast, Optional
 import pandas as pd
 from rules import get_category_details
 
@@ -15,13 +15,13 @@ class RawTransactionInput(TypedDict, total=False):
     Schema for the raw input data received from the Node.js/Prisma service.
     """
     id: str
-    date: Union[str, float, int]
+    date: str | float | int
     operation: str
     details: str
     account: str
-    amount: Union[str, float, int]
+    amount: str | float | int
     category: Optional[str]
-    originalLine: Union[str, int]
+    originalLine: str | int
 
 
 class CleanedTransaction(TypedDict):
@@ -41,11 +41,12 @@ class CleanedTransaction(TypedDict):
 
 class DataProcessor:
     """
-    Encapsulates logic for cleaning and transforming raw financial data.
+    Orchestration service for cleaning, transforming, and enriching financial transaction data.
+    Uses Pandas for high-performance batch processing of raw data exports.
     """
 
     @staticmethod
-    def clean_transactions(raw_data: List[RawTransactionInput]) -> List[CleanedTransaction]:
+    def clean_transactions(raw_data: list[RawTransactionInput]) -> list[CleanedTransaction]:
         """
         Converts raw data (Excel Strings/Serials) to native Python formats and applies
         categorization rules to derive Macro and Sub-categories.
@@ -61,11 +62,11 @@ class DataProcessor:
            otherwise defaults to the row index.
 
         Args:
-            raw_data (List[RawTransactionInput]): A list of dictionaries containing raw
+            raw_data (list[RawTransactionInput]): A list of dictionaries containing raw
                 transaction data.
 
         Returns:
-            List[CleanedTransaction]: A list of strictly typed dictionaries with
+            list[CleanedTransaction]: A list of strictly typed dictionaries with
                 standardized values (including Macro and Sub categories), suitable for serialization.
         """
         df = pd.DataFrame(raw_data)
@@ -116,4 +117,4 @@ class DataProcessor:
         # Convert to list of dicts
         result = final_df.to_dict(orient='records')
 
-        return cast(List[CleanedTransaction], result)
+        return cast(list[CleanedTransaction], result)

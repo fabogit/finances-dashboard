@@ -5,7 +5,7 @@ This module utilizes historical transaction data to predict future financial flo
 (income and expenses) using statistical analysis for recurring items and
 Linear Regression for variable trends.
 """
-from typing import List, Dict, TypedDict, Tuple
+from typing import TypedDict, Union
 import re
 import pandas as pd
 import numpy as np
@@ -49,16 +49,27 @@ class Forecaster:
 
     @staticmethod
     def predict_next_3_months(
-        transactions: List[TransactionInput],
+        transactions: list[TransactionInput],
         std_deviation_threshold: float = 0.2
-    ) -> List[MonthlyForecast] | Dict[str, str]:
+    ) -> list[MonthlyForecast] | dict[str, str]:
         """
         Analyzes past transactions to forecast the balance for the next 3 months.
 
+        The forecasting process involves:
+        1. Filtering the last 12 months of data.
+        2. Splitting transactions into income and expense flows.
+        3. Identifying recurring (fixed) flows using statistical variance.
+        4. Predicting the variable component using Linear Regression trends.
+        5. Combining results into a monthly forecast.
+
         Args:
-            transactions: A list of past transactions.
-            std_deviation_threshold: Threshold ratio (std/mean) to consider an expense 'Fixed'.
-            Default is 0.2 (20%). Higher values make detection looser.
+            transactions (list[TransactionInput]): A list of past transactions with necessary fields.
+            std_deviation_threshold (float, optional): Threshold ratio (std/mean) to consider an expense 'Fixed'.
+                Default is 0.2 (20%). Higher values make detection looser.
+
+        Returns:
+            Union[list[MonthlyForecast], dict[str, str]]: A list of 3 monthly forecast objects,
+            or a dictionary with an "error" key if the input data is insufficient or invalid.
         """
         if not transactions:
             return {"error": "No data available for forecast"}
@@ -101,7 +112,7 @@ class Forecaster:
         )
 
         # 5. Build Result List
-        results: List[MonthlyForecast] = []
+        results: list[MonthlyForecast] = []
 
         for i in range(3):
             future_date = last_date + pd.DateOffset(months=i + 1)
@@ -116,16 +127,16 @@ class Forecaster:
             results.append({
                 "date": date_str,
                 "income": {
-                    "total": round(curr_inc_total, 2),
-                    "fixed": round(fixed_inc, 2),
-                    "variable": round(var_inc, 2)
+                    "total": float(np.round(curr_inc_total, 2)),
+                    "fixed": float(np.round(fixed_inc, 2)),
+                    "variable": float(np.round(var_inc, 2))
                 },
                 "expense": {
-                    "total": round(curr_exp_total, 2),
-                    "fixed": round(fixed_exp, 2),
-                    "variable": round(var_exp, 2)
+                    "total": float(np.round(curr_exp_total, 2)),
+                    "fixed": float(np.round(fixed_exp, 2)),
+                    "variable": float(np.round(var_exp, 2))
                 },
-                "balance": round(curr_inc_total + curr_exp_total, 2)
+                "balance": float(np.round(curr_inc_total + curr_exp_total, 2))
             })
 
         return results
@@ -135,9 +146,26 @@ class Forecaster:
         df: pd.DataFrame,
         months_to_predict: int = 3,
         std_threshold_pct: float = 0.2
-    ) -> Tuple[List[float], float]:
+    ) -> tuple[list[float], float]:
         """
         Helper method to calculate Fixed vs Variable trend and project future totals.
+
+        This method performs two main steps:
+        A. Recurrence Detection: Groups transactions by subCategory or cleaned details
+           to identify fixed (recurring) items. An item is considered fixed if it appears
+           at least 3 times and its amount's standard deviation is within the threshold.
+        B. Trend Analysis: Uses Linear Regression on monthly totals to project future
+           values for the variable portion of the flow.
+
+        Args:
+            df (pd.DataFrame): DataFrame containing the transactions for a specific flow (Income/Expense).
+            months_to_predict (int): Number of future months to project. Defaults to 3.
+            std_threshold_pct (float): Sensitivity threshold for recurring item detection.
+
+        Returns:
+            tuple[list[float], float]: A tuple containing:
+                - A list of projected total amounts for each future month.
+                - The total monthly value of identified 'Fixed' items.
         """
         if df.empty:
             return [0.0] * months_to_predict, 0.0
@@ -176,7 +204,7 @@ class Forecaster:
         # Group by this numeric index
         monthly_totals = df.groupby('month_idx')['amount'].sum().reset_index()
 
-        predictions: List[float] = []
+        predictions: list[float] = []
 
         if len(monthly_totals) < 2:
             # Not enough data for regression: Use simple mean for all future months
@@ -202,3 +230,85 @@ class Forecaster:
             predictions = [float(val) for val in raw_predictions]
 
         return predictions, fixed_total
+
+    @staticmethod
+    def predict_goal_eta(
+        transactions: list[TransactionInput],
+        target_amount: float,
+        current_amount: float
+    ) -> dict[str, Union[str, float, None]]:
+        """
+        Predicts when a savings goal will be completed based on savings history.
+
+        The prediction Uses Linear Regression to project the future savings trend.
+        If history is too short (less than 2 months), it falls back to a simple average.
+
+        Args:
+            transactions (list[TransactionInput]): Historical transaction data.
+            target_amount (float): The final amount the user wants to reach.
+            current_amount (float): The current progress towards the goal.
+
+        Returns:
+            dict[str, Union[str, float, None]]: A dictionary containing:
+                - estimated_date (str): Expected completion month in "YYYY-MM" or "COMPLETED".
+                - monthly_avg (float): The projected monthly savings velocity.
+                - months_remaining (float): Number of months until the goal is reached.
+                - confidence (str): Qualitative assessment of the prediction (HIGH/MEDIUM/LOW).
+                - error (str, optional): Error message if projection is impossible.
+        """
+        if not transactions:
+            return {"error": "No data for projection"}
+
+        df = pd.DataFrame(transactions)
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0.0)
+        df = df.dropna(subset=['date'])
+
+        # Group by month and sum the amounts (savings are positive in current context)
+        df['month_idx'] = df['date'].values.astype('datetime64[M]').astype(int)
+        monthly_savings = df.groupby('month_idx')['amount'].sum().reset_index()
+
+        # We need at least 2 months to find a trend
+        if len(monthly_savings) < 2:
+            avg_savings = float(monthly_savings['amount'].mean())
+            if avg_savings <= 0:
+                return {"error": "Average savings is zero or negative"}
+            months_remaining = (target_amount - current_amount) / avg_savings
+            eta_date = pd.Timestamp.now() + pd.DateOffset(months=int(months_remaining))
+            return {
+                "estimated_date": eta_date.strftime('%Y-%m'),
+                "monthly_avg": float(np.round(avg_savings, 2)),
+                "months_remaining": float(np.round(months_remaining, 1)),
+                "confidence": "LOW (Incomplete history)"
+            }
+
+        # Linear Regression for trend
+        x = np.array(monthly_savings['month_idx'].values).reshape(-1, 1)
+        y = np.array(monthly_savings['amount'].values)
+
+        model = LinearRegression()
+        model.fit(x, y)
+
+        # Current monthly velocity (slope)
+        last_idx = monthly_savings['month_idx'].max()
+        # predict the next few months to get an average velocity including trend
+        future_indices = np.array([[last_idx + i] for i in range(1, 4)])
+        future_savings = model.predict(future_indices)
+        avg_future_velocity = float(np.mean(future_savings))
+
+        if avg_future_velocity <= 0:
+            return {"error": "Projected savings trend is zero or negative"}
+
+        remaining_to_save = target_amount - current_amount
+        if remaining_to_save <= 0:
+            return {"estimated_date": "COMPLETED", "months_remaining": 0}
+
+        months_remaining = remaining_to_save / avg_future_velocity
+        eta_date = pd.Timestamp.now() + pd.DateOffset(months=int(months_remaining))
+
+        return {
+            "estimated_date": eta_date.strftime('%Y-%m'),
+            "monthly_avg": float(np.round(avg_future_velocity, 2)),
+            "months_remaining": float(np.round(months_remaining, 1)),
+            "confidence": "HIGH (Linear trend)" if len(monthly_savings) >= 4 else "MEDIUM"
+        }

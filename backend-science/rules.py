@@ -63,10 +63,20 @@ CATEGORY_MAP = {
 }
 
 
-def get_category_details(original_label: str):
+def get_category_details(original_label: str) -> tuple[str, str]:
     """
-    Returns (Macro, Sub) tuple given an Italian label.
-    Case insensitive and trims whitespace.
+    Standardizes and translates a raw Italian category label into its Macro and Sub-category components.
+
+    This function performs a lookup in the CATEGORY_MAP. If the label is found, it returns
+    the mapped Macro category and the English translation for the sub-category. If not found,
+    it returns "UNCATEGORIZED" with the original label (trimmed) as the sub-category.
+
+    Args:
+        original_label (str): The raw category label from the source bank data.
+
+    Returns:
+        tuple[str, str]: A tuple containing (Macro Category, Sub-Category English).
+            Example: ("HOME", "Rent") or ("UNCATEGORIZED", "Custom Label")
     """
     if not original_label:
         return ("UNCATEGORIZED", "Unknown")
