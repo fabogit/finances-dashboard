@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { AssetsRepository } from 'src/assets/assets.repository';
+import { GoalsRepository } from 'src/goals/goals.repository';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
 import {
   CreateTransactionDto,
@@ -17,7 +19,11 @@ type CategoryMapData = {
 export class TransactionsRepository {
   private readonly logger = new Logger(TransactionsRepository.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly assetsRepo: AssetsRepository,
+    private readonly goalsRepo: GoalsRepository,
+  ) {}
 
   // --- HELPER: Resolve Category (Find or Create) ---
   async resolveCategoryId(
@@ -279,92 +285,161 @@ export class TransactionsRepository {
   }
 
   // --- CRUD SINGLE ---
-  async create(dto: CreateTransactionDto, tx?: Prisma.TransactionClient) {
-    const client = tx || this.prisma; // Usa la transazione se presente
-
-    // Nota: resolveCategoryId usa internamente this.prisma.
-    // Per ora va bene così (creare categorie fuori dalla transazione principale è accettabile).
+  async create(dto: CreateTransactionDto) {
     const categoryId = await this.resolveCategoryId(
       dto.category,
       dto.subCategory,
     );
 
-    let finalAssetId = dto.assetId;
-    if (!finalAssetId) {
-      // Usiamo 'client' per leggere, così se siamo in una tx vediamo dati coerenti
-      const category = await client.category.findUnique({
-        where: { id: categoryId },
-        select: { defaultAssetId: true },
-      });
-      if (category?.defaultAssetId) {
-        finalAssetId = category.defaultAssetId;
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Risolvi Asset di default (all'interno della tx per coerenza)
+      let finalAssetId = dto.assetId;
+      if (!finalAssetId) {
+        const category = await tx.category.findUnique({
+          where: { id: categoryId },
+          select: { defaultAssetId: true },
+        });
+        if (category?.defaultAssetId) finalAssetId = category.defaultAssetId;
       }
-    }
 
-    return client.enrichedTransaction.create({
-      data: {
-        date: dto.date,
-        amount: new Prisma.Decimal(dto.amount),
-        details: dto.details,
-        account: dto.account || 'MANUAL',
-        operation: dto.operation || 'Manual Entry',
-        importBatchId: 'MANUAL',
-        originalLine: -1,
-        category: { connect: { id: categoryId } },
-        asset: finalAssetId ? { connect: { id: finalAssetId } } : undefined,
-        savingsGoal: dto.savingsGoalId
-          ? { connect: { id: dto.savingsGoalId } }
-          : undefined,
-      },
-      include: {
-        category: true,
-        asset: true,
-        savingsGoal: true,
-      },
+      // 2. Crea la Transazione
+      const transaction = await tx.enrichedTransaction.create({
+        data: {
+          date: dto.date,
+          amount: new Prisma.Decimal(dto.amount),
+          details: dto.details,
+          account: dto.account || 'MANUAL',
+          operation: dto.operation || 'Manual Entry',
+          importBatchId: 'MANUAL',
+          originalLine: -1,
+          category: { connect: { id: categoryId } },
+          asset: finalAssetId ? { connect: { id: finalAssetId } } : undefined,
+          savingsGoal: dto.savingsGoalId
+            ? { connect: { id: dto.savingsGoalId } }
+            : undefined,
+        },
+        include: { category: true, asset: true, savingsGoal: true },
+      });
+
+      // 3. Aggiorna Saldi usando i repository esterni (passando tx)
+      if (transaction.assetId) {
+        await this.assetsRepo.updateBalanceWithDelta(
+          transaction.assetId,
+          transaction.amount.toNumber(),
+          tx,
+        );
+      }
+      if (transaction.savingsGoalId) {
+        await this.goalsRepo.updateProgress(
+          transaction.savingsGoalId,
+          transaction.amount.toNumber(),
+          tx,
+        );
+      }
+
+      return transaction;
     });
   }
 
   async update(id: string, dto: UpdateTransactionDto) {
-    const { category, subCategory, assetId, savingsGoalId, ...scalarFields } =
-      dto;
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Leggi il vecchio stato
+      const oldTx = await tx.enrichedTransaction.findUniqueOrThrow({
+        where: { id },
+      });
 
-    const updateData: Prisma.EnrichedTransactionUpdateInput = {
-      ...scalarFields,
-      amount: scalarFields.amount
-        ? new Prisma.Decimal(scalarFields.amount)
-        : undefined,
-    };
+      // 2. FASE DI STORNO (Revert dei vecchi saldi)
+      if (oldTx.assetId) {
+        await this.assetsRepo.updateBalanceWithDelta(
+          oldTx.assetId,
+          oldTx.amount.toNumber() * -1,
+          tx,
+        );
+      }
+      if (oldTx.savingsGoalId) {
+        await this.goalsRepo.updateProgress(
+          oldTx.savingsGoalId,
+          oldTx.amount.toNumber() * -1,
+          tx,
+        );
+      }
 
-    if (category) {
-      const categoryId = await this.resolveCategoryId(category, subCategory);
-      updateData.category = { connect: { id: categoryId } };
-    }
+      // 3. Risolvi la nuova Categoria (se cambiata)
+      const { category, subCategory, assetId, savingsGoalId, ...scalarFields } =
+        dto;
+      const updateData: Prisma.EnrichedTransactionUpdateInput = {
+        ...scalarFields,
+        amount: scalarFields.amount
+          ? new Prisma.Decimal(scalarFields.amount)
+          : undefined,
+      };
 
-    if (assetId !== undefined) {
-      // Asset Management: null = disconnect, string = connect
+      if (category) {
+        const categoryId = await this.resolveCategoryId(category, subCategory); // Nota: usa this.prisma interno, accettabile qui.
+        updateData.category = { connect: { id: categoryId } };
+      }
 
-      updateData.asset = assetId
-        ? { connect: { id: assetId } }
-        : { disconnect: true };
-    }
+      if (assetId !== undefined)
+        updateData.asset = assetId
+          ? { connect: { id: assetId } }
+          : { disconnect: true };
+      if (savingsGoalId !== undefined)
+        updateData.savingsGoal = savingsGoalId
+          ? { connect: { id: savingsGoalId } }
+          : { disconnect: true };
 
-    if (savingsGoalId !== undefined) {
-      // Goal Management: null = disconnect, string = connect
-      updateData.savingsGoal = savingsGoalId
-        ? { connect: { id: savingsGoalId } }
-        : { disconnect: true };
-    }
+      // 4. Aggiorna Transazione
+      const updatedTx = await tx.enrichedTransaction.update({
+        where: { id },
+        data: updateData,
+        include: { category: true, asset: true, savingsGoal: true },
+      });
 
-    return this.prisma.enrichedTransaction.update({
-      where: { id },
-      data: updateData,
-      include: { category: true, asset: true, savingsGoal: true },
+      // 5. FASE DI APPLICAZIONE (Applica i nuovi saldi)
+      if (updatedTx.assetId) {
+        await this.assetsRepo.updateBalanceWithDelta(
+          updatedTx.assetId,
+          updatedTx.amount.toNumber(),
+          tx,
+        );
+      }
+      if (updatedTx.savingsGoalId) {
+        await this.goalsRepo.updateProgress(
+          updatedTx.savingsGoalId,
+          updatedTx.amount.toNumber(),
+          tx,
+        );
+      }
+
+      return updatedTx;
     });
   }
 
-  async delete(id: string, tx?: Prisma.TransactionClient) {
-    const client = tx || this.prisma;
-    return client.enrichedTransaction.delete({ where: { id } });
+  async delete(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.enrichedTransaction.findUniqueOrThrow({
+        where: { id },
+      });
+
+      // Storna saldi prima di cancellare
+      if (existing.assetId) {
+        await this.assetsRepo.updateBalanceWithDelta(
+          existing.assetId,
+          existing.amount.toNumber() * -1,
+          tx,
+        );
+      }
+      if (existing.savingsGoalId) {
+        await this.goalsRepo.updateProgress(
+          existing.savingsGoalId,
+          existing.amount.toNumber() * -1,
+          tx,
+        );
+      }
+
+      // Elimina
+      return tx.enrichedTransaction.delete({ where: { id } });
+    });
   }
 
   async findById(id: string) {

@@ -68,6 +68,14 @@ export class AssetsController {
     return this.assetsService.updateBalance(id, body);
   }
 
+  @Post(':id/recalculate')
+  @ApiOperation({
+    summary: 'Recalculate asset balance based on history and transactions',
+  })
+  recalculateBalance(@Param('id') id: string) {
+    return this.assetsService.recalculateBalance(id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete asset and its history' })
   @ApiResponse({ status: 200, description: 'Asset deleted successfully' })

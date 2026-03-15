@@ -71,6 +71,20 @@ export class AssetsService {
     }
   }
 
+  async recalculateBalance(id: string) {
+    try {
+      return await this.assetsRepo.recalculateBalance(id);
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`Asset #${id} not found`);
+      }
+      throw error;
+    }
+  }
+
   async remove(id: string) {
     try {
       return await this.assetsRepo.delete(id);

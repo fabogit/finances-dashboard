@@ -1,5 +1,4 @@
 import {
-  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -9,9 +8,6 @@ import { Prisma, RawTransaction } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { randomUUID } from 'crypto';
 import { TransactionsRepository } from './transactions.repository';
-import { AssetsService } from 'src/assets/assets.service';
-import { GoalsService } from 'src/goals/goals.service';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { ScienceService } from '../science/science.service';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
 import { ProcessedTransactionDto } from '../science/dto/processed-transaction.dto';
@@ -28,9 +24,6 @@ export class TransactionsService {
   constructor(
     private readonly transactionsRepo: TransactionsRepository,
     private readonly scienceService: ScienceService,
-    private readonly assetsService: AssetsService,
-    private readonly goalsService: GoalsService,
-    private readonly prisma: PrismaService,
   ) {}
 
   private getErrorMessage(error: unknown): string {
@@ -193,54 +186,28 @@ export class TransactionsService {
   async create(dto: CreateTransactionDto) {
     try {
       this.logger.log(`Creating manual transaction: ${dto.details}`);
-
-      // AVVIO TRANSAZIONE ATOMICA
-      return await this.prisma.$transaction(async (tx) => {
-        // 1. Crea la Transazione
-        const transaction = await this.transactionsRepo.create(dto, tx);
-
-        // 2. Aggiorna Asset (se collegato)
-        if (transaction.assetId) {
-          const amount = transaction.amount.toNumber();
-          await this.assetsService.updateBalanceWithDelta(
-            transaction.assetId,
-            amount,
-            tx,
-          );
-        }
-
-        // 3. Aggiorna Goal (se collegato)
-        if (transaction.savingsGoalId) {
-          const amount = transaction.amount.toNumber();
-          await this.goalsService.updateProgress(
-            transaction.savingsGoalId,
-            amount,
-            tx,
-          );
-        }
-
-        return transaction;
-      });
+      return await this.transactionsRepo.create(dto);
     } catch (error) {
-      const msg = this.getErrorMessage(error);
+      const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Create failed: ${msg}`);
-      // Rilancia eccezioni HTTP (es. NotFound) così il controller risponde giusto
-      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Could not create transaction');
     }
   }
+
   async update(id: string, dto: UpdateTransactionDto) {
     try {
-      const existing = await this.transactionsRepo.findById(id);
-      if (!existing) {
-        this.logger.warn(`Update failed: Transaction ${id} not found`);
+      return await this.transactionsRepo.update(id, dto);
+    } catch (error: unknown) {
+      // <-- USIAMO unknown (o omettiamo il tipo)
+      // TYPE GUARD: Controlliamo se è un errore noto di Prisma
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
         throw new NotFoundException(`Transaction with ID ${id} not found`);
       }
 
-      return await this.transactionsRepo.update(id, dto);
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      const msg = this.getErrorMessage(error);
+      const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Update failed for ${id}: ${msg}`);
       throw new InternalServerErrorException('Could not update transaction');
     }
@@ -248,44 +215,19 @@ export class TransactionsService {
 
   async delete(id: string) {
     try {
-      // 1. Leggi transazione per sapere cosa stornare
-      const existing = await this.transactionsRepo.findById(id);
-      if (!existing) {
-        throw new NotFoundException(`Transaction with ID ${id} not found`);
-      }
-
-      // AVVIO TRANSAZIONE ATOMICA
-      await this.prisma.$transaction(async (tx) => {
-        // 2. Elimina la Transazione
-        await this.transactionsRepo.delete(id, tx);
-
-        // 3. Storna Asset (Inverti segno)
-        if (existing.assetId) {
-          const amountToRevert = existing.amount.toNumber() * -1;
-          await this.assetsService.updateBalanceWithDelta(
-            existing.assetId,
-            amountToRevert,
-            tx,
-          );
-        }
-
-        // 4. Storna Goal (Inverti segno)
-        if (existing.savingsGoalId) {
-          const amountToRevert = existing.amount.toNumber() * -1;
-          await this.goalsService.updateProgress(
-            existing.savingsGoalId,
-            amountToRevert,
-            tx,
-          );
-        }
-      });
-
+      await this.transactionsRepo.delete(id);
       return {
         message: 'Transaction deleted and balances reverted successfully',
       };
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      const msg = this.getErrorMessage(error);
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`Transaction with ID ${id} not found`);
+      }
+
+      const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Delete failed for ${id}: ${msg}`);
       throw new InternalServerErrorException('Could not delete transaction');
     }

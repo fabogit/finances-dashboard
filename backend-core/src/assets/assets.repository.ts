@@ -124,6 +124,59 @@ export class AssetsRepository {
     }
   }
 
+  async recalculateBalance(id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      // Verifica esistenza (lancia P2025 se non trovato)
+      await tx.asset.findUniqueOrThrow({ where: { id } });
+
+      // 1. Trova il primo snapshot assoluto (Anchor Point)
+      const firstSnapshot = await tx.assetHistory.findFirst({
+        where: { assetId: id },
+        orderBy: { date: 'asc' }, // Dal più vecchio
+      });
+
+      const baseBalance = firstSnapshot
+        ? firstSnapshot.balance
+        : new Prisma.Decimal(0);
+      const startDate = firstSnapshot ? firstSnapshot.date : new Date(0);
+
+      // 2. Somma tutte le transazioni (delta) successive all'Anchor Point
+      const aggregations = await tx.enrichedTransaction.aggregate({
+        where: {
+          assetId: id,
+          date: { gt: startDate },
+        },
+        _sum: { amount: true },
+      });
+
+      const transactionsSum = aggregations._sum.amount || new Prisma.Decimal(0);
+      const newBalance = baseBalance.add(transactionsSum);
+
+      // 3. Sovrascrivi il saldo dell'Asset con il valore calcolato
+      const updatedAsset = await tx.asset.update({
+        where: { id },
+        data: { balance: newBalance },
+      });
+
+      // 4. Registra lo storico della riconciliazione per mantenere il grafico coerente
+      await tx.assetHistory.create({
+        data: {
+          assetId: id,
+          balance: newBalance,
+          date: new Date(),
+        },
+      });
+
+      return {
+        asset: updatedAsset,
+        baseBalance: baseBalance.toNumber(),
+        transactionsSum: transactionsSum.toNumber(),
+        newBalance: newBalance.toNumber(),
+        basedOnSnapshotDate: startDate,
+      };
+    });
+  }
+
   // --- DELETE ---
   async delete(id: string) {
     // The DB handles Cascade for history and SetNull for transactions.
