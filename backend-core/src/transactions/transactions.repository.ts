@@ -292,14 +292,20 @@ export class TransactionsRepository {
     );
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Risolvi Asset di default (all'interno della tx per coerenza)
+      // 1. Risolvi Asset e Goal di default (all'interno della tx per coerenza)
+      const category = await tx.category.findUnique({
+        where: { id: categoryId },
+        select: { defaultAssetId: true, defaultGoalId: true },
+      });
+
       let finalAssetId = dto.assetId;
-      if (!finalAssetId) {
-        const category = await tx.category.findUnique({
-          where: { id: categoryId },
-          select: { defaultAssetId: true },
-        });
-        if (category?.defaultAssetId) finalAssetId = category.defaultAssetId;
+      if (!finalAssetId && category?.defaultAssetId) {
+        finalAssetId = category.defaultAssetId;
+      }
+
+      let finalGoalId = dto.savingsGoalId;
+      if (!finalGoalId && category?.defaultGoalId) {
+        finalGoalId = category.defaultGoalId;
       }
 
       // 2. Crea la Transazione
@@ -314,8 +320,8 @@ export class TransactionsRepository {
           originalLine: -1,
           category: { connect: { id: categoryId } },
           asset: finalAssetId ? { connect: { id: finalAssetId } } : undefined,
-          savingsGoal: dto.savingsGoalId
-            ? { connect: { id: dto.savingsGoalId } }
+          savingsGoal: finalGoalId
+            ? { connect: { id: finalGoalId } }
             : undefined,
         },
         include: { category: true, asset: true, savingsGoal: true },
@@ -375,8 +381,21 @@ export class TransactionsRepository {
       };
 
       if (category) {
-        const categoryId = await this.resolveCategoryId(category, subCategory); // Nota: usa this.prisma interno, accettabile qui.
+        const categoryId = await this.resolveCategoryId(category, subCategory);
         updateData.category = { connect: { id: categoryId } };
+
+        // Automation: If category changed and no explicit IDs provided, use defaults
+        const catData = await tx.category.findUnique({
+          where: { id: categoryId },
+          select: { defaultAssetId: true, defaultGoalId: true },
+        });
+
+        if (assetId === undefined && catData?.defaultAssetId) {
+          updateData.asset = { connect: { id: catData.defaultAssetId } };
+        }
+        if (savingsGoalId === undefined && catData?.defaultGoalId) {
+          updateData.savingsGoal = { connect: { id: catData.defaultGoalId } };
+        }
       }
 
       if (assetId !== undefined)

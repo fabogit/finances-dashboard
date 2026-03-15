@@ -32,6 +32,22 @@ export class TransactionDto {
   })
   subCategory?: string;
 
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'UUID of the linked asset',
+    required: false,
+    nullable: true,
+  })
+  assetId?: string | null;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'UUID of the linked savings goal',
+    required: false,
+    nullable: true,
+  })
+  savingsGoalId?: string | null;
+
   @ApiProperty()
   updatedAt: Date;
 }

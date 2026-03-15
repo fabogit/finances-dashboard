@@ -118,6 +118,10 @@ model Category {
   defaultAssetId String?
   defaultAsset   Asset?   @relation("CategoryDefaultAsset", fields: [defaultAssetId], references: [id], onDelete: SetNull)
 
+  // Link Category to a Savings Goal for automatic contribution
+  defaultGoalId String?
+  defaultGoal   SavingsGoal? @relation("CategoryDefaultGoal", fields: [defaultGoalId], references: [id], onDelete: SetNull)
+
   // Uniqueness constraint: Unique name within the same parent (or among root categories if parentId is null)
   @@unique([name, parentId])
 }
@@ -182,6 +186,9 @@ model SavingsGoal {
   // Asset linked to this goal (where the funds reside physically)
   assetId String?
   asset   Asset?  @relation("GoalAsset", fields: [assetId], references: [id], onDelete: SetNull)
+
+  // Categories linked to this goal for automation
+  categories Category[] @relation("CategoryDefaultGoal")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

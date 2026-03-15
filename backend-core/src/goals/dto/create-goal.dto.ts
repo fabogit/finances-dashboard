@@ -11,11 +11,17 @@ import {
 } from 'class-validator';
 
 export class CreateGoalDto {
-  @ApiProperty({ example: 'Japan trip 🇯🇵', description: 'Goal name' })
+  @ApiProperty({
+    example: 'Japan trip 🇯🇵',
+    description: 'A descriptive name for the savings goal',
+  })
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 3500.0, description: 'Target amount to reach' })
+  @ApiProperty({
+    example: 3500.0,
+    description: 'Total target amount to be saved for this goal',
+  })
   @IsNumber()
   @Min(1)
   targetAmount: number;

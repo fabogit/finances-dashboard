@@ -46,13 +46,17 @@ export class AssetsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get Asset details with history' })
+  @ApiOperation({
+    summary: 'Get asset details with history',
+    description:
+      'Returns the full details of a specific asset, including its current balance and configuration, plus a list of its value history snapshots.',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Asset details including history',
+    description: 'Asset details including history found and returned.',
     type: AssetResponseDto,
   })
-  @ApiResponse({ status: 404, description: 'Asset not found' })
+  @ApiResponse({ status: 404, description: 'Asset not found.' })
   @UsePipes(new ValidationPipe({ transform: true }))
   findOne(@Param('id') id: string, @Query() query: GetAssetQueryDto) {
     return this.assetsService.findOne(id, query.historyLimit);
@@ -84,13 +88,16 @@ export class AssetsController {
 
   @Post(':id/recalculate')
   @ApiOperation({
-    summary: 'Recalculate asset balance based on history and transactions',
+    summary: 'Recalculate balance from transactions',
+    description:
+      'Triggers an atomic recalculation of the asset balance based on all linked transactions. Useful for correcting sync drifts.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Asset balance recalculated',
+    description: 'Balance recalculated successfully.',
     type: AssetResponseDto,
   })
+  @ApiResponse({ status: 404, description: 'Asset not found.' })
   recalculateBalance(@Param('id') id: string) {
     return this.assetsService.recalculateBalance(id);
   }

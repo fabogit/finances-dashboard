@@ -16,6 +16,7 @@ import { CreateGoalDto } from './dto/create-goal.dto';
 import { UpdateGoalDto } from './dto/update-goal.dto';
 import { GetGoalQueryDto } from './dto/get-goal-query.dto';
 import { GoalResponseDto } from './dto/goal-response.dto';
+import { GoalProjectionResponseDto } from '../science/dto/goal-projection-response.dto';
 
 @ApiTags('Savings Goals')
 @Controller('goals')
@@ -45,13 +46,17 @@ export class GoalsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get Goal details with recent transactions' })
+  @ApiOperation({
+    summary: 'Get Goal details with recent transactions',
+    description:
+      'Returns a specific savings goal with internal progress details and a list of contributing transactions based on the provided limit.',
+  })
   @ApiResponse({
     status: 200,
-    description: 'Goal details including recent transactions',
+    description: 'Goal details retrieved successfully.',
     type: GoalResponseDto,
   })
-  @ApiResponse({ status: 404, description: 'Goal not found' })
+  @ApiResponse({ status: 404, description: 'Goal not found.' })
   @UsePipes(new ValidationPipe({ transform: true }))
   findOne(@Param('id') id: string, @Query() query: GetGoalQueryDto) {
     return this.goalsService.findOne(id, query.transactionLimit);
@@ -79,5 +84,24 @@ export class GoalsController {
   @ApiResponse({ status: 404, description: 'Goal not found' })
   remove(@Param('id') id: string) {
     return this.goalsService.remove(id);
+  }
+
+  @Get(':id/projection')
+  @ApiOperation({
+    summary: 'Get Savings Goal completion projection',
+    description:
+      'Calculates the estimated completion date and monthly savings velocity for a goal using ML linear regression in the Science Service. Requires historical transaction data.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Goal projection retrieved successfully.',
+    type: GoalProjectionResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Goal not found or insufficient data for projection.',
+  })
+  getProjection(@Param('id') id: string) {
+    return this.goalsService.getProjection(id);
   }
 }

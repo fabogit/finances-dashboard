@@ -37,6 +37,12 @@ export class CategoryResponseDto {
   @ApiProperty()
   isVerified: boolean;
 
+  @ApiPropertyOptional({ description: 'Default Asset for automation' })
+  defaultAssetId?: string | null;
+
+  @ApiPropertyOptional({ description: 'Default Goal for automation' })
+  defaultGoalId?: string | null;
+
   @ApiPropertyOptional({ type: BudgetRuleResponseDto })
   budgetRule?: BudgetRuleResponseDto;
 

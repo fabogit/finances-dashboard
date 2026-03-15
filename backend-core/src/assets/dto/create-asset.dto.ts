@@ -10,7 +10,12 @@ export class CreateAssetDto {
   @IsString()
   name: string;
 
-  @ApiProperty({ example: 'Intesa Sanpaolo', required: false })
+  @ApiProperty({
+    example: 'Intesa Sanpaolo',
+    description:
+      'Financial institution holding the asset (bank, exchange, etc.)',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   institution?: string;
@@ -23,7 +28,10 @@ export class CreateAssetDto {
   @IsEnum(AssetType)
   type: AssetType;
 
-  @ApiProperty({ example: 5000.0, description: 'Initial balance' })
+  @ApiProperty({
+    example: 5000.0,
+    description: 'Initial current value or balance of the asset',
+  })
   @IsNumber()
   balance: number;
 

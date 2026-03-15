@@ -41,12 +41,14 @@ export class CategoriesController {
       color: category.color,
       isSystem: category.isSystem,
       isVerified: category.isVerified,
+      defaultAssetId: category.defaultAssetId,
+      defaultGoalId: category.defaultGoalId,
 
       budgetRule: category.budgetRule
         ? {
             id: category.budgetRule.id,
             ruleType: category.budgetRule.ruleType,
-            limitValue: Number(category.budgetRule.limitValue as unknown),
+            limitValue: category.budgetRule.limitValue.toNumber(),
           }
         : undefined,
 

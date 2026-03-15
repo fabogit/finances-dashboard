@@ -9,6 +9,8 @@ import { ForecastTransactionInputDto } from './dto/forecast-transaction-input.dt
 import { MonthlyForecastDto } from '../analytics/dto/forecast-response.dto';
 import { ForecastResponse } from './dto/forecast-response.dto';
 import { ForecastRequestPayload } from './dto/forecast-request.dto';
+import { GoalProjectionRequestDto } from './dto/goal-projection-request.dto';
+import { GoalProjectionResponseDto } from './dto/goal-projection-response.dto';
 
 interface FastApiErrorResponse {
   detail?: string; // FastAPI returns { detail: "..." }
@@ -54,6 +56,27 @@ export class ScienceService {
       this.logger.error(`Error connecting to Forecast Service: ${msg}`);
 
       return { error: `Science Service Unavailable: ${msg}` };
+    }
+  }
+
+  /**
+   * Get Savings Goal Projection from Python.
+   */
+  async getGoalProjection(
+    payload: GoalProjectionRequestDto,
+  ): Promise<GoalProjectionResponseDto> {
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.post<GoalProjectionResponseDto>(
+          `${this.scienceUrl}/goals/projection`,
+          payload,
+        ),
+      );
+      return data;
+    } catch (error) {
+      const msg = this.extractErrorMessage(error);
+      this.logger.error(`Error connecting to Goal Projection Service: ${msg}`);
+      return { error: `Projection Service Unavailable: ${msg}` };
     }
   }
 
