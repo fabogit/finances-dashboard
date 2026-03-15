@@ -215,7 +215,14 @@ describe('TransactionsService', () => {
 
     describe('update', () => {
       it('Should throw NotFoundException if transaction does not exist', async () => {
-        transactionsRepo.findById!.mockResolvedValue(null);
+        const prismaError = new Prisma.PrismaClientKnownRequestError(
+          'Not found',
+          {
+            code: 'P2025',
+            clientVersion: '7.3.0',
+          },
+        );
+        transactionsRepo.update!.mockRejectedValue(prismaError);
 
         await expect(
           service.update('invalid_id', { details: 'New' }),
@@ -243,7 +250,14 @@ describe('TransactionsService', () => {
 
     describe('delete', () => {
       it('Should throw NotFoundException if transaction does not exist', async () => {
-        transactionsRepo.findById!.mockResolvedValue(null);
+        const prismaError = new Prisma.PrismaClientKnownRequestError(
+          'Not found',
+          {
+            code: 'P2025',
+            clientVersion: '7.3.0',
+          },
+        );
+        transactionsRepo.delete!.mockRejectedValue(prismaError);
 
         await expect(service.delete('invalid_id')).rejects.toThrow(
           NotFoundException,

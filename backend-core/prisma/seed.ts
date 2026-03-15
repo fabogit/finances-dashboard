@@ -213,6 +213,7 @@ async function seedGoals() {
       status: GoalStatus.ACTIVE,
       icon: '🛡️',
       color: '#32a852',
+      assetId: assetMap['Main Account'], // Linked!
     },
   });
   console.log('✅ Goals created.');
@@ -326,6 +327,25 @@ async function seedTransactions() {
       importBatchId: SEED_BATCH_ID,
       originalLine: 0,
     });
+
+    // --- Savings Goal (Emergency Fund) ---
+    const goal = await prisma.savingsGoal.findFirst({
+      where: { name: 'Emergency Fund' },
+    });
+    if (goal) {
+      transactions.push({
+        date: new Date(year, month, 10, 10, 0, 0),
+        amount: new Prisma.Decimal(-100.0),
+        details: 'Emergency Fund Deposit',
+        account: accountId,
+        operation: 'Transfer',
+        categoryId: categoryMap['FINANCIAL']['Transfers Out'],
+        assetId: assetMap['Main Account'], // Linked!
+        savingsGoalId: goal.id,
+        importBatchId: SEED_BATCH_ID,
+        originalLine: 0,
+      });
+    }
 
     // --- Investment (Linked to Asset) ---
     transactions.push({

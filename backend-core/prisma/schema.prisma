@@ -61,6 +61,9 @@ model Asset {
   // Back-link for automation (Categories pointing to this asset by default)
   defaultForCategories Category[] @relation("CategoryDefaultAsset")
 
+  // Goals linked to this asset
+  savingsGoals SavingsGoal[] @relation("GoalAsset")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -175,6 +178,10 @@ model SavingsGoal {
 
   // Transactions contributing to this goal (Accumulation)
   transactions EnrichedTransaction[]
+
+  // Asset linked to this goal (where the funds reside physically)
+  assetId String?
+  asset   Asset?  @relation("GoalAsset", fields: [assetId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

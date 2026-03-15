@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AssetsRepository } from 'src/assets/assets.repository';
-import { GoalsRepository } from 'src/goals/goals.repository';
+import { AssetsRepository } from '../assets/assets.repository';
+import { GoalsRepository } from '../goals/goals.repository';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
 import {
   CreateTransactionDto,

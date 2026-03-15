@@ -32,6 +32,7 @@ import {
   CreateTransactionDto,
   UpdateTransactionDto,
 } from './dto/create-update-transaction.dto';
+import { RawTransactionDto } from './dto/raw-transaction.dto';
 
 @ApiTags('Transactions')
 @Controller('transactions')
@@ -79,7 +80,11 @@ export class TransactionsController {
   // --- READ (RAW) ---
   @Get('raw')
   @ApiOperation({ summary: 'Get all RAW transactions (Debug only)' })
-  @ApiResponse({ status: 200, description: 'List of raw transactions' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of raw transactions',
+    type: [RawTransactionDto],
+  })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async findAllRaw() {
     return this.transactionsService.getAllRaw();

@@ -16,6 +16,7 @@ import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { UpdateAssetBalanceDto } from './dto/update-asset-balance.dto';
 import { GetAssetQueryDto } from './dto/get-asset-query.dto';
+import { AssetResponseDto } from './dto/asset-response.dto';
 
 @ApiTags('Assets')
 @Controller('assets')
@@ -24,7 +25,11 @@ export class AssetsController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new Asset' })
-  @ApiResponse({ status: 201, description: 'Asset created successfully.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Asset created successfully.',
+    type: AssetResponseDto,
+  })
   create(@Body() body: CreateAssetDto) {
     return this.assetsService.create(body);
   }
@@ -34,7 +39,7 @@ export class AssetsController {
   @ApiResponse({
     status: 200,
     description: 'List of all assets',
-    type: [CreateAssetDto],
+    type: [AssetResponseDto],
   })
   findAll() {
     return this.assetsService.findAll();
@@ -42,7 +47,11 @@ export class AssetsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get Asset details with history' })
-  @ApiResponse({ status: 200, description: 'Asset details including history' })
+  @ApiResponse({
+    status: 200,
+    description: 'Asset details including history',
+    type: AssetResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Asset not found' })
   @UsePipes(new ValidationPipe({ transform: true }))
   findOne(@Param('id') id: string, @Query() query: GetAssetQueryDto) {
@@ -51,7 +60,11 @@ export class AssetsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update asset details (name, institution, type)' })
-  @ApiResponse({ status: 200, description: 'Asset updated successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Asset updated successfully',
+    type: AssetResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Asset not found' })
   update(@Param('id') id: string, @Body() body: UpdateAssetDto) {
     return this.assetsService.update(id, body);
@@ -62,6 +75,7 @@ export class AssetsController {
   @ApiResponse({
     status: 200,
     description: 'Asset balance updated successfully',
+    type: AssetResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Asset not found' })
   updateBalance(@Param('id') id: string, @Body() body: UpdateAssetBalanceDto) {
@@ -72,13 +86,22 @@ export class AssetsController {
   @ApiOperation({
     summary: 'Recalculate asset balance based on history and transactions',
   })
+  @ApiResponse({
+    status: 200,
+    description: 'Asset balance recalculated',
+    type: AssetResponseDto,
+  })
   recalculateBalance(@Param('id') id: string) {
     return this.assetsService.recalculateBalance(id);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete asset and its history' })
-  @ApiResponse({ status: 200, description: 'Asset deleted successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Asset deleted successfully',
+    type: AssetResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'Asset not found' })
   remove(@Param('id') id: string) {
     return this.assetsService.remove(id);
