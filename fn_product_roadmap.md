@@ -15,9 +15,9 @@ This document outlines the current user experience and the future vision for the
 ## 🗺️ Evolutionary Roadmap
 
 ### Phase 1: Automation and Control (Short Term)
-- **Local Rule Engine**: Allow the user to define "If description contains X then Category Y" directly from the interface.
-- **De-duplication Management**: Algorithm to ignore identical transactions already imported in previous batches.
-- **Push/Email Notifications**: Automatic alerts upon exceeding budgets.
+- [x] **Category-to-Goal Automation**: Implemented link between Categories, Assets, and Savings Goals for real-time updates.
+- [x] **ML Projections**: Integrated Science Service for ETA estimation of goals.
+- [ ] **Local Rule Engine**: Allow the user to define "If description contains X then Category Y" directly from the interface.
 
 ### Phase 2: Connectivity and Real-time (Medium Term)
 - **Open Banking Integration**: Automatic synchronization via PSD2 (GoCardless/Plaid) to eliminate manual Excel uploads.

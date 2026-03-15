@@ -30,6 +30,19 @@ Used to generate 3-month financial forecasts.
     - Trend calculation (Moving Average or more complex models in Python).
 - **Output**: Forecasts for Income, Expenses, and expected Cash Flow.
 
+### 3. `POST /goals/projection`
+Used to estimate the completion date (ETA) of a savings goal.
+
+- **Input**: 
+    - `transactions`: Historical savings movements.
+    - `target_amount`: The goal's final target.
+    - `current_amount`: Current progress.
+- **Logic**:
+    - **Trend Analysis**: Uses Linear Regression on historical savings frequency and amount.
+    - **Velocity Calculation**: Determines the "savings velocity" (monthly delta).
+    - **Confidence Scoring**: Evaluates the variance in history. High variance results in "LOW" confidence.
+- **Output**: `{ estimated_date: string, monthly_avg: number, confidence: string }`.
+
 ---
 
 ## 🛠️ Data Treatment (Data Cleaning)

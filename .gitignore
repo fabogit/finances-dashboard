@@ -167,7 +167,7 @@ vite.config.ts.timestamp-*
 .env.production.local
 .env.local
 .env.*
-!.env.example
+!*_example
 
 # PYTHON
 backend-science/.direnv

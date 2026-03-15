@@ -18,7 +18,7 @@ The system is a robust **NestJS** application with **Prisma/PostgreSQL** integra
 
 ### 3. Budgeting and Savings
 - **Budget Rules**: Ability to set fixed limits or percentage-of-income limits for each category.
-- **Savings Goals**: Tracking progress toward specific targets, linked to individual assets or transactions.
+- **Savings Goals**: Tracking progress toward specific targets, linked to individual assets or transactions, with **ML-powered ETA projections** (Linear Regression) via the Science Service.
 
 ### 4. Analytics
 - **KPI Summary**: Total income/expenses and current balance.

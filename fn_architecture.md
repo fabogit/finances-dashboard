@@ -34,7 +34,11 @@ sequenceDiagram
     S->>S: AI Cleaning & Categorization
     S-->>N: Return Enriched data
     N->>D: Save EnrichedTransactions
-    N->>N: Update Asset Balances (Transactional)
+    rect rgb(200, 230, 200)
+    Note over N,D: Automation Bridge
+    N->>D: Update Asset Balances (Transactional)
+    N->>D: Update Savings Goal Progress (Transactional)
+    end
     N-->>U: Return BatchId confirmation
 ```
 
@@ -45,9 +49,10 @@ sequenceDiagram
 1.  **Transactions**: Handles the upload, persistence, and filtering of financial movements.
 2.  **Assets**: Responsible for Net Worth calculation and historical snapshot management.
 3.  **Categories**: Manages the hierarchical tree of categories and associated budget rules.
-4.  **Goals**: Monitors progress toward specific savings targets.
+4.  **Goals**: Monitors progress toward specific savings targets and calculates ETAs via ML.
 5.  **Analytics**: Aggregates data to provide KPIs and visual trends.
-6.  **Science Service Wrapper**: Proxy that handles resilient communication with the Python service.
+6.  **Automation Bridge**: Logic residing in `TransactionsRepository` that links Transactions to Assets and Goals based on Category metadata.
+7.  **Science Service Wrapper**: Proxy that handles resilient communication with the Python service.
 
 ---
 
