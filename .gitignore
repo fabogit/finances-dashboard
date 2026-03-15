@@ -182,3 +182,8 @@ backend-science/__pycache__/
 
 # DB
 *.db
+
+# Ai agents
+skills-lock.json
+.agent*
+.claude*

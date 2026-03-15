@@ -1,0 +1,56 @@
+# System Architecture: Finance Dashboard
+
+This document describes the technical architecture of the system, focusing on module interaction and data flow.
+
+## 🏗️ Overview
+
+The system follows a microservices (or decoupled services) architecture where the core business logic resides in a NestJS application, supported by a Python-based Data Science engine (FastAPI).
+
+```mermaid
+graph TD
+    User([User/Frontend]) -- REST --> Nest[backend-core: NestJS]
+    Nest -- Prisma ORM --> DB[(PostgreSQL)]
+    Nest -- HTTP/JSON --> Science[backend-science: FastAPI/Python]
+    Science -- Pandas/ML --> Science
+```
+
+---
+
+## 🔄 Transaction Life Cycle
+
+The import process is the heart of the system and goes through several validation and enrichment stages.
+
+```mermaid
+sequenceDiagram
+    participant U as User (Excel)
+    participant N as NestJS (TransactionsService)
+    participant D as Database (Prisma)
+    participant S as Science Service (Python)
+
+    U->>N: Upload Excel file
+    N->>N: Parse Excel (XLSX)
+    N->>D: Save RawTransactions (Carbon copy of Excel)
+    N->>S: Send RawTransactions for processing
+    S->>S: AI Cleaning & Categorization
+    S-->>N: Return Enriched data
+    N->>D: Save EnrichedTransactions
+    N->>N: Update Asset Balances (Transactional)
+    N-->>U: Return BatchId confirmation
+```
+
+---
+
+## 📂 Backend Core Components
+
+1.  **Transactions**: Handles the upload, persistence, and filtering of financial movements.
+2.  **Assets**: Responsible for Net Worth calculation and historical snapshot management.
+3.  **Categories**: Manages the hierarchical tree of categories and associated budget rules.
+4.  **Goals**: Monitors progress toward specific savings targets.
+5.  **Analytics**: Aggregates data to provide KPIs and visual trends.
+6.  **Science Service Wrapper**: Proxy that handles resilient communication with the Python service.
+
+---
+
+## 🛡️ Consistency Management (ACID)
+
+Critical operations (such as creating a transaction and updating the associated account balance) are executed within **Prisma Transactions**. This ensures that the balance is never misaligned with the sum of movements.
