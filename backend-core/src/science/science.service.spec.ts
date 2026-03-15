@@ -146,6 +146,39 @@ describe('ScienceService', () => {
     });
   });
 
+  describe('getGoalProjection', () => {
+    const mockRequest = {
+      transactions: [],
+      target_amount: 1000,
+      current_amount: 500,
+    };
+
+    it('Should return goal projection on SUCCESS', async () => {
+      const mockResponse = {
+        estimated_date: '2025-12',
+        monthly_avg: 100,
+        confidence: 'HIGH',
+      };
+
+      httpService.post.mockReturnValue(of(createAxiosResponse(mockResponse)));
+
+      const result = await service.getGoalProjection(mockRequest);
+
+      expect(result).toEqual(mockResponse);
+      expect(httpService.post.mock.calls[0][0]).toContain('/goals/projection');
+      expect(httpService.post.mock.calls[0][1]).toEqual(mockRequest);
+    });
+
+    it('Should fall back to error object on failure', async () => {
+      const error = createAxiosError(422, 'Unprocessable', 'Invalid data');
+      httpService.post.mockReturnValue(throwError(() => error));
+
+      const result = await service.getGoalProjection(mockRequest);
+
+      expect(result).toHaveProperty('error');
+    });
+  });
+
   describe('processTransactions', () => {
     const mockRawTx: RawTransaction[] = [
       {
