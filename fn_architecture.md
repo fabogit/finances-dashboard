@@ -59,3 +59,13 @@ sequenceDiagram
 ## 🛡️ Consistency Management (ACID)
 
 Critical operations (such as creating a transaction and updating the associated account balance) are executed within **Prisma Transactions**. This ensures that the balance is never misaligned with the sum of movements.
+
+---
+
+## 🏗️ Quality Management and CI/CD
+
+The integrity of the architecture is guaranteed by a multi-layered verification system:
+
+- **Core Module**: 100% coverage on critical Repositories and 90%+ on Services. Verified via Jest and E2E Integrated tests.
+- **Science Module**: Algorithmic validation via `pytest`.
+- **Global CI/CD**: Intelligent GitHub Actions pipeline with path-filtering that ensures every change is linted, tested, and container-verified before merging.

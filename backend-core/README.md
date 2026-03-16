@@ -8,7 +8,7 @@ Backend Core engine for the Finance Dashboard project. Built with **NestJS**, **
 - **Automated Savings**: Linking categories to Assets and Savings Goals for real-time balance updates.
 - **ML Projections**: Integration with Python Science Service for goal completion ETAs.
 - **ACID Transactions**: Financial consistency guaranteed via database-level transactions.
-- **Swagger Documentation**: Interactive API testing available at `/api`.
+- **Swagger Documentation**: Interactive API testing available at `/docs`.
 
 ---
 
@@ -91,8 +91,14 @@ pnpm run prisma:generate
 
 ### Unit Tests
 
+Comprehensive unit tests for services and repositories (90%+ coverage).
+
 ```bash
+# Run all unit tests
 pnpm run test
+
+# Run with coverage report
+pnpm run test:cov
 ```
 
 ### E2E Tests (Integration)
@@ -106,6 +112,19 @@ pnpm run test:e2e:docker
 # Manual run (if test DB is already up)
 pnpm run test:e2e
 ```
+
+---
+
+## CI/CD 🤖
+
+The core module is part of the global GitHub Actions workflow. Every push to `backend-core/**` triggers:
+
+1. **Quality Check**: Linting and formatting verification.
+2. **Security**: Prisma Client generation and dependency audit.
+3. **Unit Testing**: Full Jest suite execution.
+4. **Integration**: E2E tests run against a live Postgres service container.
+
+**Intelligent CI**: The pipeline is optimized with path-filtering, meaning `core` jobs only run when relevant files are modified.
 
 ---
 

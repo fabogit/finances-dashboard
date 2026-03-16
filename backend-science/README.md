@@ -50,3 +50,28 @@ If your IDE still shows "Import could not be resolved":
 - `processor.py`: Data cleaning and transformation logic.
 - `forecaster.py`: Statistical analysis and ML forecasting models.
 - `rules.py`: Categorization rules for transactions.
+- `tests/`: Unit test suite using `pytest`.
+
+## 📚 API Documentation
+
+Once the service is running, you can access the interactive Swagger UI at:
+**[http://localhost:8000/docs](http://localhost:8000/docs)** (default)
+
+## Testing 🧪
+
+The module includes a comprehensive unit test suite covering categorization, data cleaning, and forecasting logic.
+
+```bash
+# Run all tests
+python -m pytest tests/
+
+# Run with coverage (requires pytest-cov)
+python -m pytest --cov=. tests/
+```
+
+## CI/CD 🤖
+
+This module is integrated into the global GitHub Actions workflow. Every push to `backend-science/**` triggers:
+1. **Type Checking**: Static analysis via `pyright`.
+2. **Unit Tests**: Full execution of the `pytest` suite.
+3. **Build Verification**: Automatic Docker build check to ensure container health.
