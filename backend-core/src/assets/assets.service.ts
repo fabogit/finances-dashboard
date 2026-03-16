@@ -1,9 +1,9 @@
+import { Prisma } from '@prisma/client';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AssetsRepository } from './assets.repository';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { UpdateAssetBalanceDto } from './dto/update-asset-balance.dto';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AssetsService {
@@ -17,12 +17,8 @@ export class AssetsService {
     return this.assetsRepo.findAll();
   }
 
-  async findOne(id: string, historyLimit?: number) {
-    const asset = await this.assetsRepo.findById(id, historyLimit);
-    if (!asset) {
-      throw new NotFoundException(`Asset #${id} not found`);
-    }
-    return asset;
+  findOne(id: string, historyLimit?: number) {
+    return this.assetsRepo.findById(id, historyLimit);
   }
 
   async update(id: string, updateAssetDto: UpdateAssetDto) {

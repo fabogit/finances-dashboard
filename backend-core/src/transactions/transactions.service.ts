@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, RawTransaction } from '@prisma/client';
+import { EnrichedTransaction, Prisma, RawTransaction } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { randomUUID } from 'crypto';
 import { TransactionsRepository } from './transactions.repository';
@@ -16,6 +16,9 @@ import {
   CreateTransactionDto,
   UpdateTransactionDto,
 } from './dto/create-update-transaction.dto';
+import { AssetsService } from '../assets/assets.service';
+import { GoalsService } from '../goals/goals.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class TransactionsService {
@@ -24,6 +27,9 @@ export class TransactionsService {
   constructor(
     private readonly transactionsRepo: TransactionsRepository,
     private readonly scienceService: ScienceService,
+    private readonly assetsService: AssetsService,
+    private readonly goalsService: GoalsService,
+    private readonly prisma: PrismaService,
   ) {}
 
   private getErrorMessage(error: unknown): string {
@@ -183,10 +189,33 @@ export class TransactionsService {
   }
 
   // --- CRUD OPERATIONS ---
-  async create(dto: CreateTransactionDto) {
+  async create(dto: CreateTransactionDto): Promise<EnrichedTransaction> {
     try {
       this.logger.log(`Creating manual transaction: ${dto.details}`);
-      return await this.transactionsRepo.create(dto);
+
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Create the Transaction
+        const transaction = await this.transactionsRepo.create(dto, tx);
+
+        // 2. Update Balances
+        if (transaction.assetId) {
+          await this.assetsService.updateBalanceWithDelta(
+            transaction.assetId,
+            transaction.amount.toNumber(),
+            tx,
+          );
+        }
+
+        if (transaction.savingsGoalId) {
+          await this.goalsService.updateProgress(
+            transaction.savingsGoalId,
+            transaction.amount.toNumber(),
+            tx,
+          );
+        }
+
+        return transaction as unknown as EnrichedTransaction;
+      });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Create failed: ${msg}`);
@@ -194,12 +223,60 @@ export class TransactionsService {
     }
   }
 
-  async update(id: string, dto: UpdateTransactionDto) {
+  async update(
+    id: string,
+    dto: UpdateTransactionDto,
+  ): Promise<EnrichedTransaction> {
     try {
-      return await this.transactionsRepo.update(id, dto);
+      return await this.prisma.$transaction(async (tx) => {
+        // 1. Retrieve old state for reversion
+        const oldTx = await this.transactionsRepo.findById(id);
+        if (!oldTx) {
+          throw new NotFoundException(`Transaction with ID ${id} not found`);
+        }
+
+        // 2. REVERSION PHASE (Undo old balances)
+        if (oldTx.assetId) {
+          await this.assetsService.updateBalanceWithDelta(
+            oldTx.assetId,
+            oldTx.amount.toNumber() * -1,
+            tx,
+          );
+        }
+
+        if (oldTx.savingsGoalId) {
+          await this.goalsService.updateProgress(
+            oldTx.savingsGoalId,
+            oldTx.amount.toNumber() * -1,
+            tx,
+          );
+        }
+
+        // 3. Update Transaction
+        const updatedTx = await this.transactionsRepo.update(id, dto, tx);
+
+        // 4. APPLICATION PHASE (Apply new balances)
+        if (updatedTx.assetId) {
+          await this.assetsService.updateBalanceWithDelta(
+            updatedTx.assetId,
+            updatedTx.amount.toNumber(),
+            tx,
+          );
+        }
+
+        if (updatedTx.savingsGoalId) {
+          await this.goalsService.updateProgress(
+            updatedTx.savingsGoalId,
+            updatedTx.amount.toNumber(),
+            tx,
+          );
+        }
+
+        return updatedTx as unknown as EnrichedTransaction;
+      });
     } catch (error: unknown) {
-      // <-- USIAMO unknown (o omettiamo il tipo)
-      // TYPE GUARD: Controlliamo se è un errore noto di Prisma
+      if (error instanceof NotFoundException) throw error;
+
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'
@@ -215,11 +292,40 @@ export class TransactionsService {
 
   async delete(id: string) {
     try {
-      await this.transactionsRepo.delete(id);
+      await this.prisma.$transaction(async (tx) => {
+        // 1. Retrieve for reversion
+        const existing = await this.transactionsRepo.findById(id);
+        if (!existing) {
+          throw new NotFoundException(`Transaction with ID ${id} not found`);
+        }
+
+        // 2. REVERSION PHASE
+        if (existing.assetId) {
+          await this.assetsService.updateBalanceWithDelta(
+            existing.assetId,
+            existing.amount.toNumber() * -1,
+            tx,
+          );
+        }
+
+        if (existing.savingsGoalId) {
+          await this.goalsService.updateProgress(
+            existing.savingsGoalId,
+            existing.amount.toNumber() * -1,
+            tx,
+          );
+        }
+
+        // 3. Delete
+        await this.transactionsRepo.delete(id, tx);
+      });
+
       return {
         message: 'Transaction deleted and balances reverted successfully',
       };
     } catch (error: unknown) {
+      if (error instanceof NotFoundException) throw error;
+
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'

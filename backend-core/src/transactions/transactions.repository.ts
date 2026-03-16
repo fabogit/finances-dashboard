@@ -1,8 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { AssetsRepository } from '../assets/assets.repository';
-import { GoalsRepository } from '../goals/goals.repository';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
 import {
   CreateTransactionDto,
@@ -19,31 +17,34 @@ type CategoryMapData = {
 export class TransactionsRepository {
   private readonly logger = new Logger(TransactionsRepository.name);
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly assetsRepo: AssetsRepository,
-    private readonly goalsRepo: GoalsRepository,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   // --- HELPER: Resolve Category (Find or Create) ---
+  /**
+   * Resolves a category ID by name, creating it if it doesn't exist.
+   * If a sub-category name is provided, it resolves the sub-category under the macro category.
+   */
   async resolveCategoryId(
     categoryName: string,
     subCategoryName?: string | null,
+    tx?: Prisma.TransactionClient,
   ): Promise<string> {
-    let macro = await this.prisma.category.findFirst({
+    const client = tx || this.prisma;
+
+    let macro = await client.category.findFirst({
       where: { name: categoryName, parentId: null },
     });
 
     if (!macro) {
       this.logger.debug(`Creating new Macro Category: ${categoryName}`);
-      macro = await this.prisma.category.create({
+      macro = await client.category.create({
         data: { name: categoryName, isSystem: false, isVerified: false },
       });
     }
 
     if (!subCategoryName) return macro.id;
 
-    let sub = await this.prisma.category.findFirst({
+    let sub = await client.category.findFirst({
       where: { name: subCategoryName, parentId: macro.id },
     });
 
@@ -51,7 +52,7 @@ export class TransactionsRepository {
       this.logger.debug(
         `Creating new Sub Category: ${subCategoryName} under ${categoryName}`,
       );
-      sub = await this.prisma.category.create({
+      sub = await client.category.create({
         data: {
           name: subCategoryName,
           parentId: macro.id,
@@ -109,7 +110,11 @@ export class TransactionsRepository {
   }
 
   // --- BULK CREATE (Enriched) ---
-  async createManyEnriched(data: EnrichedDataInput[]) {
+  async createManyEnriched(
+    data: EnrichedDataInput[],
+    tx?: Prisma.TransactionClient,
+  ) {
+    const client = tx || this.prisma;
     const uniqueMacros = new Set<string>();
     const uniqueSubs = new Set<string>();
 
@@ -121,11 +126,11 @@ export class TransactionsRepository {
     }
 
     // 2. Fallback Category
-    let fallbackCat = await this.prisma.category.findFirst({
+    let fallbackCat = await client.category.findFirst({
       where: { name: 'UNCATEGORIZED', parentId: null },
     });
     if (!fallbackCat) {
-      fallbackCat = await this.prisma.category.create({
+      fallbackCat = await client.category.create({
         data: {
           name: 'UNCATEGORIZED',
           isSystem: true,
@@ -138,7 +143,7 @@ export class TransactionsRepository {
     const fallbackId = fallbackCat.id;
 
     // 3. Create missing Macro (Bulk)
-    const existingMacros = await this.prisma.category.findMany({
+    const existingMacros = await client.category.findMany({
       where: { name: { in: Array.from(uniqueMacros) }, parentId: null },
       select: { id: true, name: true },
     });
@@ -148,7 +153,7 @@ export class TransactionsRepository {
     );
 
     if (missingMacros.length > 0) {
-      await this.prisma.category.createMany({
+      await client.category.createMany({
         data: missingMacros.map((name) => ({
           name,
           isSystem: false,
@@ -160,7 +165,7 @@ export class TransactionsRepository {
       });
     }
 
-    const allMacros = await this.prisma.category.findMany({
+    const allMacros = await client.category.findMany({
       where: { name: { in: Array.from(uniqueMacros) }, parentId: null },
       select: { id: true, name: true, defaultAssetId: true },
     });
@@ -173,7 +178,7 @@ export class TransactionsRepository {
 
     // 4. Create missing Sub (Bulk)
     const subNamesOnly = Array.from(uniqueSubs).map((s) => s.split(':')[1]);
-    const existingSubs = await this.prisma.category.findMany({
+    const existingSubs = await client.category.findMany({
       where: { name: { in: subNamesOnly }, parentId: { not: null } },
       select: { id: true, name: true, parent: { select: { name: true } } },
     });
@@ -198,14 +203,14 @@ export class TransactionsRepository {
       }
     }
     if (transactionsToCreateSubs.length > 0) {
-      await this.prisma.category.createMany({
+      await client.category.createMany({
         data: transactionsToCreateSubs,
         skipDuplicates: true,
       });
     }
 
-    // Ricarica Sub aggiornate
-    const allSubs = await this.prisma.category.findMany({
+    // Reload updated Subcategories
+    const allSubs = await client.category.findMany({
       where: {
         name: { in: subNamesOnly },
         parentId: { in: Array.from(macroMap.values()).map((v) => v.id) },
@@ -228,7 +233,7 @@ export class TransactionsRepository {
       }
     });
 
-    // 5. Preparazione Transazioni con Mapping Asset Automatico
+    // 5. Prepare Transactions with Automatic Asset Mapping
     const transactionsToInsert: Prisma.EnrichedTransactionCreateManyInput[] =
       [];
 
@@ -236,29 +241,29 @@ export class TransactionsRepository {
       let categoryId: string | undefined;
       let assetId: string | null = null; // Default null
 
-      // Tentativo 1: Sub Category
+      // Attempt 1: Sub Category
       if (item.subCategory) {
         const subData = subMap.get(`${item.category}:${item.subCategory}`);
         if (subData) {
           categoryId = subData.id;
-          // Automazione: Se la sub ha un asset, usalo
+          // Automation: If sub has an asset, use it
           if (subData.defaultAssetId) assetId = subData.defaultAssetId;
         }
       }
 
-      // Tentativo 2: Macro Category (se sub fallisce o non esiste)
+      // Attempt 2: Macro Category (if sub fails or doesn't exist)
       if (!categoryId) {
         const macroData = macroMap.get(item.category);
         if (macroData) {
           categoryId = macroData.id;
-          // Automazione: Se non abbiamo ancora un asset (dalla sub), prova con la macro
+          // Automation: If we don't have an asset yet (from sub), try with macro
           if (!assetId && macroData.defaultAssetId) {
             assetId = macroData.defaultAssetId;
           }
         }
       }
 
-      // Tentativo 3: Fallback
+      // Attempt 3: Fallback
       if (!categoryId) {
         this.logger.warn(
           `Mapping failed for ${item.category} -> ${item.subCategory}. Using fallback.`,
@@ -279,186 +284,113 @@ export class TransactionsRepository {
       });
     }
 
-    return this.prisma.enrichedTransaction.createMany({
+    return client.enrichedTransaction.createMany({
       data: transactionsToInsert,
     });
   }
 
   // --- CRUD SINGLE ---
-  async create(dto: CreateTransactionDto) {
+  async create(dto: CreateTransactionDto, tx?: Prisma.TransactionClient) {
+    const client = tx || this.prisma;
     const categoryId = await this.resolveCategoryId(
       dto.category,
       dto.subCategory,
+      tx,
     );
 
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Risolvi Asset e Goal di default (all'interno della tx per coerenza)
-      const category = await tx.category.findUnique({
+    // 1. Resolve default Asset and Goal
+    const category = await client.category.findUnique({
+      where: { id: categoryId },
+      select: { defaultAssetId: true, defaultGoalId: true },
+    });
+
+    let finalAssetId = dto.assetId;
+    if (!finalAssetId && category?.defaultAssetId) {
+      finalAssetId = category.defaultAssetId;
+    }
+
+    let finalGoalId = dto.savingsGoalId;
+    if (!finalGoalId && category?.defaultGoalId) {
+      finalGoalId = category.defaultGoalId;
+    }
+
+    // 2. Create the Transaction
+    return client.enrichedTransaction.create({
+      data: {
+        date: dto.date,
+        amount: new Prisma.Decimal(dto.amount),
+        details: dto.details,
+        account: dto.account || 'MANUAL',
+        operation: dto.operation || 'Manual Entry',
+        importBatchId: 'MANUAL',
+        originalLine: -1,
+        category: { connect: { id: categoryId } },
+        asset: finalAssetId ? { connect: { id: finalAssetId } } : undefined,
+        savingsGoal: finalGoalId ? { connect: { id: finalGoalId } } : undefined,
+      },
+      include: { category: true, asset: true, savingsGoal: true },
+    });
+  }
+
+  async update(
+    id: string,
+    dto: UpdateTransactionDto,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const client = tx || this.prisma;
+
+    // 1. Resolve the new Category (if changed)
+    const { category, subCategory, assetId, savingsGoalId, ...scalarFields } =
+      dto;
+    const updateData: Prisma.EnrichedTransactionUpdateInput = {
+      ...scalarFields,
+      amount: scalarFields.amount
+        ? new Prisma.Decimal(scalarFields.amount)
+        : undefined,
+    };
+
+    if (category) {
+      const categoryId = await this.resolveCategoryId(
+        category,
+        subCategory,
+        tx,
+      );
+      updateData.category = { connect: { id: categoryId } };
+
+      // Automation: If category changed and no explicit IDs provided, use defaults
+      const catData = await client.category.findUnique({
         where: { id: categoryId },
         select: { defaultAssetId: true, defaultGoalId: true },
       });
 
-      let finalAssetId = dto.assetId;
-      if (!finalAssetId && category?.defaultAssetId) {
-        finalAssetId = category.defaultAssetId;
+      if (assetId === undefined && catData?.defaultAssetId) {
+        updateData.asset = { connect: { id: catData.defaultAssetId } };
       }
-
-      let finalGoalId = dto.savingsGoalId;
-      if (!finalGoalId && category?.defaultGoalId) {
-        finalGoalId = category.defaultGoalId;
+      if (savingsGoalId === undefined && catData?.defaultGoalId) {
+        updateData.savingsGoal = { connect: { id: catData.defaultGoalId } };
       }
+    }
 
-      // 2. Crea la Transazione
-      const transaction = await tx.enrichedTransaction.create({
-        data: {
-          date: dto.date,
-          amount: new Prisma.Decimal(dto.amount),
-          details: dto.details,
-          account: dto.account || 'MANUAL',
-          operation: dto.operation || 'Manual Entry',
-          importBatchId: 'MANUAL',
-          originalLine: -1,
-          category: { connect: { id: categoryId } },
-          asset: finalAssetId ? { connect: { id: finalAssetId } } : undefined,
-          savingsGoal: finalGoalId
-            ? { connect: { id: finalGoalId } }
-            : undefined,
-        },
-        include: { category: true, asset: true, savingsGoal: true },
-      });
+    if (assetId !== undefined)
+      updateData.asset = assetId
+        ? { connect: { id: assetId } }
+        : { disconnect: true };
+    if (savingsGoalId !== undefined)
+      updateData.savingsGoal = savingsGoalId
+        ? { connect: { id: savingsGoalId } }
+        : { disconnect: true };
 
-      // 3. Aggiorna Saldi usando i repository esterni (passando tx)
-      if (transaction.assetId) {
-        await this.assetsRepo.updateBalanceWithDelta(
-          transaction.assetId,
-          transaction.amount.toNumber(),
-          tx,
-        );
-      }
-      if (transaction.savingsGoalId) {
-        await this.goalsRepo.updateProgress(
-          transaction.savingsGoalId,
-          transaction.amount.toNumber(),
-          tx,
-        );
-      }
-
-      return transaction;
+    // 2. Update Transaction
+    return client.enrichedTransaction.update({
+      where: { id },
+      data: updateData,
+      include: { category: true, asset: true, savingsGoal: true },
     });
   }
 
-  async update(id: string, dto: UpdateTransactionDto) {
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Leggi il vecchio stato
-      const oldTx = await tx.enrichedTransaction.findUniqueOrThrow({
-        where: { id },
-      });
-
-      // 2. FASE DI STORNO (Revert dei vecchi saldi)
-      if (oldTx.assetId) {
-        await this.assetsRepo.updateBalanceWithDelta(
-          oldTx.assetId,
-          oldTx.amount.toNumber() * -1,
-          tx,
-        );
-      }
-      if (oldTx.savingsGoalId) {
-        await this.goalsRepo.updateProgress(
-          oldTx.savingsGoalId,
-          oldTx.amount.toNumber() * -1,
-          tx,
-        );
-      }
-
-      // 3. Risolvi la nuova Categoria (se cambiata)
-      const { category, subCategory, assetId, savingsGoalId, ...scalarFields } =
-        dto;
-      const updateData: Prisma.EnrichedTransactionUpdateInput = {
-        ...scalarFields,
-        amount: scalarFields.amount
-          ? new Prisma.Decimal(scalarFields.amount)
-          : undefined,
-      };
-
-      if (category) {
-        const categoryId = await this.resolveCategoryId(category, subCategory);
-        updateData.category = { connect: { id: categoryId } };
-
-        // Automation: If category changed and no explicit IDs provided, use defaults
-        const catData = await tx.category.findUnique({
-          where: { id: categoryId },
-          select: { defaultAssetId: true, defaultGoalId: true },
-        });
-
-        if (assetId === undefined && catData?.defaultAssetId) {
-          updateData.asset = { connect: { id: catData.defaultAssetId } };
-        }
-        if (savingsGoalId === undefined && catData?.defaultGoalId) {
-          updateData.savingsGoal = { connect: { id: catData.defaultGoalId } };
-        }
-      }
-
-      if (assetId !== undefined)
-        updateData.asset = assetId
-          ? { connect: { id: assetId } }
-          : { disconnect: true };
-      if (savingsGoalId !== undefined)
-        updateData.savingsGoal = savingsGoalId
-          ? { connect: { id: savingsGoalId } }
-          : { disconnect: true };
-
-      // 4. Aggiorna Transazione
-      const updatedTx = await tx.enrichedTransaction.update({
-        where: { id },
-        data: updateData,
-        include: { category: true, asset: true, savingsGoal: true },
-      });
-
-      // 5. FASE DI APPLICAZIONE (Applica i nuovi saldi)
-      if (updatedTx.assetId) {
-        await this.assetsRepo.updateBalanceWithDelta(
-          updatedTx.assetId,
-          updatedTx.amount.toNumber(),
-          tx,
-        );
-      }
-      if (updatedTx.savingsGoalId) {
-        await this.goalsRepo.updateProgress(
-          updatedTx.savingsGoalId,
-          updatedTx.amount.toNumber(),
-          tx,
-        );
-      }
-
-      return updatedTx;
-    });
-  }
-
-  async delete(id: string) {
-    return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.enrichedTransaction.findUniqueOrThrow({
-        where: { id },
-      });
-
-      // Storna saldi prima di cancellare
-      if (existing.assetId) {
-        await this.assetsRepo.updateBalanceWithDelta(
-          existing.assetId,
-          existing.amount.toNumber() * -1,
-          tx,
-        );
-      }
-      if (existing.savingsGoalId) {
-        await this.goalsRepo.updateProgress(
-          existing.savingsGoalId,
-          existing.amount.toNumber() * -1,
-          tx,
-        );
-      }
-
-      // Elimina
-      return tx.enrichedTransaction.delete({ where: { id } });
-    });
+  async delete(id: string, tx?: Prisma.TransactionClient) {
+    const client = tx || this.prisma;
+    return client.enrichedTransaction.delete({ where: { id } });
   }
 
   async findById(id: string) {
