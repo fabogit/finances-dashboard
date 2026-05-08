@@ -9,9 +9,9 @@ import {
   BudgetRuleType,
   EnrichedTransaction,
 } from '@prisma/client';
-import { CategoryResponseDto } from '../src/categories/dto/category-response.dto';
-import { BudgetAnalysisResponseDto } from '../src/analytics/dto/budget-analysis.dto';
-import { CreateCategoryDto } from 'src/categories/dto/create-category.dto';
+import { CategoryResponseDto } from '../src/modules/categories/dto/category-response.dto';
+import { BudgetAnalysisResponseDto } from '../src/modules/analytics/dto/budget-analysis.dto';
+import { CreateCategoryDto } from 'src/modules/categories/dto/create-category.dto';
 
 const getCurrentMonth = () => new Date().toISOString().slice(0, 7);
 const getCurrentISODate = () => new Date().toISOString();

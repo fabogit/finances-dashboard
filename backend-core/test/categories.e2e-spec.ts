@@ -5,7 +5,7 @@ import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ExpenseType } from '@prisma/client';
-import { CategoryResponseDto } from '../src/categories/dto/category-response.dto';
+import { CategoryResponseDto } from '../src/modules/categories/dto/category-response.dto';
 
 describe('CategoriesModule (E2E)', () => {
   let app: INestApplication;

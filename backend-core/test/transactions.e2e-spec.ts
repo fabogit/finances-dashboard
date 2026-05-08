@@ -8,7 +8,7 @@ import { ExpenseType } from '@prisma/client';
 import {
   TransactionDto,
   PaginatedTransactionsResponseDto,
-} from '../src/transactions/dto/transaction.dto';
+} from '../src/modules/transactions/dto/transaction.dto';
 
 interface NestErrorResponse {
   statusCode: number;

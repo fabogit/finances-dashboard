@@ -3,12 +3,12 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
-import { AnalyticsModule } from './analytics/analytics.module';
-import { AssetsModule } from './assets/assets.module';
-import { CategoriesModule } from './categories/categories.module';
-import { GoalsModule } from './goals/goals.module';
-import { ScienceModule } from './science/science.module';
-import { TransactionsModule } from './transactions/transactions.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { AssetsModule } from './modules/assets/assets.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { GoalsModule } from './modules/goals/goals.module';
+import { ScienceModule } from './modules/science/science.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 
 @Module({
   imports: [

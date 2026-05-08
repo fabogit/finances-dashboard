@@ -4,7 +4,7 @@ import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { AnalyticsSummaryDto } from '../src/analytics/dto/analytics-response.dto';
+import { AnalyticsSummaryDto } from '../src/modules/analytics/dto/analytics-response.dto';
 
 describe('AppController (E2E)', () => {
   let app: INestApplication;
