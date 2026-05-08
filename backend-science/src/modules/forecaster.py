@@ -5,7 +5,7 @@ This module utilizes historical transaction data to predict future financial flo
 (income and expenses) using statistical analysis for recurring items and
 Linear Regression for variable trends.
 """
-from typing import TypedDict, Union
+from typing import TypedDict, Union, cast
 import re
 from decimal import Decimal
 import pandas as pd
@@ -80,7 +80,7 @@ class Forecaster:
 
         # 1. Type Conversion
         df['date'] = pd.to_datetime(df['date'], errors='coerce')
-        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0.0)
+        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0.0) # type: ignore
 
         # Drop invalid rows
         df = df.dropna(subset=['date'])
@@ -97,8 +97,8 @@ class Forecaster:
             return {"error": "Not enough data in the selected period"}
 
         # 3. Split Income vs Expense
-        income_df = df[df['amount'] > 0].copy()
-        expense_df = df[df['amount'] < 0].copy()
+        income_df = cast(pd.DataFrame, df[df['amount'] > 0].copy())
+        expense_df = cast(pd.DataFrame, df[df['amount'] < 0].copy())
 
         # 4. Analyze flows (Get 3 future points for each)
         inc_preds, fixed_inc = Forecaster._analyze_flow(
@@ -177,7 +177,7 @@ class Forecaster:
                 return "Unknown"
             return re.sub(r'\d+', '', text).strip().upper()
 
-        df['group_key'] = df['subCategory'].fillna(
+        df['group_key'] = cast(pd.Series, df['subCategory']).fillna(
             df['details'].apply(clean_details)
         )
 
@@ -188,10 +188,10 @@ class Forecaster:
         )
 
         # Rule: At least 3 occurrences AND Standard Deviation < threshold % of mean
-        std_threshold = recurrence['mean_amount'].abs() * std_threshold_pct
+        std_threshold = recurrence['mean_amount'].abs() * std_threshold_pct # type: ignore
 
         fixed_mask = (recurrence['count'] >= 3) & (
-            recurrence['std_amount'].fillna(0) < std_threshold)
+            recurrence['std_amount'].fillna(0) < std_threshold) # type: ignore
 
         fixed_items = recurrence[fixed_mask]
         fixed_total = float(fixed_items['mean_amount'].sum())
@@ -237,7 +237,7 @@ class Forecaster:
         transactions: list[TransactionInput],
         target_amount: float,
         current_amount: float
-    ) -> dict[str, Union[str, float, None]]:
+    ) -> dict[str, Union[str, float, Decimal, None]]:
         """
         Predicts when a savings goal will be completed based on savings history.
 
@@ -257,12 +257,16 @@ class Forecaster:
                 - confidence (str): Qualitative assessment of the prediction (HIGH/MEDIUM/LOW).
                 - error (str, optional): Error message if projection is impossible.
         """
+        remaining_to_save = target_amount - current_amount
+        if remaining_to_save <= 0:
+            return {"estimated_date": "COMPLETED", "months_remaining": 0.0}
+
         if not transactions:
             return {"error": "No data for projection"}
 
         df = pd.DataFrame(transactions)
         df['date'] = pd.to_datetime(df['date'], errors='coerce')
-        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0.0)
+        df['amount'] = cast(pd.Series, pd.to_numeric(df['amount'], errors='coerce')).fillna(0.0)
         df = df.dropna(subset=['date'])
 
         # Group by month and sum the amounts (savings are positive in current context)

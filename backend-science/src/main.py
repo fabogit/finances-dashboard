@@ -231,7 +231,7 @@ def forecast_transactions(payload: ForecastRequest):
         # 4. Pass BOTH data AND the threshold to the Forecaster
         result = Forecaster.predict_next_3_months(
             typed_data,
-            std_deviation_threshold=payload.std_deviation_threshold
+            std_deviation_threshold=float(payload.std_deviation_threshold)
         )
         return result
     except Exception as e:
@@ -264,8 +264,8 @@ def project_goal(payload: GoalProjectionRequest):
 
         result = Forecaster.predict_goal_eta(
             typed_data,
-            target_amount=payload.target_amount,
-            current_amount=payload.current_amount
+            target_amount=float(payload.target_amount),
+            current_amount=float(payload.current_amount)
         )
 
         return cast(dict, result)

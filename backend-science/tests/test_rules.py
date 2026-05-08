@@ -1,4 +1,4 @@
-from rules import get_category_details
+from modules.rules import get_category_details
 
 def test_get_category_details_known_labels():
     # INCOME

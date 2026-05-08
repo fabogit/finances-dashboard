@@ -1,14 +1,12 @@
 {
-    "venvPath": ".",
-    "venv": ".venv",
-    "pythonVersion": "3.14",
-    "typeCheckingMode": "basic",
-    "include": [
-        "**/*.py"
-    ],
-    "exclude": [
-        "**/__pycache__",
-        "**/.venv",
-        "**/.direnv"
-    ]
+  "pythonVersion": "3.14",
+  "typeCheckingMode": "basic",
+  "include": ["src", "tests"],
+  "exclude": ["**/__pycache__", "**/.venv", "**/.direnv"],
+  "executionEnvironments": [
+    {
+      "root": "src"
+    }
+  ],
+  "extraPaths": ["src"]
 }

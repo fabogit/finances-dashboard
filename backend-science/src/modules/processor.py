@@ -82,7 +82,7 @@ class DataProcessor:
         )
 
         # 2. Amount Processing
-        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0.0)
+        df['amount'] = cast(pd.Series, pd.to_numeric(df['amount'], errors='coerce')).fillna(0.0)
 
         # --- 3. Category Processing ---
         if 'category' not in df.columns:

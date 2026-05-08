@@ -63,7 +63,9 @@ CATEGORY_MAP = {
 }
 
 
-def get_category_details(original_label: str) -> tuple[str, str]:
+from typing import Optional
+
+def get_category_details(original_label: Optional[str]) -> tuple[str, str]:
     """
     Standardizes and translates a raw Italian category label into its Macro and Sub-category components.
 
