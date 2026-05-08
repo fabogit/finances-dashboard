@@ -29,7 +29,8 @@ pnpm run docker:up
 ---
 
 ## 📚 Documentation
-- [System Architecture](./fn_architecture.md)
-- [Product Roadmap](./fn_product_roadmap.md)
-- [Science Integration](./fn_science_integration.md)
-- [Codebase Analysis](./fn_codebase_analysis.md)
+- [System Architecture](./documents/fn_architecture.md)
+- [Product Roadmap](./documents/fn_product_roadmap.md)
+- [Science Integration](./documents/fn_science_integration.md)
+- [Codebase Analysis](./documents/fn_codebase_analysis.md)
+- [Data Dictionary](./documents/fn_data_dictionary.md)
