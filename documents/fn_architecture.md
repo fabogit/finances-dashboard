@@ -44,7 +44,9 @@ sequenceDiagram
 
 ---
 
-## 📂 Backend Core Components
+## 📂 Backend Core Components (`src/modules/`)
+
+All business logic is strictly encapsulated within the `src/modules/` directory:
 
 1.  **Transactions**: Handles the upload, persistence, and filtering of financial movements.
 2.  **Assets**: Responsible for Net Worth calculation and historical snapshot management.
@@ -56,9 +58,19 @@ sequenceDiagram
 
 ---
 
-## 🛡️ Consistency Management (ACID)
+## 🛡️ Consistency & Precision
+
+### ACID Transactions
 
 Critical operations (such as creating a transaction and updating the associated account balance) are executed within **Prisma Transactions**. This ensures that the balance is never misaligned with the sum of movements.
+
+### Decimal Precision Protocol
+
+To avoid JavaScript floating-point errors in financial calculations, the system enforces a strict global protocol:
+
+- **Input**: `@ParseDecimal()` decorator converts incoming strings/numbers into `Prisma.Decimal`.
+- **Output**: `@SerializeDecimal()` interceptor converts `Prisma.Decimal` back into safe primitives for the frontend.
+- **Enforcement**: A global `SerializeInterceptor` ensures that only explicitly exposed (`@Expose()`) properties leave the API.
 
 ---
 

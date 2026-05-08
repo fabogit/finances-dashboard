@@ -2,9 +2,11 @@
 
 This document details the communication protocol and processing logic delegated to the Python service.
 
-## ⚙️ Configuration
+## ⚙️ Configuration & Structure
 
-The service is contacted via NestJS's `HttpService`. The URL is configurable via an environment variable:
+The Python code is modularized within the `src/` directory (e.g., `src/modules/processor.py`).
+The service is run via uvicorn targeting `src.main:app`.
+It is contacted via NestJS's `HttpService`. The URL is configurable via an environment variable:
 `SCIENCE_SERVICE_URL` (default: `http://backend-science:8000`)
 
 ---
