@@ -7,6 +7,7 @@ Linear Regression for variable trends.
 """
 from typing import TypedDict, Union
 import re
+from decimal import Decimal
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -16,9 +17,9 @@ from sklearn.linear_model import LinearRegression
 
 class ForecastFlowResult(TypedDict):
     """Represents the breakdown of a financial flow (Income or Expense)."""
-    total: float
-    fixed: float
-    variable: float
+    total: Decimal
+    fixed: Decimal
+    variable: Decimal
 
 
 class MonthlyForecast(TypedDict):
@@ -26,14 +27,14 @@ class MonthlyForecast(TypedDict):
     date: str
     income: ForecastFlowResult
     expense: ForecastFlowResult
-    balance: float
+    balance: Decimal
 
 
 class TransactionInput(TypedDict):
     """Input structure for a single transaction to be analyzed."""
     id: str
     date: str
-    amount: float
+    amount: Decimal
     details: str
     category: str
     subCategory: str | None
@@ -127,16 +128,16 @@ class Forecaster:
             results.append({
                 "date": date_str,
                 "income": {
-                    "total": float(np.round(curr_inc_total, 2)),
-                    "fixed": float(np.round(fixed_inc, 2)),
-                    "variable": float(np.round(var_inc, 2))
+                    "total": Decimal(str(np.round(curr_inc_total, 2))),
+                    "fixed": Decimal(str(np.round(fixed_inc, 2))),
+                    "variable": Decimal(str(np.round(var_inc, 2)))
                 },
                 "expense": {
-                    "total": float(np.round(curr_exp_total, 2)),
-                    "fixed": float(np.round(fixed_exp, 2)),
-                    "variable": float(np.round(var_exp, 2))
+                    "total": Decimal(str(np.round(curr_exp_total, 2))),
+                    "fixed": Decimal(str(np.round(fixed_exp, 2))),
+                    "variable": Decimal(str(np.round(var_exp, 2)))
                 },
-                "balance": float(np.round(curr_inc_total + curr_exp_total, 2))
+                "balance": Decimal(str(np.round(curr_inc_total + curr_exp_total, 2)))
             })
 
         return results
@@ -308,7 +309,7 @@ class Forecaster:
 
         return {
             "estimated_date": eta_date.strftime('%Y-%m'),
-            "monthly_avg": float(np.round(avg_future_velocity, 2)),
-            "months_remaining": float(np.round(months_remaining, 1)),
+            "monthly_avg": Decimal(str(np.round(avg_future_velocity, 2))),
+            "months_remaining": Decimal(str(np.round(months_remaining, 1))),
             "confidence": "HIGH (Linear trend)" if len(monthly_savings) >= 4 else "MEDIUM"
         }

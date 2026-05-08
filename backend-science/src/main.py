@@ -12,11 +12,12 @@ Key Components:
 """
 import logging
 import traceback
+from decimal import Decimal
 from typing import Optional, Union, cast
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from processor import DataProcessor, RawTransactionInput
-from forecaster import Forecaster, TransactionInput
+from modules.processor import DataProcessor, RawTransactionInput
+from modules.forecaster import Forecaster, TransactionInput
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ class ProcessedTransactionDto(BaseModel):
     operation: str
     details: str
     account: str
-    amount: float      # e.g., -747.6
+    amount: Decimal      # e.g., -747.6
     category: str
     subCategory: Optional[str] = None
 
@@ -59,9 +60,9 @@ class ForecastFlowDto(BaseModel):
         fixed (float): The portion of the total attributed to recurring/fixed costs.
         variable (float): The portion of the total attributed to variable/trend-based costs.
     """
-    total: float
-    fixed: float
-    variable: float
+    total: Decimal
+    fixed: Decimal
+    variable: Decimal
 
 
 class MonthlyForecastDto(BaseModel):
@@ -77,7 +78,7 @@ class MonthlyForecastDto(BaseModel):
     date: str
     income: ForecastFlowDto
     expense: ForecastFlowDto
-    balance: float
+    balance: Decimal
 
 # --- INPUT DTOs ---
 
@@ -117,10 +118,10 @@ class ForecastRequest(BaseModel):
     Contains the transaction history and configuration parameters.
     """
     transactions: list[ProcessedTransactionDto]
-    std_deviation_threshold: float = Field(
-        default=0.2,
-        ge=0.0,
-        le=1.0,
+    std_deviation_threshold: Decimal = Field(
+        default=Decimal('0.2'),
+        ge=Decimal('0.0'),
+        le=Decimal('1.0'),
         description="Threshold (0.0-1.0) to identify fixed expenses. Higher = looser detection."
     )
 
@@ -130,8 +131,8 @@ class GoalProjectionRequest(BaseModel):
     Input payload for the goal projection endpoint.
     """
     transactions: list[ProcessedTransactionDto]
-    target_amount: float
-    current_amount: float
+    target_amount: Decimal
+    current_amount: Decimal
 
 
 class GoalProjectionResponse(BaseModel):
@@ -139,8 +140,8 @@ class GoalProjectionResponse(BaseModel):
     Response structure for goal completion projections.
     """
     estimated_date: Optional[str] = None
-    monthly_avg: Optional[float] = None
-    months_remaining: Optional[float] = None
+    monthly_avg: Optional[Decimal] = None
+    months_remaining: Optional[Decimal] = None
     confidence: Optional[str] = None
     error: Optional[str] = None
 

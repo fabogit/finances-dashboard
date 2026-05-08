@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 import pandas as pd
 from processor import DataProcessor
@@ -20,7 +21,7 @@ def test_clean_transactions_happy_path():
     assert len(result) == 1
     tx = result[0]
     assert tx["id"] == "100"
-    assert tx["amount"] == -15.50
+    assert tx["amount"] == Decimal("-15.50")
     assert tx["category"] == "FOOD"
     assert tx["subCategory"] == "Dining Out"
 
@@ -62,5 +63,5 @@ def test_clean_transactions_mapping_from_dataframe_types():
         {"id": "2", "date": "2025-01-01", "amount": -20.5, "operation": "A", "details": "B", "account": "C"}
     ]
     result = DataProcessor.clean_transactions(raw_input)
-    assert result[0]["amount"] == 100.0
-    assert result[1]["amount"] == -20.5
+    assert result[0]["amount"] == Decimal("100.0")
+    assert result[1]["amount"] == Decimal("-20.5")

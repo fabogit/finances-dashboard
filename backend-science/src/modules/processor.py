@@ -6,8 +6,9 @@ raw financial transaction data. It leverages Pandas to handle common data
 inconsistencies found in exports and applies categorization rules.
 """
 from typing import TypedDict, cast, Optional
+from decimal import Decimal
 import pandas as pd
-from rules import get_category_details
+from .rules import get_category_details
 
 
 class RawTransactionInput(TypedDict, total=False):
@@ -34,7 +35,7 @@ class CleanedTransaction(TypedDict):
     operation: str
     details: str
     account: str
-    amount: float      # Strictly float for calculations
+    amount: Decimal    # Strictly Decimal for precision
     category: str      # MACRO Category (e.g. "HOME")
     subCategory: str
 
@@ -114,7 +115,10 @@ class DataProcessor:
         final_df['category'] = df['macro_cat']
         final_df['subCategory'] = df['sub_cat_en']
 
-        # Convert to list of dicts
+        # Convert to list of dicts and fix amount type
         result = final_df.to_dict(orient='records')
+        for item in result:
+            # Ensure amount is Decimal for precision preservation
+            item['amount'] = Decimal(str(item['amount']))
 
         return cast(list[CleanedTransaction], result)

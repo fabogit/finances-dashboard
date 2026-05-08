@@ -1,3 +1,4 @@
+from decimal import Decimal
 import pytest
 import pandas as pd
 from datetime import datetime
@@ -36,10 +37,10 @@ def test_predict_next_3_months_happy_path():
     # Verify structure of first month
     m1 = result[0]
     assert "date" in m1
-    assert m1["income"]["fixed"] == 2500.0
-    assert m1["expense"]["fixed"] == -1000.0
+    assert m1["income"]["fixed"] == Decimal("2500.0")
+    assert m1["expense"]["fixed"] == Decimal("-1000.0")
     # Variable should be around -610ish (regression of -500, -510 ... -610)
-    assert m1["expense"]["variable"] < -500
+    assert m1["expense"]["variable"] < Decimal("-500")
 
 def test_predict_goal_eta_completed():
     result = Forecaster.predict_goal_eta([], 1000, 1000)
