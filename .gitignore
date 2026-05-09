@@ -177,6 +177,9 @@ backend-science/tests/__pycache__
 backend-science/src/__pycache__/
 backend-science/src/modules/__pycache__/
 backend-science/src/modules/util/__pycache__/
+backend-science/.pytest_cache
+backend-science/__pycache__
+
 
 docs
 
