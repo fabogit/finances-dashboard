@@ -55,7 +55,7 @@ export class AssetsService {
 
   async updateBalanceWithDelta(
     id: string,
-    delta: Prisma.Decimal | number | string,
+    delta: Prisma.Decimal | number,
     tx?: Prisma.TransactionClient,
   ) {
     try {
