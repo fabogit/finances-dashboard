@@ -1,10 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ExpenseType } from '@prisma/client';
+import { configureApp } from '../src/app-setup';
+
+const API_PREFIX = '/api/v1';
 
 describe('Reconciliation & ACID Updates (E2E)', () => {
   let app: INestApplication;
@@ -17,9 +20,7 @@ describe('Reconciliation & ACID Updates (E2E)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
+    configureApp(app);
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
@@ -47,7 +48,7 @@ describe('Reconciliation & ACID Updates (E2E)', () => {
 
     // 2. Create Transaction: -10 EUR
     const createRes = await request(server)
-      .post('/transactions')
+      .post(`${API_PREFIX}/transactions`)
       .send({
         amount: -10,
         date: new Date().toISOString(),
@@ -67,7 +68,7 @@ describe('Reconciliation & ACID Updates (E2E)', () => {
 
     // 3. Update Transaction: Change amount to -30
     await request(server)
-      .patch(`/transactions/${txId}`)
+      .patch(`${API_PREFIX}/transactions/${txId}`)
       .send({ amount: -30 })
       .expect(200);
 
@@ -83,7 +84,7 @@ describe('Reconciliation & ACID Updates (E2E)', () => {
     });
 
     await request(server)
-      .patch(`/transactions/${txId}`)
+      .patch(`${API_PREFIX}/transactions/${txId}`)
       .send({ assetId: asset2.id })
       .expect(200);
 
@@ -150,7 +151,7 @@ describe('Reconciliation & ACID Updates (E2E)', () => {
 
     // 4. Trigger Recalculate
     const res = await request(server)
-      .post(`/assets/${asset.id}/recalculate`)
+      .post(`${API_PREFIX}/assets/${asset.id}/recalculate`)
       .expect(201); // Controller uses @Post which defaults to 201
 
     expect((res.body as { newBalance: number }).newBalance).toBe(1150);

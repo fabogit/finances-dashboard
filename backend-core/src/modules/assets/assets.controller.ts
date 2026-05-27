@@ -9,6 +9,7 @@ import {
   Query,
   UsePipes,
   ValidationPipe,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Serialize } from '../../common/interceptors/serialize.interceptor';
@@ -63,7 +64,10 @@ export class AssetsController {
   })
   @ApiResponse({ status: 404, description: 'Asset not found.' })
   @UsePipes(new ValidationPipe({ transform: true }))
-  async findOne(@Param('id') id: string, @Query() query: GetAssetQueryDto) {
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: GetAssetQueryDto,
+  ) {
     return this.assetsService.findOne(id, query.historyLimit);
   }
 
@@ -76,7 +80,10 @@ export class AssetsController {
     type: AssetResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Asset not found' })
-  async update(@Param('id') id: string, @Body() body: UpdateAssetDto) {
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: UpdateAssetDto,
+  ) {
     return this.assetsService.update(id, body);
   }
 
@@ -90,7 +97,7 @@ export class AssetsController {
   })
   @ApiResponse({ status: 404, description: 'Asset not found' })
   async updateBalance(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateAssetBalanceDto,
   ) {
     return this.assetsService.updateBalance(id, body);
@@ -109,7 +116,7 @@ export class AssetsController {
     type: RecalculateBalanceResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Asset not found.' })
-  async recalculateBalance(@Param('id') id: string) {
+  async recalculateBalance(@Param('id', ParseUUIDPipe) id: string) {
     return this.assetsService.recalculateBalance(id);
   }
 
@@ -122,7 +129,7 @@ export class AssetsController {
     type: AssetResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Asset not found' })
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.assetsService.remove(id);
   }
 }

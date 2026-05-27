@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { ConfigModule } from '@nestjs/config';
+import { validate } from './common/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { AssetsModule } from './modules/assets/assets.module';
@@ -16,6 +17,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
       isGlobal: true,
       envFilePath:
         process.env.NODE_ENV === 'production' ? undefined : '.env.local',
+      validate,
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),

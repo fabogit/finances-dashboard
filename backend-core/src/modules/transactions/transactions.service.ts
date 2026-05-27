@@ -10,7 +10,7 @@ import { randomUUID } from 'crypto';
 import { TransactionsRepository } from './transactions.repository';
 import { ScienceService } from '../science/science.service';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
-import { ProcessedTransactionDto } from '../science/dto/processed-transaction.dto';
+import { UploadScienceResult } from './interfaces/upload-science-result.interface';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
 import {
   CreateTransactionDto,
@@ -88,70 +88,61 @@ export class TransactionsService {
     }
 
     // --- 4. PYTHON INTEGRATION & ENRICHED SAVING ---
-    let scienceResult: ProcessedTransactionDto[] | { error: string } | null =
-      null;
-    let scienceStatus = 'skipped';
+    let scienceResult: UploadScienceResult = { status: 'skipped' };
     let savedEnrichedCount = 0;
 
     if (transactionsToSave.length > 0) {
       try {
         this.logger.log('Sending data to Science Service for processing...');
 
-        scienceResult =
+        const resultData =
           await this.scienceService.processTransactions(transactionsToSave);
 
-        if (Array.isArray(scienceResult)) {
-          scienceStatus = 'success';
-          this.logger.log(
-            `Science Service returned ${scienceResult.length} records. Saving in progress...`,
-          );
+        scienceResult = { status: 'success', data: resultData };
+        this.logger.log(
+          `Science Service returned ${resultData.length} records. Saving in progress...`,
+        );
 
-          // MAPPING: JSON (Python) -> DB Object (Prisma)
-          const enrichedToSave = scienceResult.map((item) => ({
-            importBatchId: batchId, // Use the ID generated at the start
-            originalLine: parseInt(item.id), // Python returns the row as a string ID
-            date: new Date(item.date), // "2024-12-29" -> Date Object
-            amount: item.amount,
-            operation: item.operation,
-            details: item.details,
-            account: item.account,
-            category: item.category,
-            subCategory: item.subCategory,
-          }));
+        // MAPPING: JSON (Python) -> DB Object (Prisma)
+        const enrichedToSave = resultData.map((item) => ({
+          importBatchId: batchId, // Use the ID generated at the start
+          originalLine: parseInt(item.id), // Python returns the row as a string ID
+          date: new Date(item.date), // "2024-12-29" -> Date Object
+          amount: item.amount,
+          operation: item.operation,
+          details: item.details,
+          account: item.account,
+          category: item.category,
+          subCategory: item.subCategory,
+        }));
 
-          // WRITING TO DB
-          const result =
-            await this.transactionsRepo.createManyEnriched(enrichedToSave);
-          savedEnrichedCount = result.count;
+        // WRITING TO DB
+        const result =
+          await this.transactionsRepo.createManyEnriched(enrichedToSave);
+        savedEnrichedCount = result.count;
 
-          this.logger.log(
-            `✅ Saved ${savedEnrichedCount} enriched transactions to DB.`,
-          );
-        }
+        this.logger.log(
+          `✅ Saved ${savedEnrichedCount} enriched transactions to DB.`,
+        );
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error';
         this.logger.error(`Science Service Error: ${errorMessage}`);
-        scienceStatus = 'failed';
-        scienceResult = { error: errorMessage };
+        scienceResult = { status: 'failed', error: errorMessage };
       }
     }
-
-    const isSuccess = Array.isArray(scienceResult);
 
     return {
       message: 'File processed successfully',
       rowsImported: transactionsToSave.length,
       batchId: batchId,
       science: {
-        status: scienceStatus,
-        processedCount: isSuccess
-          ? (scienceResult as ProcessedTransactionDto[]).length
-          : 0,
+        status: scienceResult.status,
+        processedCount:
+          scienceResult.status === 'success' ? scienceResult.data.length : 0,
         savedToDb: savedEnrichedCount,
-        preview: isSuccess
-          ? (scienceResult as ProcessedTransactionDto[])[0]
-          : null,
+        preview:
+          scienceResult.status === 'success' ? scienceResult.data[0] : null,
       },
     };
   }

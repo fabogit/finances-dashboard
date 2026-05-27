@@ -8,6 +8,7 @@ import {
   Delete,
   Put,
   HttpStatus,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
@@ -67,7 +68,10 @@ export class CategoriesController {
     status: HttpStatus.NOT_FOUND,
     description: 'Category not found',
   })
-  async update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateCategoryDto,
+  ) {
     return this.categoriesService.update(id, dto);
   }
 
@@ -88,7 +92,7 @@ export class CategoriesController {
     status: HttpStatus.CONFLICT,
     description: 'Cannot delete: Category has sub-categories or transactions',
   })
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.remove(id);
   }
 
@@ -102,7 +106,10 @@ export class CategoriesController {
     description: 'The updated or created budget rule',
     type: BudgetRuleResponseDto,
   })
-  async setBudget(@Param('id') id: string, @Body() dto: SetBudgetDto) {
+  async setBudget(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetBudgetDto,
+  ) {
     return this.categoriesService.setBudget(id, dto);
   }
 }

@@ -12,14 +12,18 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "noFallthroughCasesInSwitch": false,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "outDir": "./dist",
     "removeComments": true,
     "resolvePackageJsonExports": true,
     "skipLibCheck": true,
     "sourceMap": true,
-    "strictBindCallApply": false,
+    "strict": true,
+    "strictBindCallApply": true,
     "strictNullChecks": true,
+    "strictPropertyInitialization": false,
     "target": "ES2023"
   }
 }

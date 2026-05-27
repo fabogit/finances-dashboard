@@ -1,13 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  INestApplication,
-  ValidationPipe,
-  ClassSerializerInterceptor,
-} from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { configureApp } from '../src/app-setup';
+
+const API_PREFIX = '/api/v1';
 
 describe('Precision Verification (E2E)', () => {
   let app: INestApplication;
@@ -19,10 +17,7 @@ describe('Precision Verification (E2E)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ transform: true }));
-    app.useGlobalInterceptors(
-      new ClassSerializerInterceptor(app.get(Reflector)),
-    );
+    configureApp(app);
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
@@ -44,7 +39,7 @@ describe('Precision Verification (E2E)', () => {
     >[0];
     // 1. Create an asset with 0.0 balance
     const assetResponse = await request(appServer)
-      .post('/assets')
+      .post(`${API_PREFIX}/assets`)
       .send({
         name: 'PRECISION_TEST_ASSET',
         type: 'CASH',
@@ -58,7 +53,7 @@ describe('Precision Verification (E2E)', () => {
 
     // 2. Add a transaction of 0.1
     await request(appServer)
-      .post('/transactions')
+      .post(`${API_PREFIX}/transactions`)
       .send({
         date: new Date().toISOString(),
         amount: 0.1,
@@ -71,7 +66,7 @@ describe('Precision Verification (E2E)', () => {
 
     // 3. Add a transaction of 0.2
     await request(appServer)
-      .post('/transactions')
+      .post(`${API_PREFIX}/transactions`)
       .send({
         date: new Date().toISOString(),
         amount: 0.2,
@@ -84,7 +79,7 @@ describe('Precision Verification (E2E)', () => {
 
     // 4. Check the asset balance
     const finalAssetResponse = await request(appServer)
-      .get(`/assets/${assetId}`)
+      .get(`${API_PREFIX}/assets/${assetId}`)
       .expect(200);
 
     // If it were a JS float trap, it would be 0.30000000000000004
@@ -98,7 +93,7 @@ describe('Precision Verification (E2E)', () => {
       typeof request
     >[0];
     const assetResponse = await request(appServer)
-      .post('/assets')
+      .post(`${API_PREFIX}/assets`)
       .send({
         name: 'PRECISION_TEST_ASSET_2',
         type: 'CASH',
@@ -111,7 +106,7 @@ describe('Precision Verification (E2E)', () => {
     const assetId = assetBody.id;
 
     const txResponse = await request(appServer)
-      .post('/transactions')
+      .post(`${API_PREFIX}/transactions`)
       .send({
         date: new Date().toISOString(),
         amount: 0.1,
@@ -130,12 +125,12 @@ describe('Precision Verification (E2E)', () => {
     // Asset started at 0.3. Tx 0.1 created -> 0.4.
     // Patch 0.1 to 0.2 -> Revert 0.1 (0.3), Apply 0.2 (0.5).
     await request(appServer)
-      .patch(`/transactions/${txId}`)
+      .patch(`${API_PREFIX}/transactions/${txId}`)
       .send({ amount: 0.2 })
       .expect(200);
 
     const finalAssetResponse = await request(appServer)
-      .get(`/assets/${assetId}`)
+      .get(`${API_PREFIX}/assets/${assetId}`)
       .expect(200);
 
     const finalBody = finalAssetResponse.body as { balance: number };

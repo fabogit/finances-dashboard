@@ -1,10 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { AnalyticsSummaryDto } from '../src/modules/analytics/dto/analytics-response.dto';
+import { configureApp } from '../src/app-setup';
+
+const API_PREFIX = '/api/v1';
 
 describe('AppController (E2E)', () => {
   let app: INestApplication;
@@ -16,9 +19,7 @@ describe('AppController (E2E)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
+    configureApp(app);
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
@@ -40,7 +41,7 @@ describe('AppController (E2E)', () => {
     const server = app.getHttpServer() as Server;
 
     const response = await request(server)
-      .get('/analytics/summary')
+      .get(`${API_PREFIX}/analytics/summary`)
       .expect(200);
 
     const body = response.body as AnalyticsSummaryDto;

@@ -1,10 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { AssetType, ExpenseType } from '@prisma/client';
+import { configureApp } from '../src/app-setup';
+
+const API_PREFIX = '/api/v1';
 
 describe('Automation Flow (E2E)', () => {
   let app: INestApplication;
@@ -17,9 +20,7 @@ describe('Automation Flow (E2E)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
+    configureApp(app);
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
@@ -79,7 +80,7 @@ describe('Automation Flow (E2E)', () => {
     };
 
     await request(server)
-      .post('/transactions')
+      .post(`${API_PREFIX}/transactions`)
       .send(transactionPayload)
       .expect(201);
 

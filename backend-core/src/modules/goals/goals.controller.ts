@@ -9,6 +9,7 @@ import {
   Query,
   UsePipes,
   ValidationPipe,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { GoalsService } from './goals.service';
@@ -62,7 +63,10 @@ export class GoalsController {
   })
   @ApiResponse({ status: 404, description: 'Goal not found.' })
   @UsePipes(new ValidationPipe({ transform: true }))
-  findOne(@Param('id') id: string, @Query() query: GetGoalQueryDto) {
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: GetGoalQueryDto,
+  ) {
     return this.goalsService.findOne(id, query.transactionLimit);
   }
 
@@ -75,7 +79,7 @@ export class GoalsController {
     type: GoalResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Goal not found' })
-  update(@Param('id') id: string, @Body() body: UpdateGoalDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() body: UpdateGoalDto) {
     return this.goalsService.update(id, body);
   }
 
@@ -88,7 +92,7 @@ export class GoalsController {
     type: GoalResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Goal not found' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.goalsService.remove(id);
   }
 
@@ -108,7 +112,7 @@ export class GoalsController {
     status: 404,
     description: 'Goal not found or insufficient data for projection.',
   })
-  getProjection(@Param('id') id: string) {
+  getProjection(@Param('id', ParseUUIDPipe) id: string) {
     return this.goalsService.getProjection(id);
   }
 }

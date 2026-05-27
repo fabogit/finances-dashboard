@@ -1,11 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ExpenseType } from '@prisma/client';
 import { CategoryResponseDto } from '../src/modules/categories/dto/category-response.dto';
+import { configureApp } from '../src/app-setup';
+
+const API_PREFIX = '/api/v1';
 
 describe('CategoriesModule (E2E)', () => {
   let app: INestApplication;
@@ -18,9 +21,7 @@ describe('CategoriesModule (E2E)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
+    configureApp(app);
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
@@ -46,7 +47,7 @@ describe('CategoriesModule (E2E)', () => {
     };
 
     const res = await request(server)
-      .post('/categories')
+      .post(`${API_PREFIX}/categories`)
       .send(payload)
       .expect(201);
     const body = res.body as CategoryResponseDto;
@@ -67,7 +68,7 @@ describe('CategoriesModule (E2E)', () => {
     };
 
     const res = await request(server)
-      .post('/categories')
+      .post(`${API_PREFIX}/categories`)
       .send(payload)
       .expect(201);
 
@@ -83,11 +84,16 @@ describe('CategoriesModule (E2E)', () => {
       parentId: macroId,
     };
 
-    await request(server).post('/categories').send(payload).expect(409);
+    await request(server)
+      .post(`${API_PREFIX}/categories`)
+      .send(payload)
+      .expect(409);
   });
 
   it('4. Should retrieve the Category Tree structure', async () => {
-    const res = await request(server).get('/categories').expect(200);
+    const res = await request(server)
+      .get(`${API_PREFIX}/categories`)
+      .expect(200);
     const tree = res.body as CategoryResponseDto[];
 
     expect(Array.isArray(tree)).toBe(true);
@@ -102,6 +108,8 @@ describe('CategoriesModule (E2E)', () => {
   });
 
   it('5. Should Prevent Deletion of Category with Children', async () => {
-    await request(server).delete(`/categories/${macroId}`).expect(409); // ConflictException
+    await request(server)
+      .delete(`${API_PREFIX}/categories/${macroId}`)
+      .expect(409); // ConflictException
   });
 });

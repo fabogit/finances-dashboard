@@ -7,6 +7,10 @@ import {
   UpdateTransactionDto,
 } from './dto/create-update-transaction.dto';
 import { EnrichedDataInput } from './interfaces/enriched-data-input.interface';
+import {
+  transactionWithDetailsInclude,
+  TransactionWithDetails,
+} from './interfaces/transaction-with-details.interface';
 
 type CategoryMapData = {
   id: string;
@@ -290,7 +294,10 @@ export class TransactionsRepository {
   }
 
   // --- CRUD SINGLE ---
-  async create(dto: CreateTransactionDto, tx?: Prisma.TransactionClient) {
+  async create(
+    dto: CreateTransactionDto,
+    tx?: Prisma.TransactionClient,
+  ): Promise<TransactionWithDetails> {
     const client = tx || this.prisma;
     const categoryId = await this.resolveCategoryId(
       dto.category,
@@ -328,7 +335,7 @@ export class TransactionsRepository {
         asset: finalAssetId ? { connect: { id: finalAssetId } } : undefined,
         savingsGoal: finalGoalId ? { connect: { id: finalGoalId } } : undefined,
       },
-      include: { category: true, asset: true, savingsGoal: true },
+      include: transactionWithDetailsInclude,
     });
   }
 
@@ -336,7 +343,7 @@ export class TransactionsRepository {
     id: string,
     dto: UpdateTransactionDto,
     tx?: Prisma.TransactionClient,
-  ) {
+  ): Promise<TransactionWithDetails> {
     const client = tx || this.prisma;
 
     // 1. Resolve the new Category (if changed)
@@ -384,7 +391,7 @@ export class TransactionsRepository {
     return client.enrichedTransaction.update({
       where: { id },
       data: updateData,
-      include: { category: true, asset: true, savingsGoal: true },
+      include: transactionWithDetailsInclude,
     });
   }
 
@@ -393,18 +400,16 @@ export class TransactionsRepository {
     return client.enrichedTransaction.delete({ where: { id } });
   }
 
-  async findById(id: string) {
+  async findById(id: string): Promise<TransactionWithDetails | null> {
     return this.prisma.enrichedTransaction.findUnique({
       where: { id },
-      include: {
-        category: { include: { parent: true } },
-        asset: true,
-        savingsGoal: true,
-      },
+      include: transactionWithDetailsInclude,
     });
   }
 
-  async findAllEnriched(filters: GetTransactionsFilterDto) {
+  async findAllEnriched(
+    filters: GetTransactionsFilterDto,
+  ): Promise<{ total: number; transactions: TransactionWithDetails[] }> {
     const where = this.buildWhereClause(filters);
     const [total, transactions] = await this.prisma.$transaction([
       this.prisma.enrichedTransaction.count({ where }),
@@ -413,11 +418,7 @@ export class TransactionsRepository {
         take: filters.limit,
         skip: (filters.page - 1) * filters.limit,
         orderBy: { [filters.sortBy]: filters.sortOrder },
-        include: {
-          category: { include: { parent: true } },
-          asset: true,
-          savingsGoal: true,
-        },
+        include: transactionWithDetailsInclude,
       }),
     ]);
     return { total, transactions };
