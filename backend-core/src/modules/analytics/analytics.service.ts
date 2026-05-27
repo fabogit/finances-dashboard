@@ -145,7 +145,7 @@ export class AnalyticsService {
       return { error: 'No data available in DB for forecast' };
     }
 
-    // Mapping per Python (Relational -> Flat)
+    // Mapping for Python (Relational -> Flat)
     const payload: ForecastTransactionInputDto[] = transactions.map((t) => {
       let cat = 'Uncategorized';
       let sub: string | null = null;

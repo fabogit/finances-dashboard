@@ -31,9 +31,9 @@ export class SerializeInterceptor implements NestInterceptor {
   ): Observable<unknown> {
     return handler.handle().pipe(
       map((data: unknown) => {
-        // Applica plainToInstance ai dati restituiti dal Controller
+        // Apply plainToInstance to the data returned by the controller
         return plainToInstance(this.dto, data, {
-          // Esclude dal JSON finale campi che non hanno il decoratore @Expose() nel DTO
+          // Exclude fields from the final JSON that do not have the @Expose() decorator in the DTO
           excludeExtraneousValues: true,
         });
       }),
