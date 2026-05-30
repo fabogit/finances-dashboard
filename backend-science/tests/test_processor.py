@@ -21,6 +21,7 @@ def test_clean_transactions_happy_path():
     assert len(result) == 1
     tx = result[0]
     assert tx["id"] == "100"
+    assert tx["date"] == "2025-01-01"
     assert tx["amount"] == Decimal("-15.50")
     assert tx["category"] == "FOOD"
     assert tx["subCategory"] == "Dining Out"

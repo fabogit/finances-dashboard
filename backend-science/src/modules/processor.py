@@ -73,10 +73,21 @@ class DataProcessor:
         df = pd.DataFrame(raw_data)
 
         # 1. Date Processing
-        df['date_numeric'] = pd.to_numeric(df['date'], errors='coerce')
-        df['clean_date'] = pd.to_datetime(
-            df['date_numeric'], unit='D', origin='1899-12-30'
-        )
+        def parse_resilient_date(val):
+            if pd.isnull(val):
+                return pd.NaT
+            try:
+                numeric_val = float(val)
+                if numeric_val > 10000:
+                    return pd.to_datetime(numeric_val, unit='D', origin='1899-12-30')
+            except (ValueError, TypeError):
+                pass
+            try:
+                return pd.to_datetime(val)
+            except (ValueError, TypeError):
+                return pd.NaT
+
+        df['clean_date'] = df['date'].apply(parse_resilient_date)
         df['date'] = df['clean_date'].apply(
             lambda x: x.strftime('%Y-%m-%d') if pd.notnull(x) else ''
         )
