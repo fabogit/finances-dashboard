@@ -90,6 +90,9 @@ describe('TransactionsService', () => {
               (cb: (tx: Prisma.TransactionClient) => Promise<unknown>) =>
                 cb({} as Prisma.TransactionClient),
             ),
+            enrichedTransaction: {
+              findMany: jest.fn().mockResolvedValue([]),
+            },
           },
         },
       ],
@@ -170,6 +173,61 @@ describe('TransactionsService', () => {
 
       expect(transactionsRepo.createManyRaw).toHaveBeenCalled();
       expect(result.science.status).toBe('failed');
+    });
+
+    it('Should FILTER OUT duplicate transactions and not save them', async () => {
+      const buffer = createMockExcelBuffer([rawExcelRow]);
+      const mockFile = { buffer, size: buffer.length } as Express.Multer.File;
+
+      const prismaMock = service['prisma'] as unknown as {
+        enrichedTransaction: {
+          findMany: jest.Mock;
+        };
+      };
+
+      const expectedHash = (
+        service as unknown as {
+          generateTransactionHash(tx: {
+            date: Date;
+            amount: number;
+            details: string;
+            account: string;
+            operation: string;
+          }): string;
+        }
+      ).generateTransactionHash({
+        date: new Date('2025-01-01'),
+        amount: -50.5,
+        details: 'Test Store',
+        account: 'MyBank',
+        operation: 'POS',
+      });
+
+      prismaMock.enrichedTransaction.findMany.mockResolvedValue([
+        { transactionHash: expectedHash },
+      ]);
+
+      transactionsRepo.createManyRaw!.mockResolvedValue({ count: 1 });
+
+      const scienceResponse: ProcessedTransactionDto[] = [
+        {
+          id: '19',
+          date: '2025-01-01',
+          amount: -50.5,
+          operation: 'POS',
+          details: 'Test Store',
+          account: 'MyBank',
+          category: 'Shopping',
+          subCategory: 'Groceries',
+        },
+      ];
+      scienceService.processTransactions!.mockResolvedValue(scienceResponse);
+
+      const result = await service.uploadFile(mockFile);
+
+      expect(transactionsRepo.createManyRaw).toHaveBeenCalledTimes(1);
+      expect(transactionsRepo.createManyEnriched).not.toHaveBeenCalled();
+      expect(result.science.savedToDb).toBe(0);
     });
   });
 

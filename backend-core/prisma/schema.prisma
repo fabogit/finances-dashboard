@@ -148,6 +148,8 @@ model EnrichedTransaction {
   assetId   String?
   asset     Asset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
 
+  transactionHash String? @unique
+
   // Links the transaction to a Goal (e.g., Monthly savings -> Vacation Goal)
   savingsGoalId String?
   savingsGoal   SavingsGoal? @relation(fields: [savingsGoalId], references: [id], onDelete: SetNull)

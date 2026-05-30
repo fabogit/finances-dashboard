@@ -290,6 +290,7 @@ export class TransactionsRepository {
         account: item.account,
         categoryId: categoryId,
         assetId: assetId,
+        transactionHash: item.transactionHash ?? null,
       });
     }
 

@@ -9,4 +9,5 @@ export interface EnrichedDataInput {
   account: string;
   category: string;
   subCategory?: string | null;
+  transactionHash?: string | null;
 }

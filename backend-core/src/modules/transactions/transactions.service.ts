@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { TransactionsRepository } from './transactions.repository';
 import { ScienceService } from '../science/science.service';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
@@ -37,6 +37,23 @@ export class TransactionsService {
       return error.message;
     }
     return String(error);
+  }
+
+  private generateTransactionHash(tx: {
+    date: Date;
+    amount: number | string | Prisma.Decimal;
+    details?: string | null;
+    account?: string | null;
+    operation?: string | null;
+  }): string {
+    const details = tx.details || '';
+    const account = tx.account || '';
+    const operation = tx.operation || '';
+    const dateStr = tx.date.toISOString().split('T')[0];
+    const amountStr = String(tx.amount);
+
+    const input = `${dateStr}|${amountStr}|${details}|${account}|${operation}`;
+    return createHash('sha256').update(input).digest('hex');
   }
 
   // --- UPLOAD FLOW ---
@@ -104,21 +121,55 @@ export class TransactionsService {
         );
 
         // MAPPING: JSON (Python) -> DB Object (Prisma)
-        const enrichedToSave = resultData.map((item) => ({
-          importBatchId: batchId, // Use the ID generated at the start
-          originalLine: parseInt(item.id), // Python returns the row as a string ID
-          date: new Date(item.date), // "2024-12-29" -> Date Object
-          amount: item.amount,
-          operation: item.operation,
-          details: item.details,
-          account: item.account,
-          category: item.category,
-          subCategory: item.subCategory,
-        }));
+        const enrichedToSave = resultData.map((item) => {
+          const dateObj = new Date(item.date);
+          const hash = this.generateTransactionHash({
+            date: dateObj,
+            amount: item.amount,
+            details: item.details,
+            account: item.account,
+            operation: item.operation,
+          });
+
+          return {
+            importBatchId: batchId, // Use the ID generated at the start
+            originalLine: parseInt(item.id), // Python returns the row as a string ID
+            date: dateObj, // "2024-12-29" -> Date Object
+            amount: item.amount,
+            operation: item.operation,
+            details: item.details,
+            account: item.account,
+            category: item.category,
+            subCategory: item.subCategory,
+            transactionHash: hash,
+          };
+        });
+
+        // FILTER DUPLICATES
+        const hashes = enrichedToSave.map((tx) => tx.transactionHash);
+        const existingTransactions =
+          (await this.prisma.enrichedTransaction.findMany({
+            where: { transactionHash: { in: hashes } },
+            select: { transactionHash: true },
+          })) as { transactionHash: string | null }[];
+        const existingHashes = new Set(
+          existingTransactions
+            .map((tx) => tx.transactionHash)
+            .filter((h): h is string => h !== null),
+        );
+
+        const nonDuplicateEnriched = enrichedToSave.filter(
+          (tx) => !existingHashes.has(tx.transactionHash),
+        );
 
         // WRITING TO DB
-        const result =
-          await this.transactionsRepo.createManyEnriched(enrichedToSave);
+        let result = { count: 0 };
+        if (nonDuplicateEnriched.length > 0) {
+          result =
+            await this.transactionsRepo.createManyEnriched(
+              nonDuplicateEnriched,
+            );
+        }
         savedEnrichedCount = result.count;
 
         this.logger.log(
