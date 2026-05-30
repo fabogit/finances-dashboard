@@ -33,11 +33,12 @@ export class CreateTransactionDto {
     description:
       'UUID of the Asset linked to this transaction (e.g., Bank Account)',
     required: false,
+    nullable: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @IsOptional()
   @IsUUID()
-  assetId?: string;
+  assetId?: string | null;
 
   @ApiProperty({ example: 'USD', description: 'Currency code', default: 'EUR' })
   @IsOptional()
@@ -80,11 +81,12 @@ export class CreateTransactionDto {
   @ApiProperty({
     description: 'UUID of the Savings Goal linked to this transaction',
     required: false,
+    nullable: true,
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @IsOptional()
   @IsUUID()
-  savingsGoalId?: string;
+  savingsGoalId?: string | null;
 
   @ApiProperty({ example: 'Leisure Misc', required: false })
   @IsOptional()

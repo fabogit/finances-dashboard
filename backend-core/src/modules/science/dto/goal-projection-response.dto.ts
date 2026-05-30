@@ -40,6 +40,10 @@ export class GoalProjectionResponseDto {
   error?: string;
 
   @Expose()
+  @ApiPropertyOptional({
+    example: 'Japan trip 🇯🇵',
+    description: 'Name of the goal',
+  })
   goalName?: string;
 
   @Expose()

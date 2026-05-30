@@ -32,5 +32,5 @@ export class ProcessedTransactionDto {
   operation: string;
 
   @ApiProperty({ example: 'Groceries', nullable: true })
-  subCategory: string;
+  subCategory: string | null;
 }

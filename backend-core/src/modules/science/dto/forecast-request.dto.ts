@@ -14,10 +14,10 @@ export class ForecastRequestPayload {
   transactions: ForecastTransactionInputDto[];
 
   @ApiProperty({
-    example: 2.0,
+    example: 0.2,
     description:
-      'Standard deviation threshold for anomaly detection (default: 2.0)',
-    default: 2.0,
+      'Standard deviation threshold for anomaly detection (default: 0.2)',
+    default: 0.2,
   })
   @IsNumber()
   std_deviation_threshold: number;

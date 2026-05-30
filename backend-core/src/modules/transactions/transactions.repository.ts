@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  SYSTEM_CATEGORIES,
+  TRANSACTION_FALLBACKS,
+  EXPENSE_TYPES,
+} from '../../common/constants/domain.constants';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
 import {
   CreateTransactionDto,
@@ -131,16 +136,16 @@ export class TransactionsRepository {
 
     // 2. Fallback Category
     let fallbackCat = await client.category.findFirst({
-      where: { name: 'UNCATEGORIZED', parentId: null },
+      where: { name: SYSTEM_CATEGORIES.UNCATEGORIZED, parentId: null },
     });
     if (!fallbackCat) {
       fallbackCat = await client.category.create({
         data: {
-          name: 'UNCATEGORIZED',
+          name: SYSTEM_CATEGORIES.UNCATEGORIZED,
           isSystem: true,
           isVerified: true,
-          type: 'UNCLASSIFIED',
-          icon: '❓',
+          type: EXPENSE_TYPES.UNCLASSIFIED,
+          icon: SYSTEM_CATEGORIES.DEFAULT_ICON,
         },
       });
     }
@@ -163,7 +168,7 @@ export class TransactionsRepository {
           isSystem: false,
           isVerified: false,
           parentId: null,
-          type: 'UNCLASSIFIED',
+          type: EXPENSE_TYPES.UNCLASSIFIED,
         })),
         skipDuplicates: true,
       });
@@ -201,7 +206,7 @@ export class TransactionsRepository {
             parentId: macroData.id,
             isSystem: false,
             isVerified: false,
-            type: 'UNCLASSIFIED',
+            type: EXPENSE_TYPES.UNCLASSIFIED,
           });
         }
       }
@@ -327,9 +332,9 @@ export class TransactionsRepository {
         date: dto.date,
         amount: new Prisma.Decimal(dto.amount),
         details: dto.details,
-        account: dto.account || 'MANUAL',
-        operation: dto.operation || 'Manual Entry',
-        importBatchId: 'MANUAL',
+        account: dto.account || TRANSACTION_FALLBACKS.ACCOUNT,
+        operation: dto.operation || TRANSACTION_FALLBACKS.OPERATION,
+        importBatchId: TRANSACTION_FALLBACKS.IMPORT_BATCH_ID,
         originalLine: -1,
         category: { connect: { id: categoryId } },
         asset: finalAssetId ? { connect: { id: finalAssetId } } : undefined,

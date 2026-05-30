@@ -93,9 +93,8 @@ describe('TransactionsModule (E2E)', () => {
 
     expect(body.id).toBeDefined();
     expect(Number(body.amount)).toBe(-50.5);
-
-    const categoryResponse = body.category as unknown as { name: string };
-    expect(categoryResponse.name).toBe(testCategoryName);
+    expect(body.category).toBe(testCategoryName);
+    expect(body.subCategory).toBeUndefined();
   });
 
   it('3. Should update transaction details', async () => {

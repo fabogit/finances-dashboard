@@ -17,7 +17,7 @@ export class CreateCategoryDto {
   name: string;
 
   @ApiPropertyOptional({
-    example: 'uuid-of-macro-category',
+    example: '123e4567-e89b-12d3-a456-426614174000',
     description: 'Parent ID. Leave empty if this is a Macro Category',
   })
   @IsOptional()

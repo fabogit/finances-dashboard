@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { TransactionsRepository } from '../transactions/transactions.repository';
 import { AnalyticsRepository } from './analytics.repository';
 import { ScienceService } from '../science/science.service';
+import { FORECAST_FALLBACKS } from '../../common/constants/domain.constants';
 import {
   GetTransactionsFilterDto,
   GroupByOption,
@@ -147,7 +148,7 @@ export class AnalyticsService {
 
     // Mapping for Python (Relational -> Flat)
     const payload: ForecastTransactionInputDto[] = transactions.map((t) => {
-      let cat = 'Uncategorized';
+      let cat: string = FORECAST_FALLBACKS.CATEGORY;
       let sub: string | null = null;
 
       if (t.category) {
@@ -165,8 +166,8 @@ export class AnalyticsService {
         date: t.date.toISOString().split('T')[0],
         amount: t.amount.toNumber(),
         details: t.details || '',
-        operation: t.operation || 'System',
-        account: t.account || 'Default',
+        operation: t.operation || FORECAST_FALLBACKS.OPERATION,
+        account: t.account || FORECAST_FALLBACKS.ACCOUNT,
         category: cat,
         subCategory: sub,
       };

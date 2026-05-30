@@ -31,6 +31,10 @@ export class SerializeInterceptor implements NestInterceptor {
   ): Observable<unknown> {
     return handler.handle().pipe(
       map((data: unknown) => {
+        // Bypass serialization if the response contains an error key (union error responses)
+        if (data && typeof data === 'object' && 'error' in data) {
+          return data;
+        }
         // Apply plainToInstance to the data returned by the controller
         return plainToInstance(this.dto, data, {
           // Exclude fields from the final JSON that do not have the @Expose() decorator in the DTO

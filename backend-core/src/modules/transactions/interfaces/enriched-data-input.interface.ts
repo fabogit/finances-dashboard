@@ -8,5 +8,5 @@ export interface EnrichedDataInput {
   details: string;
   account: string;
   category: string;
-  subCategory?: string;
+  subCategory?: string | null;
 }

@@ -1,6 +1,25 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose, Type } from 'class-transformer';
+import { Expose, Type, Transform } from 'class-transformer';
 import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
+import { SYSTEM_CATEGORIES } from '../../../common/constants/domain.constants';
+
+interface TransformObj {
+  category?:
+    | string
+    | {
+        id: string;
+        name: string;
+        parentId?: string | null;
+        parent?: {
+          id: string;
+          name: string;
+        } | null;
+      }
+    | null;
+  subCategory?: string | null;
+  categoryId?: string | null;
+  subCategoryId?: string | null;
+}
 
 export class TransactionDto {
   @Expose()
@@ -21,6 +40,13 @@ export class TransactionDto {
 
   @Expose()
   @ApiProperty({ example: 'SHOPPING', description: 'Macro category' })
+  @Transform(({ obj }: { obj: unknown }) => {
+    const raw = obj as TransformObj;
+    if (!raw.category) return SYSTEM_CATEGORIES.UNCATEGORIZED;
+    if (typeof raw.category === 'string') return raw.category;
+    const cat = raw.category;
+    return cat.parent ? cat.parent.name : cat.name;
+  })
   category: string;
 
   @Expose()
@@ -38,7 +64,10 @@ export class TransactionDto {
   details: string;
 
   @Expose()
-  @ApiProperty({ example: 'uuid-1234-...', description: 'Transaction UUID' })
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Transaction UUID',
+  })
   id: string;
 
   @Expose()
@@ -60,6 +89,13 @@ export class TransactionDto {
     example: 'Electronics',
     description: 'Translated sub-category',
     required: false,
+  })
+  @Transform(({ obj }: { obj: unknown }) => {
+    const raw = obj as TransformObj;
+    if (typeof raw.subCategory === 'string') return raw.subCategory;
+    if (!raw.category || typeof raw.category === 'string') return undefined;
+    const cat = raw.category;
+    return cat.parent ? cat.name : undefined;
   })
   subCategory?: string;
 
@@ -88,6 +124,13 @@ export class TransactionDto {
     required: false,
     nullable: true,
   })
+  @Transform(({ obj }: { obj: unknown }) => {
+    const raw = obj as TransformObj;
+    if (typeof raw.categoryId === 'string') return raw.categoryId;
+    if (!raw.category || typeof raw.category === 'string') return null;
+    const cat = raw.category;
+    return cat.parent ? cat.parent.id : cat.id;
+  })
   categoryId?: string | null;
 
   @Expose()
@@ -96,6 +139,13 @@ export class TransactionDto {
     description: 'UUID of the mapped sub-category',
     required: false,
     nullable: true,
+  })
+  @Transform(({ obj }: { obj: unknown }) => {
+    const raw = obj as TransformObj;
+    if (typeof raw.subCategoryId === 'string') return raw.subCategoryId;
+    if (!raw.category || typeof raw.category === 'string') return null;
+    const cat = raw.category;
+    return cat.parent ? cat.id : null;
   })
   subCategoryId?: string | null;
 

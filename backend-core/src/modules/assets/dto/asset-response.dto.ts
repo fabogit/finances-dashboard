@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AssetType } from '@prisma/client';
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
 
 export class AssetResponseDto {
@@ -62,4 +62,37 @@ export class AssetResponseDto {
     description: 'Last update date',
   })
   updatedAt: Date;
+
+  @Expose()
+  @ApiPropertyOptional({
+    type: () => [AssetHistoryResponseDto],
+    description: 'List of historical balance snapshots for this asset',
+  })
+  @Type(() => AssetHistoryResponseDto)
+  history?: AssetHistoryResponseDto[];
+}
+
+export class AssetHistoryResponseDto {
+  @Expose()
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Snapshot UUID',
+  })
+  id: string;
+
+  @Expose()
+  @ApiProperty({
+    example: '2025-01-01T12:00:00Z',
+    description: 'Snapshot date',
+  })
+  date: Date;
+
+  @Expose()
+  @ApiProperty({
+    example: 5000.0,
+    description: 'Balance at snapshot date',
+    type: 'number',
+  })
+  @SerializeDecimal()
+  balance: number;
 }

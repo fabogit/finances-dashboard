@@ -25,3 +25,20 @@ export const GOAL_STATUSES = {
   COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
 } as const;
+
+export const SYSTEM_CATEGORIES = {
+  UNCATEGORIZED: 'UNCATEGORIZED',
+  DEFAULT_ICON: '❓',
+} as const;
+
+export const TRANSACTION_FALLBACKS = {
+  ACCOUNT: 'MANUAL',
+  OPERATION: 'Manual Entry',
+  IMPORT_BATCH_ID: 'MANUAL',
+} as const;
+
+export const FORECAST_FALLBACKS = {
+  ACCOUNT: 'Default',
+  OPERATION: 'System',
+  CATEGORY: 'Uncategorized',
+} as const;
