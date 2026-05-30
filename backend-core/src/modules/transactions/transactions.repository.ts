@@ -186,11 +186,26 @@ export class TransactionsRepository {
     );
 
     // 4. Create missing Sub (Bulk)
-    const subNamesOnly = Array.from(uniqueSubs).map((s) => s.split(':')[1]);
-    const existingSubs = await client.category.findMany({
-      where: { name: { in: subNamesOnly }, parentId: { not: null } },
-      select: { id: true, name: true, parent: { select: { name: true } } },
-    });
+    let existingSubs: Array<{
+      id: string;
+      name: string;
+      parent: { name: string } | null;
+    }> = [];
+    if (uniqueSubs.size > 0) {
+      const orConditions = Array.from(uniqueSubs).map((s) => {
+        const [parentName, subName] = s.split(':');
+        return {
+          name: subName,
+          parent: { name: parentName, parentId: null },
+        };
+      });
+
+      existingSubs = await client.category.findMany({
+        where: { OR: orConditions },
+        select: { id: true, name: true, parent: { select: { name: true } } },
+      });
+    }
+
     const existingSubKeys = new Set(
       existingSubs.map((s) => `${s.parent?.name}:${s.name}`),
     );
@@ -219,18 +234,31 @@ export class TransactionsRepository {
     }
 
     // Reload updated Subcategories
-    const allSubs = await client.category.findMany({
-      where: {
-        name: { in: subNamesOnly },
-        parentId: { in: Array.from(macroMap.values()).map((v) => v.id) },
-      },
-      select: {
-        id: true,
-        name: true,
-        defaultAssetId: true,
-        parent: { select: { name: true } },
-      },
-    });
+    let allSubs: Array<{
+      id: string;
+      name: string;
+      defaultAssetId: string | null;
+      parent: { name: string } | null;
+    }> = [];
+    if (uniqueSubs.size > 0) {
+      const orConditions = Array.from(uniqueSubs).map((s) => {
+        const [parentName, subName] = s.split(':');
+        return {
+          name: subName,
+          parent: { name: parentName, parentId: null },
+        };
+      });
+
+      allSubs = await client.category.findMany({
+        where: { OR: orConditions },
+        select: {
+          id: true,
+          name: true,
+          defaultAssetId: true,
+          parent: { select: { name: true } },
+        },
+      });
+    }
 
     const subMap = new Map<string, CategoryMapData>();
     allSubs.forEach((s) => {
