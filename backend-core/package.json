@@ -91,6 +91,7 @@
     "prisma:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "prisma:reset": "dotenv -e .env.local -- prisma migrate reset",
     "prisma:studio": "dotenv -e .env.local -- prisma studio",
+    "prisma:seed": "dotenv -e .env.local -- prisma db seed",
     "start": "nest start",
     "start:debug": "nest start --debug --watch",
     "start:dev": "nest start --watch",

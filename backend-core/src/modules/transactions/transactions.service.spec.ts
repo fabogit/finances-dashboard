@@ -71,9 +71,12 @@ describe('TransactionsService', () => {
   let service: TransactionsService;
   let transactionsRepo: MockRepository<TransactionsRepository>;
   let scienceService: MockRepository<ScienceService>;
+  let assetsService: AssetsService;
+  let goalsService: GoalsService;
+  let module: TestingModule;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         TransactionsService,
         { provide: TransactionsRepository, useFactory: createTransactionsMock },
@@ -87,8 +90,18 @@ describe('TransactionsService', () => {
           provide: PrismaService,
           useValue: {
             $transaction: jest.fn(
-              (cb: (tx: Prisma.TransactionClient) => Promise<unknown>) =>
-                cb({} as Prisma.TransactionClient),
+              (
+                cb: (tx: {
+                  enrichedTransaction: { findMany: jest.Mock };
+                }) => Promise<unknown>,
+              ) => {
+                const mockTx = {
+                  enrichedTransaction: {
+                    findMany: jest.fn().mockResolvedValue([]),
+                  },
+                };
+                return cb(mockTx);
+              },
             ),
             enrichedTransaction: {
               findMany: jest.fn().mockResolvedValue([]),
@@ -101,6 +114,8 @@ describe('TransactionsService', () => {
     service = module.get<TransactionsService>(TransactionsService);
     transactionsRepo = module.get(TransactionsRepository);
     scienceService = module.get(ScienceService);
+    assetsService = module.get<AssetsService>(AssetsService);
+    goalsService = module.get<GoalsService>(GoalsService);
   });
 
   describe('getErrorMessage', () => {
@@ -228,6 +243,90 @@ describe('TransactionsService', () => {
       expect(transactionsRepo.createManyRaw).toHaveBeenCalledTimes(1);
       expect(transactionsRepo.createManyEnriched).not.toHaveBeenCalled();
       expect(result.science.savedToDb).toBe(0);
+    });
+
+    it('Should trigger asset and goal balance updates during import when enriched transactions are saved', async () => {
+      const buffer = createMockExcelBuffer([rawExcelRow]);
+      const mockFile = { buffer, size: buffer.length } as Express.Multer.File;
+
+      transactionsRepo.createManyRaw!.mockResolvedValue({ count: 1 });
+      transactionsRepo.createManyEnriched!.mockResolvedValue({ count: 1 });
+
+      const scienceResponse: ProcessedTransactionDto[] = [
+        {
+          id: '19',
+          date: '2025-01-01',
+          amount: -50.5,
+          operation: 'POS',
+          details: 'Test Store',
+          account: 'MyBank',
+          category: 'Shopping',
+          subCategory: 'Groceries',
+        },
+      ];
+      scienceService.processTransactions!.mockResolvedValue(scienceResponse);
+
+      const prismaService = module.get(PrismaService);
+      jest.spyOn(prismaService, '$transaction').mockImplementation((cb) => {
+        const mockTx = {
+          enrichedTransaction: {
+            findMany: jest.fn().mockResolvedValue([
+              {
+                assetId: 'asset_1',
+                savingsGoalId: 'goal_1',
+                amount: new Prisma.Decimal(-50.5),
+              },
+            ]),
+          },
+        } as unknown as Prisma.TransactionClient;
+        return cb(mockTx);
+      });
+
+      const result = await service.uploadFile(mockFile);
+
+      expect(result.science.savedToDb).toBe(1);
+      expect(assetsService['updateBalanceWithDelta']).toHaveBeenCalledWith(
+        'asset_1',
+        new Prisma.Decimal(-50.5),
+        expect.any(Object),
+      );
+      expect(goalsService['updateProgress']).toHaveBeenCalledWith(
+        'goal_1',
+        new Prisma.Decimal(-50.5),
+        expect.any(Object),
+      );
+    });
+
+    it('Should NOT trigger balance updates if no new enriched transactions are saved', async () => {
+      const buffer = createMockExcelBuffer([rawExcelRow]);
+      const mockFile = { buffer, size: buffer.length } as Express.Multer.File;
+
+      transactionsRepo.createManyRaw!.mockResolvedValue({ count: 1 });
+      transactionsRepo.createManyEnriched!.mockResolvedValue({ count: 0 });
+
+      const scienceResponse: ProcessedTransactionDto[] = [
+        {
+          id: '19',
+          date: '2025-01-01',
+          amount: -50.5,
+          operation: 'POS',
+          details: 'Test Store',
+          account: 'MyBank',
+          category: 'Shopping',
+          subCategory: 'Groceries',
+        },
+      ];
+      scienceService.processTransactions!.mockResolvedValue(scienceResponse);
+
+      const prismaService = module.get(PrismaService);
+      const transactionSpy = jest.spyOn(prismaService, '$transaction');
+
+      const result = await service.uploadFile(mockFile);
+
+      expect(result.science.savedToDb).toBe(0);
+      expect(transactionSpy).toHaveBeenCalled();
+      expect(assetsService['updateBalanceWithDelta']).not.toHaveBeenCalled();
+      expect(goalsService['updateProgress']).not.toHaveBeenCalled();
     });
   });
 

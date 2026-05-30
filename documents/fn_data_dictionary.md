@@ -21,6 +21,7 @@ The "clean" and classified transaction shown to the user.
 - `category`: Relationship with a hierarchical category.
 - `asset`: The asset on which the transaction had an impact.
 - `savingsGoal`: (Optional) Goal to which this transaction contributes.
+- `transactionHash`: Deterministic SHA-256 hash used to prevent duplicate transaction imports.
 
 ### 3. Category
 

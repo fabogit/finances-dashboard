@@ -162,15 +162,61 @@ export class TransactionsService {
           (tx) => !existingHashes.has(tx.transactionHash),
         );
 
-        // WRITING TO DB
-        let result = { count: 0 };
-        if (nonDuplicateEnriched.length > 0) {
-          result =
-            await this.transactionsRepo.createManyEnriched(
+        // WRITING TO DB (with ACID transaction)
+        await this.prisma.$transaction(async (tx) => {
+          let result = { count: 0 };
+          if (nonDuplicateEnriched.length > 0) {
+            result = await this.transactionsRepo.createManyEnriched(
               nonDuplicateEnriched,
+              tx,
             );
-        }
-        savedEnrichedCount = result.count;
+
+            if (result.count > 0) {
+              // Retrieve the resolved transactions to update balances
+              const inserted = (await tx.enrichedTransaction.findMany({
+                where: { importBatchId: batchId },
+                select: { assetId: true, savingsGoalId: true, amount: true },
+              })) as Array<{
+                assetId: string | null;
+                savingsGoalId: string | null;
+                amount: Prisma.Decimal;
+              }>;
+
+              // Group deltas by asset
+              const assetDeltas = new Map<string, Prisma.Decimal>();
+              // Group deltas by goal
+              const goalDeltas = new Map<string, Prisma.Decimal>();
+
+              for (const t of inserted) {
+                if (t.assetId) {
+                  const current =
+                    assetDeltas.get(t.assetId) || new Prisma.Decimal(0);
+                  assetDeltas.set(t.assetId, current.plus(t.amount));
+                }
+                if (t.savingsGoalId) {
+                  const current =
+                    goalDeltas.get(t.savingsGoalId) || new Prisma.Decimal(0);
+                  goalDeltas.set(t.savingsGoalId, current.plus(t.amount));
+                }
+              }
+
+              // Apply asset balance updates
+              for (const [assetId, delta] of assetDeltas.entries()) {
+                await this.assetsService.updateBalanceWithDelta(
+                  assetId,
+                  delta,
+                  tx,
+                );
+              }
+
+              // Apply goal progress updates
+              for (const [goalId, delta] of goalDeltas.entries()) {
+                await this.goalsService.updateProgress(goalId, delta, tx);
+              }
+            }
+          }
+          savedEnrichedCount = result.count;
+        });
 
         this.logger.log(
           `✅ Saved ${savedEnrichedCount} enriched transactions to DB.`,

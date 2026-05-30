@@ -151,6 +151,16 @@ export class TransactionDto {
 
   @Expose()
   @ApiProperty({
+    example: 'a5cf74e892c90c749911e3b2e7a09426f8cde20e10b1a03f4f828a2a4e2bd903',
+    description:
+      'Deterministic SHA-256 hash used to prevent duplicate transaction imports',
+    required: false,
+    nullable: true,
+  })
+  transactionHash?: string | null;
+
+  @Expose()
+  @ApiProperty({
     example: '2025-01-01T12:00:00Z',
     description: 'Last update timestamp',
   })
