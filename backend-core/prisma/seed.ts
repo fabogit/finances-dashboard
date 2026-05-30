@@ -139,6 +139,7 @@ const getRandomAmount = (min: number, max: number) => {
 };
 
 // --- SEEDING FUNCTIONS ---
+// These functions handle the creation of initial system data.
 
 async function seedAssets() {
   console.log('🌱 Seeding Assets & History...');
@@ -179,6 +180,7 @@ async function seedAssets() {
       },
     });
   }
+
   // History 2025
   await prisma.assetHistory.create({
     data: {
@@ -205,6 +207,8 @@ async function seedAssets() {
 
 async function seedGoals() {
   console.log('🌱 Seeding Savings Goals...');
+
+  // 1. Emergency Fund
   await prisma.savingsGoal.create({
     data: {
       name: 'Emergency Fund',
@@ -213,13 +217,30 @@ async function seedGoals() {
       status: GoalStatus.ACTIVE,
       icon: '🛡️',
       color: '#32a852',
+      assetId: assetMap['Main Account'],
     },
   });
+
+  // 2. Long Term Savings
+  await prisma.savingsGoal.create({
+    data: {
+      name: 'Long Term Savings',
+      targetAmount: 50000,
+      currentAmount: 15200, // Linked to ETF balance basically
+      status: GoalStatus.ACTIVE,
+      icon: '📈',
+      color: '#2b6cb0',
+      assetId: assetMap['ETF Portfolio'],
+    },
+  });
+
   console.log('✅ Goals created.');
 }
 
 async function seedCategories() {
   console.log('🌱 Seeding Categories (Idempotent Check)...');
+  // Categories are organized in a Macro -> Sub hierarchy.
+  // We also configure 'Automation Hints' (Default Asset/Goal) here.
 
   for (const macro of SEED_DATA) {
     let createdMacro = await prisma.category.findFirst({
@@ -249,14 +270,22 @@ async function seedCategories() {
     for (const sub of macro.subs) {
       // Determine Default Asset
       let defaultAssetId: string | null = null;
-
-      // AUTOMATION: Link 'Investments' category to 'ETF Portfolio' Asset
       if (macro.name === 'FINANCIAL' && sub.name === 'Investments') {
         defaultAssetId = assetMap['ETF Portfolio'];
       }
-      // AUTOMATION: Link 'Salary' to 'Main Account'
       if (macro.name === 'INCOME' && sub.name === 'Salary & Pension') {
         defaultAssetId = assetMap['Main Account'];
+      }
+
+      // AUTOMATION BRIDGE: Link specific categories to Assets and Savings Goals.
+      // Any transaction uploaded with these categories will automatically
+      // contribute to the linked balance/goal.
+      let defaultGoalId: string | null = null;
+      if (macro.name === 'FINANCIAL' && sub.name === 'Investments') {
+        const goal = await prisma.savingsGoal.findFirst({
+          where: { name: 'Long Term Savings' },
+        });
+        defaultGoalId = goal?.id || null;
       }
 
       const subCat = await prisma.category.upsert({
@@ -270,7 +299,8 @@ async function seedCategories() {
           type: sub.type,
           isSystem: true,
           isVerified: true,
-          defaultAssetId: defaultAssetId, // <--- Link Asset
+          defaultAssetId: defaultAssetId,
+          defaultGoalId: defaultGoalId,
         },
         create: {
           name: sub.name,
@@ -278,7 +308,8 @@ async function seedCategories() {
           parentId: createdMacro.id,
           isSystem: true,
           isVerified: true,
-          defaultAssetId: defaultAssetId, // <--- Link Asset
+          defaultAssetId: defaultAssetId,
+          defaultGoalId: defaultGoalId,
         },
       });
 
@@ -327,6 +358,25 @@ async function seedTransactions() {
       originalLine: 0,
     });
 
+    // --- Savings Goal (Emergency Fund) ---
+    const goal = await prisma.savingsGoal.findFirst({
+      where: { name: 'Emergency Fund' },
+    });
+    if (goal) {
+      transactions.push({
+        date: new Date(year, month, 10, 10, 0, 0),
+        amount: new Prisma.Decimal(-100.0),
+        details: 'Emergency Fund Deposit',
+        account: accountId,
+        operation: 'Transfer',
+        categoryId: categoryMap['FINANCIAL']['Transfers Out'],
+        assetId: assetMap['Main Account'], // Linked!
+        savingsGoalId: goal.id,
+        importBatchId: SEED_BATCH_ID,
+        originalLine: 0,
+      });
+    }
+
     // --- Investment (Linked to Asset) ---
     transactions.push({
       date: new Date(year, month, 28, 10, 0, 0),
@@ -341,6 +391,7 @@ async function seedTransactions() {
     });
 
     // --- Variable Expenses ---
+
     // Groceries
     for (let i = 0; i < 3; i++) {
       transactions.push({
@@ -466,7 +517,8 @@ async function main() {
   await prisma.asset.deleteMany({ where: { institution: { not: null } } });
   await prisma.savingsGoal.deleteMany();
 
-  // ORDINE ESECUZIONE
+  // --- EXECUTION ORDER ---
+  // We must seed Assets and Goals first so that Categories can reference them for automations.
   await seedAssets();
   await seedGoals();
   await seedCategories();

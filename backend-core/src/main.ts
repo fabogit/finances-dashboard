@@ -1,42 +1,17 @@
-import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import helmet from 'helmet';
+import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { configureApp } from './app-setup';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
+  const configService = app.get(ConfigService);
 
-  // Security enhancements
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-          styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
-          imgSrc: ["'self'", 'data:', 'https:'],
-        },
-      },
-    }),
-  );
-  app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*', // Allow configuration, default to all for now but should be restricted in prod
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-  });
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-    }),
-  );
-  const httpAdapter = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
+  // Apply all shared configurations (CORS, Pipes, Filters, Interceptors, Prefix, Versioning)
+  configureApp(app);
 
   const document = SwaggerModule.createDocument(
     app,
@@ -50,8 +25,8 @@ async function bootstrap() {
   const swaggerPath = 'docs';
   SwaggerModule.setup(swaggerPath, app, document);
 
-  const HOST = process.env.HOST || '0.0.0.0';
-  const PORT = process.env.PORT || 3000;
+  const HOST = configService.get<string>('HOST') || '0.0.0.0';
+  const PORT = configService.get<number>('PORT') || 3000;
   await app.listen(PORT, HOST);
   logger.log(`✅ Application is running on: ${await app.getUrl()}`);
   logger.log(`✅ Swagger documentation: ${await app.getUrl()}/${swaggerPath}`);

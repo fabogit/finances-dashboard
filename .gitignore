@@ -167,14 +167,21 @@ vite.config.ts.timestamp-*
 .env.production.local
 .env.local
 .env.*
-!.env.example
+!*_example
 
 # PYTHON
 backend-science/.direnv
 backend-science/.venv
 backend-science/.venv/
-backend-science/__pycache__/
+backend-science/tests/__pycache__
+backend-science/src/__pycache__/
+backend-science/src/modules/__pycache__/
+backend-science/src/modules/util/__pycache__/
+backend-science/.pytest_cache
+backend-science/__pycache__
 
+
+docs
 
 # temp directory
 .temp
@@ -182,3 +189,9 @@ backend-science/__pycache__/
 
 # DB
 *.db
+
+# Ai agents
+skills-lock.json
+.agent*
+.claude*
+.antigravityrules

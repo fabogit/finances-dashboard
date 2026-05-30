@@ -1,0 +1,44 @@
+export const ASSET_TYPES = {
+  CASH: 'CASH',
+  INVESTMENT: 'INVESTMENT',
+  REAL_ESTATE: 'REAL_ESTATE',
+  VEHICLE: 'VEHICLE',
+  DEBT: 'DEBT',
+  OTHER: 'OTHER',
+} as const;
+
+export const BUDGET_RULE_TYPES = {
+  FIXED_AMOUNT: 'FIXED_AMOUNT',
+  PERCENTAGE_OF_INCOME: 'PERCENTAGE_OF_INCOME',
+} as const;
+
+export const EXPENSE_TYPES = {
+  NEEDS: 'NEEDS',
+  WANTS: 'WANTS',
+  SAVINGS: 'SAVINGS',
+  UNCLASSIFIED: 'UNCLASSIFIED',
+} as const;
+
+export const GOAL_STATUSES = {
+  ACTIVE: 'ACTIVE',
+  PAUSED: 'PAUSED',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+export const SYSTEM_CATEGORIES = {
+  UNCATEGORIZED: 'UNCATEGORIZED',
+  DEFAULT_ICON: '❓',
+} as const;
+
+export const TRANSACTION_FALLBACKS = {
+  ACCOUNT: 'MANUAL',
+  OPERATION: 'Manual Entry',
+  IMPORT_BATCH_ID: 'MANUAL',
+} as const;
+
+export const FORECAST_FALLBACKS = {
+  ACCOUNT: 'Default',
+  OPERATION: 'System',
+  CATEGORY: 'Uncategorized',
+} as const;

@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module';
@@ -8,7 +8,10 @@ import { ExpenseType } from '@prisma/client';
 import {
   TransactionDto,
   PaginatedTransactionsResponseDto,
-} from '../src/transactions/dto/transaction.dto';
+} from '../src/modules/transactions/dto/transaction.dto';
+import { configureApp } from '../src/app-setup';
+
+const API_PREFIX = '/api/v1';
 
 interface NestErrorResponse {
   statusCode: number;
@@ -30,9 +33,7 @@ describe('TransactionsModule (E2E)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
+    configureApp(app);
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
@@ -61,12 +62,13 @@ describe('TransactionsModule (E2E)', () => {
     };
 
     const res = await request(server)
-      .post('/transactions')
+      .post(`${API_PREFIX}/transactions`)
       .send(invalidPayload)
       .expect(400);
     const body = res.body as NestErrorResponse;
 
-    expect(body.message).toBeInstanceOf(Array);
+    expect(typeof body.message).toBe('string');
+    expect(body.message).toContain('amount');
   });
 
   it('2. Should create a valid transaction', async () => {
@@ -80,7 +82,7 @@ describe('TransactionsModule (E2E)', () => {
     };
 
     const res = await request(server)
-      .post('/transactions')
+      .post(`${API_PREFIX}/transactions`)
       .send(payload)
       .expect(201);
     const body = res.body as TransactionDto;
@@ -91,9 +93,8 @@ describe('TransactionsModule (E2E)', () => {
 
     expect(body.id).toBeDefined();
     expect(Number(body.amount)).toBe(-50.5);
-
-    const categoryResponse = body.category as unknown as { name: string };
-    expect(categoryResponse.name).toBe(testCategoryName);
+    expect(body.category).toBe(testCategoryName);
+    expect(body.subCategory).toBeUndefined();
   });
 
   it('3. Should update transaction details', async () => {
@@ -106,7 +107,7 @@ describe('TransactionsModule (E2E)', () => {
     };
 
     const res = await request(server)
-      .patch(`/transactions/${createdTxId}`)
+      .patch(`${API_PREFIX}/transactions/${createdTxId}`)
       .send(updatePayload)
       .expect(200);
     const body = res.body as TransactionDto;
@@ -130,7 +131,7 @@ describe('TransactionsModule (E2E)', () => {
     });
 
     const res = await request(server)
-      .get('/transactions')
+      .get(`${API_PREFIX}/transactions`)
       .query({ startDate: '2025-01-01', endDate: '2025-12-31' })
       .expect(200);
 
@@ -150,7 +151,7 @@ describe('TransactionsModule (E2E)', () => {
 
   it('5. Should search transactions by text (details)', async () => {
     const res = await request(server)
-      .get('/transactions')
+      .get(`${API_PREFIX}/transactions`)
       .query({ search: 'Supermarket' }) // Query param
       .expect(200);
     const body = res.body as PaginatedTransactionsResponseDto;

@@ -1,0 +1,12 @@
+{
+  "pythonVersion": "3.14",
+  "typeCheckingMode": "basic",
+  "include": ["src", "tests"],
+  "exclude": ["**/__pycache__", "**/.venv", "**/.direnv"],
+  "executionEnvironments": [
+    {
+      "root": "src"
+    }
+  ],
+  "extraPaths": ["src"]
+}
