@@ -134,7 +134,31 @@ export class TransactionsRepository {
       }
     }
 
-    // 2. Fallback Category
+    // 1. Resolve fallback category
+    const fallbackId = await this.resolveFallbackCategory(client);
+
+    // 2. Resolve / Create macro categories
+    const macroMap = await this.resolveOrCreateMacros(uniqueMacros, client);
+
+    // 3. Resolve / Create subcategories
+    const subMap = await this.resolveOrCreateSubs(uniqueSubs, macroMap, client);
+
+    // 4. Map transactions with automatic asset associations
+    const transactionsToInsert = this.buildEnrichedInsertData(
+      data,
+      fallbackId,
+      macroMap,
+      subMap,
+    );
+
+    return client.enrichedTransaction.createMany({
+      data: transactionsToInsert,
+    });
+  }
+
+  private async resolveFallbackCategory(
+    client: Prisma.TransactionClient,
+  ): Promise<string> {
     let fallbackCat = await client.category.findFirst({
       where: { name: SYSTEM_CATEGORIES.UNCATEGORIZED, parentId: null },
     });
@@ -149,9 +173,17 @@ export class TransactionsRepository {
         },
       });
     }
-    const fallbackId = fallbackCat.id;
+    return fallbackCat.id;
+  }
 
-    // 3. Create missing Macro (Bulk)
+  private async resolveOrCreateMacros(
+    uniqueMacros: Set<string>,
+    client: Prisma.TransactionClient,
+  ): Promise<Map<string, CategoryMapData>> {
+    if (uniqueMacros.size === 0) {
+      return new Map();
+    }
+
     const existingMacros = await client.category.findMany({
       where: { name: { in: Array.from(uniqueMacros) }, parentId: null },
       select: { id: true, name: true },
@@ -184,27 +216,37 @@ export class TransactionsRepository {
     allMacros.forEach((c) =>
       macroMap.set(c.name, { id: c.id, defaultAssetId: c.defaultAssetId }),
     );
+    return macroMap;
+  }
 
-    // 4. Create missing Sub (Bulk)
+  private async resolveOrCreateSubs(
+    uniqueSubs: Set<string>,
+    macroMap: Map<string, CategoryMapData>,
+    client: Prisma.TransactionClient,
+  ): Promise<Map<string, CategoryMapData>> {
+    const subMap = new Map<string, CategoryMapData>();
+    if (uniqueSubs.size === 0) {
+      return subMap;
+    }
+
     let existingSubs: Array<{
       id: string;
       name: string;
       parent: { name: string } | null;
     }> = [];
-    if (uniqueSubs.size > 0) {
-      const orConditions = Array.from(uniqueSubs).map((s) => {
-        const [parentName, subName] = s.split(':');
-        return {
-          name: subName,
-          parent: { name: parentName, parentId: null },
-        };
-      });
 
-      existingSubs = await client.category.findMany({
-        where: { OR: orConditions },
-        select: { id: true, name: true, parent: { select: { name: true } } },
-      });
-    }
+    const orConditions = Array.from(uniqueSubs).map((s) => {
+      const [parentName, subName] = s.split(':');
+      return {
+        name: subName,
+        parent: { name: parentName, parentId: null },
+      };
+    });
+
+    existingSubs = await client.category.findMany({
+      where: { OR: orConditions },
+      select: { id: true, name: true, parent: { select: { name: true } } },
+    });
 
     const existingSubKeys = new Set(
       existingSubs.map((s) => `${s.parent?.name}:${s.name}`),
@@ -226,6 +268,7 @@ export class TransactionsRepository {
         }
       }
     }
+
     if (transactionsToCreateSubs.length > 0) {
       await client.category.createMany({
         data: transactionsToCreateSubs,
@@ -233,34 +276,16 @@ export class TransactionsRepository {
       });
     }
 
-    // Reload updated Subcategories
-    let allSubs: Array<{
-      id: string;
-      name: string;
-      defaultAssetId: string | null;
-      parent: { name: string } | null;
-    }> = [];
-    if (uniqueSubs.size > 0) {
-      const orConditions = Array.from(uniqueSubs).map((s) => {
-        const [parentName, subName] = s.split(':');
-        return {
-          name: subName,
-          parent: { name: parentName, parentId: null },
-        };
-      });
+    const allSubs = await client.category.findMany({
+      where: { OR: orConditions },
+      select: {
+        id: true,
+        name: true,
+        defaultAssetId: true,
+        parent: { select: { name: true } },
+      },
+    });
 
-      allSubs = await client.category.findMany({
-        where: { OR: orConditions },
-        select: {
-          id: true,
-          name: true,
-          defaultAssetId: true,
-          parent: { select: { name: true } },
-        },
-      });
-    }
-
-    const subMap = new Map<string, CategoryMapData>();
     allSubs.forEach((s) => {
       if (s.parent) {
         subMap.set(`${s.parent.name}:${s.name}`, {
@@ -270,7 +295,15 @@ export class TransactionsRepository {
       }
     });
 
-    // 5. Prepare Transactions with Automatic Asset Mapping
+    return subMap;
+  }
+
+  private buildEnrichedInsertData(
+    data: EnrichedDataInput[],
+    fallbackId: string,
+    macroMap: Map<string, CategoryMapData>,
+    subMap: Map<string, CategoryMapData>,
+  ): Prisma.EnrichedTransactionCreateManyInput[] {
     const transactionsToInsert: Prisma.EnrichedTransactionCreateManyInput[] =
       [];
 
@@ -322,9 +355,7 @@ export class TransactionsRepository {
       });
     }
 
-    return client.enrichedTransaction.createMany({
-      data: transactionsToInsert,
-    });
+    return transactionsToInsert;
   }
 
   // --- CRUD SINGLE ---
