@@ -500,4 +500,35 @@ export class TransactionsRepository {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  async getAssetDeltasByBatchId(
+    batchId: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const client = tx || this.prisma;
+    return client.enrichedTransaction.groupBy({
+      by: ['assetId'],
+      where: {
+        importBatchId: batchId,
+        assetId: { not: null },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+  }
+
+  async getGoalDeltasByBatchId(batchId: string, tx?: Prisma.TransactionClient) {
+    const client = tx || this.prisma;
+    return client.enrichedTransaction.groupBy({
+      by: ['savingsGoalId'],
+      where: {
+        importBatchId: batchId,
+        savingsGoalId: { not: null },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+  }
 }

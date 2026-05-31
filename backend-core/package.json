@@ -85,7 +85,7 @@
     "docker:down": "docker-compose --env-file ../.env.compose down",
     "docker:up": "docker-compose --env-file ../.env.compose up --build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "eslint \"{src,apps,libs,test,prisma}/**/*.ts\" --fix",
     "prisma:deploy": "dotenv -e .env.local -- prisma migrate deploy",
     "prisma:generate": "dotenv -e .env.local -- prisma generate",
     "prisma:migrate": "dotenv -e .env.local -- prisma migrate dev",

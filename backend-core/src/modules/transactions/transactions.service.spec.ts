@@ -32,6 +32,8 @@ const createTransactionsMock = (): MockRepository<TransactionsRepository> => ({
   create: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
+  getAssetDeltasByBatchId: jest.fn().mockResolvedValue([]),
+  getGoalDeltasByBatchId: jest.fn().mockResolvedValue([]),
 });
 
 const createScienceMock = (): MockRepository<ScienceService> => ({
@@ -92,12 +94,12 @@ describe('TransactionsService', () => {
             $transaction: jest.fn(
               (
                 cb: (tx: {
-                  enrichedTransaction: { findMany: jest.Mock };
+                  enrichedTransaction: { groupBy: jest.Mock };
                 }) => Promise<unknown>,
               ) => {
                 const mockTx = {
                   enrichedTransaction: {
-                    findMany: jest.fn().mockResolvedValue([]),
+                    groupBy: jest.fn().mockResolvedValue([]),
                   },
                 };
                 return cb(mockTx);
@@ -268,19 +270,22 @@ describe('TransactionsService', () => {
 
       const prismaService = module.get(PrismaService);
       jest.spyOn(prismaService, '$transaction').mockImplementation((cb) => {
-        const mockTx = {
-          enrichedTransaction: {
-            findMany: jest.fn().mockResolvedValue([
-              {
-                assetId: 'asset_1',
-                savingsGoalId: 'goal_1',
-                amount: new Prisma.Decimal(-50.5),
-              },
-            ]),
-          },
-        } as unknown as Prisma.TransactionClient;
+        const mockTx = {} as unknown as Prisma.TransactionClient;
         return cb(mockTx);
       });
+
+      transactionsRepo.getAssetDeltasByBatchId!.mockResolvedValue([
+        {
+          assetId: 'asset_1',
+          _sum: { amount: new Prisma.Decimal(-50.5) },
+        },
+      ]);
+      transactionsRepo.getGoalDeltasByBatchId!.mockResolvedValue([
+        {
+          savingsGoalId: 'goal_1',
+          _sum: { amount: new Prisma.Decimal(-50.5) },
+        },
+      ]);
 
       const result = await service.uploadFile(mockFile);
 

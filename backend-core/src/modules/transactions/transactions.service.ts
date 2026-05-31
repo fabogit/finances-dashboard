@@ -172,46 +172,37 @@ export class TransactionsService {
             );
 
             if (result.count > 0) {
-              // Retrieve the resolved transactions to update balances
-              const inserted = (await tx.enrichedTransaction.findMany({
-                where: { importBatchId: batchId },
-                select: { assetId: true, savingsGoalId: true, amount: true },
-              })) as Array<{
-                assetId: string | null;
-                savingsGoalId: string | null;
-                amount: Prisma.Decimal;
-              }>;
-
-              // Group deltas by asset
-              const assetDeltas = new Map<string, Prisma.Decimal>();
-              // Group deltas by goal
-              const goalDeltas = new Map<string, Prisma.Decimal>();
-
-              for (const t of inserted) {
-                if (t.assetId) {
-                  const current =
-                    assetDeltas.get(t.assetId) || new Prisma.Decimal(0);
-                  assetDeltas.set(t.assetId, current.plus(t.amount));
-                }
-                if (t.savingsGoalId) {
-                  const current =
-                    goalDeltas.get(t.savingsGoalId) || new Prisma.Decimal(0);
-                  goalDeltas.set(t.savingsGoalId, current.plus(t.amount));
-                }
-              }
-
-              // Apply asset balance updates
-              for (const [assetId, delta] of assetDeltas.entries()) {
-                await this.assetsService.updateBalanceWithDelta(
-                  assetId,
-                  delta,
+              // 1. Group deltas by asset in the database
+              const assetDeltas =
+                await this.transactionsRepo.getAssetDeltasByBatchId(
+                  batchId,
                   tx,
                 );
+
+              // 2. Group deltas by goal in the database
+              const goalDeltas =
+                await this.transactionsRepo.getGoalDeltasByBatchId(batchId, tx);
+
+              // Apply asset balance updates
+              for (const group of assetDeltas) {
+                if (group.assetId && group._sum.amount) {
+                  await this.assetsService.updateBalanceWithDelta(
+                    group.assetId,
+                    group._sum.amount,
+                    tx,
+                  );
+                }
               }
 
               // Apply goal progress updates
-              for (const [goalId, delta] of goalDeltas.entries()) {
-                await this.goalsService.updateProgress(goalId, delta, tx);
+              for (const group of goalDeltas) {
+                if (group.savingsGoalId && group._sum.amount) {
+                  await this.goalsService.updateProgress(
+                    group.savingsGoalId,
+                    group._sum.amount,
+                    tx,
+                  );
+                }
               }
             }
           }
