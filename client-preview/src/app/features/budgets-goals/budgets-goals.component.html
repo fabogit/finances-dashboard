@@ -1,0 +1,57 @@
+<div class="page-header">
+  <h2 class="neon-text-primary">Budgets & Savings Goals</h2>
+  <p class="subtitle">Set spending limits and view ML projected timelines for saving targets</p>
+</div>
+
+<div class="split-layout">
+  <!-- Budget Rules (Spent vs Budgeted) -->
+  <div class="glass-card budget-section">
+    <h3>Active Budgets</h3>
+    <div class="budget-item" *ngFor="let rule of mockService.budgetRules()">
+      <div class="budget-info">
+        <h4>{{ rule.categoryName }}</h4>
+        <span>
+          Spent: <strong>{{ (categorySpend()[rule.categoryName] || 0) | currency:'EUR' }}</strong> 
+          of {{ rule.amount | currency:'EUR' }}
+        </span>
+      </div>
+      <div class="progress-wrapper">
+        <mat-progress-bar 
+          mode="determinate" 
+          [value]="getSpendPercentage(rule.categoryName, rule.amount)"
+          [color]="getSpendPercentage(rule.categoryName, rule.amount) >= 100 ? 'warn' : 'primary'">
+        </mat-progress-bar>
+        <span class="percentage">{{ getSpendPercentage(rule.categoryName, rule.amount) }}%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Savings Goals (ML Predictions) -->
+  <div class="glass-card goals-section">
+    <h3>Savings Targets & Projections</h3>
+    <div class="goal-card" *ngFor="let goal of mockService.goals()">
+      <div class="goal-header">
+        <h4>{{ goal.name }}</h4>
+        <mat-icon class="purple-icon">insights</mat-icon>
+      </div>
+      <div class="goal-amounts">
+        <span class="current">{{ goal.currentAmount | currency:'EUR':'symbol':'1.0-0' }}</span>
+        <span class="divider">/</span>
+        <span class="target">{{ goal.targetAmount | currency:'EUR':'symbol':'1.0-0' }}</span>
+      </div>
+      <div class="progress-bar">
+        <div class="bar-fill" [style.width.%]="(goal.currentAmount/goal.targetAmount)*100"></div>
+      </div>
+      <div class="projection-footer">
+        <div class="p-detail">
+          <span class="label">Monthly Rate</span>
+          <strong>{{ goal.monthlyContribution | currency:'EUR' }}/mo</strong>
+        </div>
+        <div class="p-detail">
+          <span class="label">Projected Completion (ML ETA)</span>
+          <strong class="neon-text-primary">{{ getGoalETA(goal.currentAmount, goal.targetAmount, goal.monthlyContribution) }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

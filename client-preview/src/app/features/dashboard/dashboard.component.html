@@ -1,0 +1,119 @@
+<div class="dashboard-header">
+  <h2 class="neon-text-primary">Dashboard Overview</h2>
+  <p class="subtitle">Real-time financial indicators and AI-driven projections</p>
+</div>
+
+<!-- KPI Grid -->
+<div class="grid-kpis">
+  <div class="glass-card kpi-card">
+    <div class="card-icon income-icon"><mat-icon>trending_up</mat-icon></div>
+    <div class="card-info">
+      <span class="label">Total Income</span>
+      <h3 class="value text-income">{{ kpis().income | currency:'EUR' }}</h3>
+    </div>
+  </div>
+
+  <div class="glass-card kpi-card">
+    <div class="card-icon expense-icon"><mat-icon>trending_down</mat-icon></div>
+    <div class="card-info">
+      <span class="label">Total Expenses</span>
+      <h3 class="value text-expense">{{ kpis().expenses | currency:'EUR' }}</h3>
+    </div>
+  </div>
+
+  <div class="glass-card kpi-card">
+    <div class="card-icon balance-icon"><mat-icon>account_balance_wallet</mat-icon></div>
+    <div class="card-info">
+      <span class="label">Net Worth</span>
+      <h3 class="value neon-text-secondary">{{ kpis().netWorth | currency:'EUR' }}</h3>
+    </div>
+  </div>
+</div>
+
+<!-- Trends and Forecast Split -->
+<div class="dashboard-split">
+  <!-- SVG Chart Mock -->
+  <div class="glass-card chart-container">
+    <h3>Monthly Trends (5m)</h3>
+    <div class="svg-chart-wrapper">
+      <svg viewBox="0 0 500 200" class="svg-chart">
+        <!-- Horizontal grid lines -->
+        <line x1="40" y1="40" x2="480" y2="40" stroke="rgba(255,255,255,0.05)" />
+        <line x1="40" y1="100" x2="480" y2="100" stroke="rgba(255,255,255,0.05)" />
+        <line x1="40" y1="160" x2="480" y2="160" stroke="rgba(255,255,255,0.05)" />
+        
+        <!-- Income bars (green) -->
+        <rect x="70" y="80" width="20" height="80" rx="4" fill="var(--accent-success)" opacity="0.8" />
+        <rect x="150" y="70" width="20" height="90" rx="4" fill="var(--accent-success)" opacity="0.8" />
+        <rect x="230" y="60" width="20" height="100" rx="4" fill="var(--accent-success)" opacity="0.8" />
+        <rect x="310" y="75" width="20" height="85" rx="4" fill="var(--accent-success)" opacity="0.8" />
+        <rect x="390" y="55" width="20" height="105" rx="4" fill="var(--accent-success)" opacity="0.8" />
+
+        <!-- Expense bars (coral) -->
+        <rect x="95" y="100" width="20" height="60" rx="4" fill="var(--accent-warning)" opacity="0.8" />
+        <rect x="175" y="110" width="20" height="50" rx="4" fill="var(--accent-warning)" opacity="0.8" />
+        <rect x="255" y="90" width="20" height="70" rx="4" fill="var(--accent-warning)" opacity="0.8" />
+        <rect x="335" y="115" width="20" height="45" rx="4" fill="var(--accent-warning)" opacity="0.8" />
+        <rect x="415" y="85" width="20" height="75" rx="4" fill="var(--accent-warning)" opacity="0.8" />
+
+        <!-- Labels -->
+        <text x="87" y="180" fill="#a0a0b0" font-size="10" text-anchor="middle">Jan</text>
+        <text x="167" y="180" fill="#a0a0b0" font-size="10" text-anchor="middle">Feb</text>
+        <text x="247" y="180" fill="#a0a0b0" font-size="10" text-anchor="middle">Mar</text>
+        <text x="327" y="180" fill="#a0a0b0" font-size="10" text-anchor="middle">Apr</text>
+        <text x="407" y="180" fill="#a0a0b0" font-size="10" text-anchor="middle">May</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Forecast & Sliders -->
+  <div class="glass-card forecast-container">
+    <h3>AI Projections Settings</h3>
+    <p class="forecast-tip">Simulate prediction engine inputs:</p>
+
+    <div class="slider-group">
+      <div class="slider-header">
+        <span>Lookback range (months)</span>
+        <strong>{{ lookbackMonths() }}m</strong>
+      </div>
+      <mat-slider min="6" max="24" step="6" discrete>
+        <input matSliderThumb [ngModel]="lookbackMonths()" (ngModelChange)="lookbackMonths.set($event)">
+      </mat-slider>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-header">
+        <span>Prediction period (months)</span>
+        <strong>{{ monthsToPredict() }}m</strong>
+      </div>
+      <mat-slider min="3" max="12" step="3" discrete>
+        <input matSliderThumb [ngModel]="monthsToPredict()" (ngModelChange)="monthsToPredict.set($event)">
+      </mat-slider>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-header">
+        <span>Deviation std threshold</span>
+        <strong>{{ stdThreshold() }}</strong>
+      </div>
+      <mat-slider min="0.1" max="0.5" step="0.05" discrete>
+        <input matSliderThumb [ngModel]="stdThreshold()" (ngModelChange)="stdThreshold.set($event)">
+      </mat-slider>
+    </div>
+
+    <div class="forecast-results">
+      <div class="forecast-header-row">
+        <span>Month</span>
+        <span>Income</span>
+        <span>Expense</span>
+        <span>Net</span>
+      </div>
+      <div class="forecast-row" *ngFor="let f of forecastProjections()">
+        <span>{{ f.month }}</span>
+        <span class="text-income">+{{ f.income | currency:'EUR':'symbol':'1.0-0' }}</span>
+        <span class="text-expense">-{{ f.expense | currency:'EUR':'symbol':'1.0-0' }}</span>
+        <span [class]="f.net >= 0 ? 'text-income' : 'text-expense'">{{ f.net | currency:'EUR':'symbol':'1.0-0' }}</span>
+      </div>
+    </div>
+  </div>
+</div>
