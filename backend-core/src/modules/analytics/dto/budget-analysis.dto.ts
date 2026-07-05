@@ -3,6 +3,9 @@ import { Exclude, Expose, Type } from 'class-transformer';
 import { IsString, Matches } from 'class-validator';
 
 // --- INPUT ---
+/**
+ * Request query parameters DTO to retrieve budget analysis.
+ */
 export class GetBudgetAnalysisDto {
   @ApiProperty({ example: '2026-01', description: 'Target month (YYYY-MM)' })
   @IsString()
@@ -11,6 +14,9 @@ export class GetBudgetAnalysisDto {
 }
 
 // --- OUTPUT ---
+/**
+ * Response DTO representing budget execution and alerts for a single category.
+ */
 export class CategoryBudgetStatusDto {
   @Expose()
   @ApiProperty({ description: 'Category Name' })
@@ -35,11 +41,15 @@ export class CategoryBudgetStatusDto {
   @ApiProperty({
     enum: ['OK', 'WARNING', 'EXCEEDED', 'NO_BUDGET'],
     example: 'OK',
+    description: 'Budget execution warning/alert status',
   })
   status: 'OK' | 'WARNING' | 'EXCEEDED' | 'NO_BUDGET';
 
   @Expose()
-  @ApiPropertyOptional({ type: [CategoryBudgetStatusDto] })
+  @ApiPropertyOptional({
+    type: [CategoryBudgetStatusDto],
+    description: 'Nested budget status for subcategories',
+  })
   @Type(() => CategoryBudgetStatusDto)
   children?: CategoryBudgetStatusDto[];
 
@@ -47,9 +57,12 @@ export class CategoryBudgetStatusDto {
   rawSpent?: number;
 }
 
+/**
+ * Response DTO representing the complete budget analysis for a given month.
+ */
 export class BudgetAnalysisResponseDto {
   @Expose()
-  @ApiProperty({ example: '2026-01' })
+  @ApiProperty({ example: '2026-01', description: 'Analysis month (YYYY-MM)' })
   month: string;
 
   @Expose()
@@ -60,7 +73,10 @@ export class BudgetAnalysisResponseDto {
   totalIncome: number;
 
   @Expose()
-  @ApiProperty({ type: [CategoryBudgetStatusDto] })
+  @ApiProperty({
+    type: [CategoryBudgetStatusDto],
+    description: 'Status items grouped by category',
+  })
   @Type(() => CategoryBudgetStatusDto)
   categories: CategoryBudgetStatusDto[];
 }

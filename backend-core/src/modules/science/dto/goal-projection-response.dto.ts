@@ -2,6 +2,9 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
 
+/**
+ * Response DTO returning the savings goal projection metrics calculated by the Science engine.
+ */
 export class GoalProjectionResponseDto {
   @Expose()
   @ApiPropertyOptional({
@@ -47,12 +50,12 @@ export class GoalProjectionResponseDto {
   goalName?: string;
 
   @Expose()
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Current progress balance amount' })
   @SerializeDecimal()
   currentProgress?: number;
 
   @Expose()
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Target goal amount' })
   @SerializeDecimal()
   targetAmount?: number;
 }

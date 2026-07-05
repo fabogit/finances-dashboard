@@ -3,6 +3,9 @@ import { Expose, Type } from 'class-transformer';
 import { AssetResponseDto } from './asset-response.dto';
 import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
 
+/**
+ * Response DTO returning details of the asset balance recalculation.
+ */
 export class RecalculateBalanceResponseDto {
   @Expose()
   @ApiProperty({ type: AssetResponseDto, description: 'The updated asset' })

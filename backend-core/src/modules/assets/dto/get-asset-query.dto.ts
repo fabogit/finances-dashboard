@@ -2,6 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Min, Max } from 'class-validator';
 
+/**
+ * Query parameters DTO to retrieve detailed asset information.
+ */
 export class GetAssetQueryDto {
   @ApiProperty({
     required: false,

@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
 
+/**
+ * Response DTO representing a transaction processed by the Science categorization engine.
+ */
 export class ProcessedTransactionDto {
   @ApiProperty({ example: 'Main Account', description: 'Account name' })
   account: string;
@@ -13,7 +16,7 @@ export class ProcessedTransactionDto {
   @SerializeDecimal()
   amount: number;
 
-  @ApiProperty({ example: 'Food' })
+  @ApiProperty({ example: 'Food', description: 'Macro category name' })
   category: string;
 
   @ApiProperty({
@@ -22,15 +25,28 @@ export class ProcessedTransactionDto {
   })
   date: string;
 
-  @ApiProperty({ example: 'Supermarket Purchase' })
+  @ApiProperty({
+    example: 'Supermarket Purchase',
+    description: 'Detailed description/narrative',
+  })
   details: string;
 
-  @ApiProperty({ example: 'tx_uuid_123' })
+  @ApiProperty({
+    example: 'tx_uuid_123',
+    description: 'Unique transaction identifier',
+  })
   id: string;
 
-  @ApiProperty({ example: 'POS Payment' })
+  @ApiProperty({
+    example: 'POS Payment',
+    description: 'Operation/Transaction type',
+  })
   operation: string;
 
-  @ApiProperty({ example: 'Groceries', nullable: true })
+  @ApiProperty({
+    example: 'Groceries',
+    nullable: true,
+    description: 'Sub-category name',
+  })
   subCategory: string | null;
 }

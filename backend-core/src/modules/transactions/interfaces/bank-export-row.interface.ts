@@ -1,3 +1,6 @@
+/**
+ * Structure of a raw row parsed from imported CSV/Excel bank export files.
+ */
 export interface BankExportRow {
   Data?: string | number;
   Operazione?: string;

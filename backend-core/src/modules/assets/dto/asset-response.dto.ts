@@ -3,6 +3,9 @@ import { AssetType } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
 import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
 
+/**
+ * Response DTO representing an asset profile details.
+ */
 export class AssetResponseDto {
   @Expose()
   @ApiProperty({
@@ -72,6 +75,9 @@ export class AssetResponseDto {
   history?: AssetHistoryResponseDto[];
 }
 
+/**
+ * Response DTO representing a historical balance snapshot for an asset.
+ */
 export class AssetHistoryResponseDto {
   @Expose()
   @ApiProperty({

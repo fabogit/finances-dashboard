@@ -3,6 +3,9 @@ import { Type } from 'class-transformer';
 import { IsArray, IsNumber, ValidateNested } from 'class-validator';
 import { ForecastTransactionInputDto } from './forecast-transaction-input.dto';
 
+/**
+ * Payload DTO sent to the Python FastAPI Science service for forecast calculation.
+ */
 export class ForecastRequestPayload {
   @ApiProperty({
     type: [ForecastTransactionInputDto],

@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 // 1. DTO for the single transaction preview inside "science"
+/**
+ * Response DTO representing a preview item of an uploaded transaction.
+ */
 export class TransactionPreviewDto {
   @ApiProperty({
     example: 'Conto 1000/00067758',
@@ -28,6 +31,9 @@ export class TransactionPreviewDto {
 }
 
 // 2. DTO for the "science" object
+/**
+ * Response DTO representing the enrichment metrics from the Science service.
+ */
 export class ScienceResultDto {
   @ApiProperty({
     type: TransactionPreviewDto,
@@ -56,6 +62,9 @@ export class ScienceResultDto {
 }
 
 // 3. Main Response DTO
+/**
+ * Response DTO returning the results of a transaction batch import and science processing.
+ */
 export class UploadTransactionResponseDto {
   @ApiProperty({
     example: '9f7fc610-1e8e-4b84-9b4c-3798c1e03d29',
@@ -63,7 +72,10 @@ export class UploadTransactionResponseDto {
   })
   batchId: string;
 
-  @ApiProperty({ example: 'File processed successfully' })
+  @ApiProperty({
+    example: 'File processed successfully',
+    description: 'Status message describing the result of the upload operation',
+  })
   message: string;
 
   @ApiProperty({ example: 1337, description: 'Number of raw rows imported' })

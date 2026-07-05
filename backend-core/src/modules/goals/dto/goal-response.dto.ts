@@ -3,6 +3,9 @@ import { GoalStatus } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
 import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
 
+/**
+ * Response DTO representing savings goal profile details.
+ */
 export class GoalResponseDto {
   @Expose()
   @ApiProperty({
@@ -82,6 +85,9 @@ export class GoalResponseDto {
   transactions?: GoalContributionTransactionDto[];
 }
 
+/**
+ * Response DTO representing details of a transaction contributing to a savings goal.
+ */
 export class GoalContributionTransactionDto {
   @Expose()
   @ApiProperty({

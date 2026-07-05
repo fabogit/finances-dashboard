@@ -8,6 +8,9 @@ import {
   IsUUID,
 } from 'class-validator';
 
+/**
+ * Input DTO for creating a new financial category.
+ */
 export class CreateCategoryDto {
   @ApiProperty({
     example: 'Entertainment',
@@ -24,7 +27,11 @@ export class CreateCategoryDto {
   @IsUUID()
   parentId?: string;
 
-  @ApiPropertyOptional({ enum: ExpenseType, default: ExpenseType.UNCLASSIFIED })
+  @ApiPropertyOptional({
+    enum: ExpenseType,
+    default: ExpenseType.UNCLASSIFIED,
+    description: 'Expense type classification (e.g. INCOME, EXPENSE)',
+  })
   @IsOptional()
   @IsEnum(ExpenseType)
   type?: ExpenseType;

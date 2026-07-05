@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsOptional, IsString } from 'class-validator';
 
+/**
+ * Input DTO representing a single transaction passed as context to the Science forecast engine.
+ */
 export class ForecastTransactionInputDto {
   @ApiProperty({ example: 'Main Account', description: 'Account name or ID' })
   @IsString()

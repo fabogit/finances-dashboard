@@ -10,6 +10,9 @@ import { Type } from 'class-transformer';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator';
 
+/**
+ * Input DTO for creating a new transaction.
+ */
 export class CreateTransactionDto {
   @ApiProperty({
     example: 'MANUAL_ENTRY',
@@ -88,11 +91,18 @@ export class CreateTransactionDto {
   @IsUUID()
   savingsGoalId?: string | null;
 
-  @ApiProperty({ example: 'Leisure Misc', required: false })
+  @ApiProperty({
+    example: 'Leisure Misc',
+    required: false,
+    description: 'Sub-category name',
+  })
   @IsOptional()
   @IsString()
   subCategory?: string;
 }
 
 // PartialType makes fields optional for the update
+/**
+ * Input DTO for updating a transaction's properties.
+ */
 export class UpdateTransactionDto extends PartialType(CreateTransactionDto) {}

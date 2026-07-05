@@ -116,6 +116,9 @@ dist
 # TernJS port file
 .tern-port
 
+# VSCode
+.vscode/
+
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
@@ -180,7 +183,7 @@ backend-science/src/modules/util/__pycache__/
 backend-science/.pytest_cache
 backend-science/__pycache__
 
-
+# Temporary/Internal docs
 docs
 
 # temp directory

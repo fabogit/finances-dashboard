@@ -21,6 +21,9 @@ interface TransformObj {
   subCategoryId?: string | null;
 }
 
+/**
+ * Response DTO representing an enriched transaction with fully-resolved category hierarchy and links.
+ */
 export class TransactionDto {
   @Expose()
   @ApiProperty({
@@ -167,6 +170,9 @@ export class TransactionDto {
   updatedAt: Date;
 }
 
+/**
+ * Response DTO containing pagination metadata.
+ */
 export class PaginationMetaDto {
   @Expose()
   @ApiProperty({ example: 10, description: 'Number of items in this response' })
@@ -185,6 +191,9 @@ export class PaginationMetaDto {
   total: number;
 }
 
+/**
+ * Response DTO returning a paginated list of transactions.
+ */
 export class PaginatedTransactionsResponseDto {
   @Expose()
   @ApiProperty({

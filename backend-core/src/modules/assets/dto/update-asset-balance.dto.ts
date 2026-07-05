@@ -2,6 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsOptional } from 'class-validator';
 import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator';
 
+/**
+ * Input DTO for updating an asset's balance and creating a history snapshot.
+ */
 export class UpdateAssetBalanceDto {
   @ApiProperty({
     example: '5200.50',

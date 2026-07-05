@@ -3,6 +3,9 @@ import { BudgetRuleType } from '@prisma/client';
 import { IsEnum } from 'class-validator';
 import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator';
 
+/**
+ * Input DTO for setting or updating a category's budget rule.
+ */
 export class SetBudgetDto {
   @ApiProperty({
     enum: BudgetRuleType,
