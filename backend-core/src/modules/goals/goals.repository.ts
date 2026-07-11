@@ -1,15 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { SavingsGoal, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateGoalDto } from './dto/create-goal.dto';
 import { UpdateGoalDto } from './dto/update-goal.dto';
+import { SavingsGoalWithTransactions } from './interfaces/savings-goal-with-transactions.interface';
 
 @Injectable()
 export class GoalsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   // --- CREATE ---
-  async create(dto: CreateGoalDto) {
+  async create(dto: CreateGoalDto): Promise<SavingsGoal> {
     return this.prisma.savingsGoal.create({
       data: {
         name: dto.name,
@@ -24,14 +25,17 @@ export class GoalsRepository {
   }
 
   // --- READ ALL ---
-  async findAll() {
+  async findAll(): Promise<SavingsGoal[]> {
     return this.prisma.savingsGoal.findMany({
       orderBy: [{ status: 'asc' }, { deadline: 'asc' }],
     });
   }
 
   // --- FIND ONE (Dynamic Limit) ---
-  async findById(id: string, transactionLimit: number = 10) {
+  async findById(
+    id: string,
+    transactionLimit: number = 10,
+  ): Promise<SavingsGoalWithTransactions | null> {
     return this.prisma.savingsGoal.findUnique({
       where: { id },
       include: {
@@ -51,7 +55,7 @@ export class GoalsRepository {
   }
 
   // --- UPDATE (Standard) ---
-  async update(id: string, dto: UpdateGoalDto) {
+  async update(id: string, dto: UpdateGoalDto): Promise<SavingsGoal> {
     return this.prisma.savingsGoal.update({
       where: { id },
       data: {
@@ -77,7 +81,7 @@ export class GoalsRepository {
     id: string,
     deltaAmount: Prisma.Decimal | number,
     tx?: Prisma.TransactionClient,
-  ) {
+  ): Promise<SavingsGoal> {
     const client = tx || this.prisma;
 
     return client.savingsGoal.update({
@@ -94,7 +98,7 @@ export class GoalsRepository {
   }
 
   // --- DELETE ---
-  async delete(id: string) {
+  async delete(id: string): Promise<SavingsGoal> {
     return this.prisma.savingsGoal.delete({
       where: { id },
     });

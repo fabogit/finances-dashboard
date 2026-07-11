@@ -27,8 +27,8 @@ export interface ForecastItem {
   date: Date;
   amount: Prisma.Decimal;
   details: string | null;
-  operation: string;
-  account: string;
+  operation: string | null;
+  account: string | null;
   category: {
     name: string;
     parent: { name: string } | null;
@@ -39,7 +39,7 @@ export interface ForecastItem {
  * Represents grouped monthly expenses for a given category.
  */
 export interface MonthlyExpenseByCategoryItem {
-  categoryId: string;
+  categoryId: string | null;
   _sum: {
     amount: Prisma.Decimal | null;
   };

@@ -44,6 +44,8 @@ const createMockCategory = (
     color: null,
     isSystem: false,
     isVerified: true,
+    userId: 'demo_user',
+    systemKey: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     budgetRule: null,
@@ -143,7 +145,7 @@ describe('AnalyticsService (Unit)', () => {
       ];
 
       (analyticsRepo.getMonthlyIncome as jest.Mock).mockResolvedValue(
-        monthlyIncome,
+        mkDecimal(monthlyIncome),
       );
       (
         analyticsRepo.getMonthlyExpensesByCategory as jest.Mock
@@ -163,7 +165,9 @@ describe('AnalyticsService (Unit)', () => {
       (categoriesRepo.findAllTree as jest.Mock).mockResolvedValue([
         createMockCategory(),
       ]);
-      (analyticsRepo.getMonthlyIncome as jest.Mock).mockResolvedValue(1000);
+      (analyticsRepo.getMonthlyIncome as jest.Mock).mockResolvedValue(
+        mkDecimal(1000),
+      );
       (
         analyticsRepo.getMonthlyExpensesByCategory as jest.Mock
       ).mockResolvedValue([]);
