@@ -40,13 +40,7 @@ const createScienceMock = (): MockRepository<ScienceService> => ({
   processTransactions: jest.fn(),
 });
 
-const mkDecimal = (val: number): Prisma.Decimal =>
-  ({
-    toNumber: () => val,
-    toFixed: (d?: number) => val.toFixed(d),
-    equals: (other: Prisma.Decimal) => val === other.toNumber(),
-    toString: () => val.toString(),
-  }) as unknown as Prisma.Decimal;
+const mkDecimal = (val: number): Prisma.Decimal => new Prisma.Decimal(val);
 
 const createMockExcelBuffer = (rows: Record<string, unknown>[]): Buffer => {
   const worksheet = XLSX.utils.json_to_sheet([]);
@@ -401,6 +395,65 @@ describe('TransactionsService', () => {
         expect(result.details).toBe('Cash');
       });
 
+      it('should call updateBalanceWithDelta and updateProgress on creation if assetId and savingsGoalId are present', async () => {
+        const dto: CreateTransactionDto = {
+          date: new Date(),
+          amount: -25,
+          operation: 'Manual',
+          details: 'Test manual creation',
+          category: 'Food',
+          account: 'Wallet',
+          assetId: 'asset_1',
+          savingsGoalId: 'goal_1',
+        };
+
+        transactionsRepo.create!.mockResolvedValue({
+          ...mockExistingTx,
+          assetId: 'asset_1',
+          savingsGoalId: 'goal_1',
+          amount: mkDecimal(-25),
+        });
+
+        await service.create(dto);
+
+        expect(assetsService['updateBalanceWithDelta']).toHaveBeenCalledWith(
+          'asset_1',
+          mkDecimal(-25),
+          expect.any(Object),
+        );
+        expect(goalsService['updateProgress']).toHaveBeenCalledWith(
+          'goal_1',
+          mkDecimal(-25),
+          expect.any(Object),
+        );
+      });
+
+      it('should throw InternalServerErrorException and abort if asset balance update fails', async () => {
+        const dto: CreateTransactionDto = {
+          date: new Date(),
+          amount: -25,
+          operation: 'Manual',
+          details: 'Test manual creation',
+          category: 'Food',
+          account: 'Wallet',
+          assetId: 'asset_1',
+        };
+
+        transactionsRepo.create!.mockResolvedValue({
+          ...mockExistingTx,
+          assetId: 'asset_1',
+          amount: mkDecimal(-25),
+        });
+
+        (assetsService.updateBalanceWithDelta as jest.Mock).mockRejectedValue(
+          new Error('Asset balance update failed'),
+        );
+
+        await expect(service.create(dto)).rejects.toThrow(
+          InternalServerErrorException,
+        );
+      });
+
       it('should throw InternalServerErrorException on error', async () => {
         transactionsRepo.create!.mockRejectedValue(new Error('DB Fail'));
         await expect(
@@ -442,6 +495,117 @@ describe('TransactionsService', () => {
         const result = await service.update('tx_123', { details: 'Updated' });
         expect(result.details).toBe('Updated');
       });
+
+      it('should update balance with delta once if assetId and savingsGoalId remain the same but amount changes', async () => {
+        transactionsRepo.findById!.mockResolvedValue({
+          ...mockExistingTx,
+          assetId: 'asset_1',
+          savingsGoalId: 'goal_1',
+          amount: mkDecimal(-50),
+        });
+
+        transactionsRepo.update!.mockResolvedValue({
+          ...mockExistingTx,
+          assetId: 'asset_1',
+          savingsGoalId: 'goal_1',
+          amount: mkDecimal(-30),
+        });
+
+        await service.update('tx_123', {
+          amount: -30,
+        });
+
+        // Verify it calls updateBalanceWithDelta only ONCE with delta of +20
+        expect(assetsService['updateBalanceWithDelta']).toHaveBeenCalledTimes(
+          1,
+        );
+        expect(assetsService['updateBalanceWithDelta']).toHaveBeenCalledWith(
+          'asset_1',
+          mkDecimal(20), // -30 - (-50)
+          expect.any(Object),
+        );
+
+        expect(goalsService['updateProgress']).toHaveBeenCalledTimes(1);
+        expect(goalsService['updateProgress']).toHaveBeenCalledWith(
+          'goal_1',
+          mkDecimal(20),
+          expect.any(Object),
+        );
+      });
+
+      it('should not call updateBalanceWithDelta or updateProgress if asset, goal and amount are unchanged', async () => {
+        transactionsRepo.findById!.mockResolvedValue({
+          ...mockExistingTx,
+          assetId: 'asset_1',
+          savingsGoalId: 'goal_1',
+          amount: mkDecimal(-50),
+        });
+
+        transactionsRepo.update!.mockResolvedValue({
+          ...mockExistingTx,
+          assetId: 'asset_1',
+          savingsGoalId: 'goal_1',
+          amount: mkDecimal(-50),
+          details: 'Updated details only',
+        });
+
+        await service.update('tx_123', {
+          details: 'Updated details only',
+        });
+
+        expect(assetsService['updateBalanceWithDelta']).not.toHaveBeenCalled();
+        expect(goalsService['updateProgress']).not.toHaveBeenCalled();
+      });
+
+      it('should revert old balances and apply new ones, even if assetId and savingsGoalId change', async () => {
+        transactionsRepo.findById!.mockResolvedValue({
+          ...mockExistingTx,
+          assetId: 'asset_old',
+          savingsGoalId: 'goal_old',
+          amount: mkDecimal(-50),
+        });
+
+        transactionsRepo.update!.mockResolvedValue({
+          ...mockExistingTx,
+          assetId: 'asset_new',
+          savingsGoalId: 'goal_new',
+          amount: mkDecimal(-30),
+        });
+
+        await service.update('tx_123', {
+          amount: -30,
+          assetId: 'asset_new',
+          savingsGoalId: 'goal_new',
+        });
+
+        // 1. Revert Old Balance
+        expect(assetsService['updateBalanceWithDelta']).toHaveBeenNthCalledWith(
+          1,
+          'asset_old',
+          mkDecimal(50), // -(-50)
+          expect.any(Object),
+        );
+        expect(goalsService['updateProgress']).toHaveBeenNthCalledWith(
+          1,
+          'goal_old',
+          mkDecimal(50), // -(-50)
+          expect.any(Object),
+        );
+
+        // 2. Apply New Balance
+        expect(assetsService['updateBalanceWithDelta']).toHaveBeenNthCalledWith(
+          2,
+          'asset_new',
+          mkDecimal(-30),
+          expect.any(Object),
+        );
+        expect(goalsService['updateProgress']).toHaveBeenNthCalledWith(
+          2,
+          'goal_new',
+          mkDecimal(-30),
+          expect.any(Object),
+        );
+      });
     });
 
     describe('delete', () => {
@@ -473,6 +637,28 @@ describe('TransactionsService', () => {
         transactionsRepo.delete!.mockResolvedValue(mockExistingTx);
         const result = await service.delete('tx_123');
         expect(result.message).toContain('deleted');
+      });
+
+      it('should revert asset balance and goal progress on deletion', async () => {
+        transactionsRepo.findById!.mockResolvedValue({
+          ...mockExistingTx,
+          assetId: 'asset_1',
+          savingsGoalId: 'goal_1',
+          amount: mkDecimal(-50),
+        });
+
+        await service.delete('tx_123');
+
+        expect(assetsService['updateBalanceWithDelta']).toHaveBeenCalledWith(
+          'asset_1',
+          mkDecimal(50),
+          expect.any(Object),
+        );
+        expect(goalsService['updateProgress']).toHaveBeenCalledWith(
+          'goal_1',
+          mkDecimal(50),
+          expect.any(Object),
+        );
       });
     });
   });

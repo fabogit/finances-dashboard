@@ -304,47 +304,71 @@ export class TransactionsService {
   async update(id: string, dto: UpdateTransactionDto) {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        // 1. Retrieve old state for reversion
+        // 1. Retrieve old state for comparison
         const oldTx = await this.transactionsRepo.findById(id);
         if (!oldTx) {
           throw new NotFoundException(`Transaction with ID ${id} not found`);
         }
 
-        // 2. REVERSION PHASE (Undo old balances)
-        if (oldTx.assetId) {
-          await this.assetsService.updateBalanceWithDelta(
-            oldTx.assetId,
-            oldTx.amount.negated(),
-            tx,
-          );
-        }
-
-        if (oldTx.savingsGoalId) {
-          await this.goalsService.updateProgress(
-            oldTx.savingsGoalId,
-            oldTx.amount.negated(),
-            tx,
-          );
-        }
-
-        // 3. Update Transaction
+        // 2. Perform Update (within transaction)
         const updatedTx = await this.transactionsRepo.update(id, dto, tx);
 
-        // 4. APPLICATION PHASE (Apply new balances)
-        if (updatedTx.assetId) {
-          await this.assetsService.updateBalanceWithDelta(
-            updatedTx.assetId,
-            updatedTx.amount,
-            tx,
-          );
+        // 3. Optimized Asset Balance Update
+        const oldAssetId = oldTx.assetId;
+        const newAssetId = updatedTx.assetId;
+        const oldAmount = oldTx.amount;
+        const newAmount = updatedTx.amount;
+
+        if (oldAssetId === newAssetId) {
+          // If asset is the same, only update if the amount changed
+          if (oldAssetId && !oldAmount.equals(newAmount)) {
+            const assetDelta = newAmount.minus(oldAmount);
+            await this.assetsService.updateBalanceWithDelta(
+              oldAssetId,
+              assetDelta,
+              tx,
+            );
+          }
+        } else {
+          // If asset changed, revert old asset and apply to new asset
+          if (oldAssetId) {
+            await this.assetsService.updateBalanceWithDelta(
+              oldAssetId,
+              oldAmount.negated(),
+              tx,
+            );
+          }
+          if (newAssetId) {
+            await this.assetsService.updateBalanceWithDelta(
+              newAssetId,
+              newAmount,
+              tx,
+            );
+          }
         }
 
-        if (updatedTx.savingsGoalId) {
-          await this.goalsService.updateProgress(
-            updatedTx.savingsGoalId,
-            updatedTx.amount,
-            tx,
-          );
+        // 4. Optimized Savings Goal Progress Update
+        const oldGoalId = oldTx.savingsGoalId;
+        const newGoalId = updatedTx.savingsGoalId;
+
+        if (oldGoalId === newGoalId) {
+          // If goal is the same, only update if the amount changed
+          if (oldGoalId && !oldAmount.equals(newAmount)) {
+            const goalDelta = newAmount.minus(oldAmount);
+            await this.goalsService.updateProgress(oldGoalId, goalDelta, tx);
+          }
+        } else {
+          // If goal changed, revert old goal and apply to new goal
+          if (oldGoalId) {
+            await this.goalsService.updateProgress(
+              oldGoalId,
+              oldAmount.negated(),
+              tx,
+            );
+          }
+          if (newGoalId) {
+            await this.goalsService.updateProgress(newGoalId, newAmount, tx);
+          }
         }
 
         return updatedTx;

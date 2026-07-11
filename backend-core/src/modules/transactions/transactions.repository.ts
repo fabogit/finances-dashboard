@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { EnrichedTransaction, RawTransaction, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   SYSTEM_CATEGORIES,
@@ -16,6 +16,10 @@ import {
   transactionWithDetailsInclude,
   TransactionWithDetails,
 } from './interfaces/transaction-with-details.interface';
+import {
+  AssetDelta,
+  GoalDelta,
+} from './interfaces/transaction-deltas.interface';
 
 type CategoryMapData = {
   id: string;
@@ -122,7 +126,7 @@ export class TransactionsRepository {
   async createManyEnriched(
     data: EnrichedDataInput[],
     tx?: Prisma.TransactionClient,
-  ) {
+  ): Promise<Prisma.BatchPayload> {
     const client = tx || this.prisma;
     const uniqueMacros = new Set<string>();
     const uniqueSubs = new Set<string>();
@@ -166,6 +170,7 @@ export class TransactionsRepository {
       fallbackCat = await client.category.create({
         data: {
           name: SYSTEM_CATEGORIES.UNCATEGORIZED,
+          systemKey: SYSTEM_CATEGORIES.UNCATEGORIZED,
           isSystem: true,
           isVerified: true,
           type: EXPENSE_TYPES.UNCLASSIFIED,
@@ -460,7 +465,10 @@ export class TransactionsRepository {
     });
   }
 
-  async delete(id: string, tx?: Prisma.TransactionClient) {
+  async delete(
+    id: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<EnrichedTransaction> {
     const client = tx || this.prisma;
     return client.enrichedTransaction.delete({ where: { id } });
   }
@@ -489,13 +497,15 @@ export class TransactionsRepository {
     return { total, transactions };
   }
 
-  async createManyRaw(data: Prisma.RawTransactionCreateManyInput[]) {
+  async createManyRaw(
+    data: Prisma.RawTransactionCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
     return this.prisma.rawTransaction.createMany({
       data,
     });
   }
 
-  async findAllRaw() {
+  async findAllRaw(): Promise<RawTransaction[]> {
     return this.prisma.rawTransaction.findMany({
       orderBy: { createdAt: 'desc' },
     });
@@ -504,9 +514,9 @@ export class TransactionsRepository {
   async getAssetDeltasByBatchId(
     batchId: string,
     tx?: Prisma.TransactionClient,
-  ) {
+  ): Promise<AssetDelta[]> {
     const client = tx || this.prisma;
-    return client.enrichedTransaction.groupBy({
+    const deltas = await client.enrichedTransaction.groupBy({
       by: ['assetId'],
       where: {
         importBatchId: batchId,
@@ -516,11 +526,15 @@ export class TransactionsRepository {
         amount: true,
       },
     });
+    return deltas;
   }
 
-  async getGoalDeltasByBatchId(batchId: string, tx?: Prisma.TransactionClient) {
+  async getGoalDeltasByBatchId(
+    batchId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<GoalDelta[]> {
     const client = tx || this.prisma;
-    return client.enrichedTransaction.groupBy({
+    const deltas = await client.enrichedTransaction.groupBy({
       by: ['savingsGoalId'],
       where: {
         importBatchId: batchId,
@@ -530,5 +544,6 @@ export class TransactionsRepository {
         amount: true,
       },
     });
+    return deltas;
   }
 }
