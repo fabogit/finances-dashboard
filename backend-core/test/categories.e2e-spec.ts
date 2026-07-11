@@ -30,6 +30,16 @@ describe('CategoriesModule (E2E)', () => {
     await prisma.budgetRule.deleteMany();
     await prisma.enrichedTransaction.deleteMany();
     await prisma.category.deleteMany();
+
+    await prisma.category.create({
+      data: {
+        name: 'UNCATEGORIZED',
+        systemKey: 'UNCATEGORIZED',
+        isSystem: true,
+        isVerified: true,
+        type: ExpenseType.UNCLASSIFIED,
+      },
+    });
   });
 
   afterAll(async () => {
@@ -37,6 +47,8 @@ describe('CategoriesModule (E2E)', () => {
   });
 
   let macroId: string;
+  let subId: string;
+  let targetId: string;
 
   it('1. Should create a MACRO category', async () => {
     const payload = {
@@ -74,6 +86,7 @@ describe('CategoriesModule (E2E)', () => {
 
     const body = res.body as CategoryResponseDto;
     expect(body.parentId).toBe(macroId);
+    subId = body.id;
   });
 
   it('3. Should prevent Duplicate category names (in same level)', async () => {
@@ -107,9 +120,96 @@ describe('CategoriesModule (E2E)', () => {
     }
   });
 
-  it('5. Should Prevent Deletion of Category with Children', async () => {
+  it('5. Should create a TARGET category for reassigning', async () => {
+    const payload = {
+      name: 'Target Category',
+      type: ExpenseType.NEEDS,
+      icon: '🎯',
+    };
+
+    const res = await request(server)
+      .post(`${API_PREFIX}/categories`)
+      .send(payload)
+      .expect(201);
+    const body = res.body as CategoryResponseDto;
+    targetId = body.id;
+  });
+
+  it('6. Should delete subcategory and re-route transactions to target category', async () => {
+    // Create a transaction linked to subId category
+    const transaction = await prisma.enrichedTransaction.create({
+      data: {
+        importBatchId: 'test-batch',
+        originalLine: 1,
+        date: new Date(),
+        amount: -50.0,
+        currency: 'EUR',
+        categoryId: subId,
+      },
+    });
+
+    // Delete subId and reassign to targetId
+    await request(server)
+      .delete(`${API_PREFIX}/categories/${subId}?reassignToId=${targetId}`)
+      .expect(200);
+
+    // Verify transaction was moved
+    const updatedTransaction = await prisma.enrichedTransaction.findUnique({
+      where: { id: transaction.id },
+    });
+    expect(updatedTransaction?.categoryId).toBe(targetId);
+  });
+
+  it('7. Should delete macro category, nullifying children parentIds and routing transactions to UNCATEGORIZED fallback', async () => {
+    // Create a new sub-category linked to macroId
+    const newSub = await prisma.category.create({
+      data: {
+        name: 'Another Sub',
+        parentId: macroId,
+        type: ExpenseType.NEEDS,
+      },
+    });
+
+    // Create a transaction linked to macroId
+    const transaction = await prisma.enrichedTransaction.create({
+      data: {
+        importBatchId: 'test-batch',
+        originalLine: 2,
+        date: new Date(),
+        amount: -100.0,
+        currency: 'EUR',
+        categoryId: macroId,
+      },
+    });
+
+    // Delete macroId without reassignToId (fallback to UNCATEGORIZED)
     await request(server)
       .delete(`${API_PREFIX}/categories/${macroId}`)
-      .expect(409); // ConflictException
+      .expect(200);
+
+    // Verify child category parentId is nullified
+    const updatedSub = await prisma.category.findUnique({
+      where: { id: newSub.id },
+    });
+    expect(updatedSub?.parentId).toBeNull();
+
+    // Verify transaction is reassigned to UNCATEGORIZED
+    const fallbackCategory = await prisma.category.findFirst({
+      where: { systemKey: 'UNCATEGORIZED' },
+    });
+    const updatedTransaction = await prisma.enrichedTransaction.findUnique({
+      where: { id: transaction.id },
+    });
+    expect(updatedTransaction?.categoryId).toBe(fallbackCategory?.id);
+  });
+
+  it('8. Should prevent deletion of system fallback category', async () => {
+    const fallbackCategory = await prisma.category.findFirst({
+      where: { systemKey: 'UNCATEGORIZED' },
+    });
+
+    await request(server)
+      .delete(`${API_PREFIX}/categories/${fallbackCategory?.id}`)
+      .expect(403); // Forbidden
   });
 });
