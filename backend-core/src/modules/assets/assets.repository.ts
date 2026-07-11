@@ -1,16 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Asset, Prisma } from '@prisma/client';
 import { CreateAssetDto } from './dto/create-asset.dto';
 import { UpdateAssetDto } from './dto/update-asset.dto';
 import { UpdateAssetBalanceDto } from './dto/update-asset-balance.dto';
-import { Prisma } from '@prisma/client';
+import {
+  AssetWithHistory,
+  RecalculateBalanceResult,
+} from './interfaces/asset-repository.interfaces';
 
 @Injectable()
 export class AssetsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   // --- CREATE ---
-  async create(dto: CreateAssetDto) {
+  async create(dto: CreateAssetDto): Promise<Asset> {
     return this.prisma.$transaction(async (tx) => {
       const asset = await tx.asset.create({
         data: {
@@ -19,27 +23,25 @@ export class AssetsRepository {
           type: dto.type,
           balance: new Prisma.Decimal(dto.balance),
           currency: dto.currency || 'EUR',
+          isOnBudget: dto.isOnBudget,
         },
       });
-      await tx.assetHistory.create({
-        data: {
-          assetId: asset.id,
-          balance: new Prisma.Decimal(dto.balance),
-          date: new Date(),
-        },
-      });
+      await this.upsertHistorySnapshot(tx, asset.id, asset.balance);
       return asset;
     });
   }
 
   // --- READ ---
-  async findAll() {
+  async findAll(): Promise<Asset[]> {
     return this.prisma.asset.findMany({
       orderBy: { balance: 'desc' },
     });
   }
 
-  async findById(id: string, historyLimit: number = 20) {
+  async findById(
+    id: string,
+    historyLimit: number = 20,
+  ): Promise<AssetWithHistory | null> {
     return this.prisma.asset.findUnique({
       where: { id },
       include: {
@@ -52,7 +54,7 @@ export class AssetsRepository {
   }
 
   // --- UPDATE DETAILS (No Balance) ---
-  async update(id: string, partialAsset: UpdateAssetDto) {
+  async update(id: string, partialAsset: UpdateAssetDto): Promise<Asset> {
     return this.prisma.asset.update({
       where: { id },
       data: partialAsset,
@@ -64,8 +66,10 @@ export class AssetsRepository {
     id: string,
     dto: UpdateAssetBalanceDto,
     tx?: Prisma.TransactionClient,
-  ) {
-    const logic = async (transactionClient: Prisma.TransactionClient) => {
+  ): Promise<Asset> {
+    const logic = async (
+      transactionClient: Prisma.TransactionClient,
+    ): Promise<Asset> => {
       const updatedAsset = await transactionClient.asset.update({
         where: { id },
         data: {
@@ -73,13 +77,12 @@ export class AssetsRepository {
         },
       });
 
-      await transactionClient.assetHistory.create({
-        data: {
-          assetId: id,
-          balance: new Prisma.Decimal(dto.balance),
-          date: dto.date ? new Date(dto.date) : new Date(),
-        },
-      });
+      await this.upsertHistorySnapshot(
+        transactionClient,
+        id,
+        new Prisma.Decimal(dto.balance),
+        dto.date,
+      );
 
       return updatedAsset;
     };
@@ -96,8 +99,10 @@ export class AssetsRepository {
     id: string,
     delta: Prisma.Decimal | number,
     tx?: Prisma.TransactionClient,
-  ) {
-    const logic = async (transactionClient: Prisma.TransactionClient) => {
+  ): Promise<Asset> {
+    const logic = async (
+      transactionClient: Prisma.TransactionClient,
+    ): Promise<Asset> => {
       const updatedAsset = await transactionClient.asset.update({
         where: { id },
         data: {
@@ -106,13 +111,11 @@ export class AssetsRepository {
       });
 
       // Snapshot
-      await transactionClient.assetHistory.create({
-        data: {
-          assetId: id,
-          balance: updatedAsset.balance,
-          date: new Date(),
-        },
-      });
+      await this.upsertHistorySnapshot(
+        transactionClient,
+        id,
+        updatedAsset.balance,
+      );
 
       return updatedAsset;
     };
@@ -124,7 +127,7 @@ export class AssetsRepository {
     }
   }
 
-  async recalculateBalance(id: string) {
+  async recalculateBalance(id: string): Promise<RecalculateBalanceResult> {
     return this.prisma.$transaction(async (tx) => {
       // 0. Verify existence (throws P2025 if not found)
       await tx.asset.findUniqueOrThrow({ where: { id } });
@@ -159,13 +162,7 @@ export class AssetsRepository {
       });
 
       // 4. Record reconciliation history snapshot to maintain graph consistency
-      await tx.assetHistory.create({
-        data: {
-          assetId: id,
-          balance: newBalance,
-          date: new Date(),
-        },
-      });
+      await this.upsertHistorySnapshot(tx, id, newBalance);
 
       return {
         asset: updatedAsset,
@@ -178,11 +175,44 @@ export class AssetsRepository {
   }
 
   // --- DELETE ---
-  async delete(id: string) {
+  async delete(id: string): Promise<Asset> {
     // The DB handles Cascade for history and SetNull for transactions.
-    // Here we let Prisma throw an error if the ID doesn't exist,
+    // Here we let Prisma throw an error if the ID doesn't exist.
     return this.prisma.asset.delete({
       where: { id },
     });
+  }
+
+  // --- PRIVATE HELPERS ---
+  private async upsertHistorySnapshot(
+    tx: Prisma.TransactionClient,
+    assetId: string,
+    balance: Prisma.Decimal,
+    dateInput?: Date | string | null,
+  ): Promise<void> {
+    const targetDate = dateInput ? new Date(dateInput) : new Date();
+    targetDate.setUTCHours(0, 0, 0, 0); // Truncate to UTC 00:00:00.000
+
+    const existing = await tx.assetHistory.findFirst({
+      where: {
+        assetId,
+        date: targetDate,
+      },
+    });
+
+    if (existing) {
+      await tx.assetHistory.update({
+        where: { id: existing.id },
+        data: { balance },
+      });
+    } else {
+      await tx.assetHistory.create({
+        data: {
+          assetId,
+          balance,
+          date: targetDate,
+        },
+      });
+    }
   }
 }

@@ -19,6 +19,7 @@ describe('AssetsRepository', () => {
     assetHistory: {
       create: jest.fn(),
       findFirst: jest.fn(),
+      update: jest.fn(),
     },
     enrichedTransaction: {
       aggregate: jest.fn(),
@@ -33,6 +34,7 @@ describe('AssetsRepository', () => {
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AssetsRepository,
@@ -50,12 +52,14 @@ describe('AssetsRepository', () => {
         type: AssetType.CASH,
         balance: 1000,
         institution: 'Trust',
+        isOnBudget: true,
       };
       const createMock = mockPrisma.asset.create;
       createMock.mockResolvedValue({
         id: 'a1',
         ...dto,
       });
+      mockPrisma.assetHistory.findFirst.mockResolvedValue(null);
 
       const asset = await repository.create(dto);
       expect(asset.id).toBe('a1');
@@ -64,11 +68,42 @@ describe('AssetsRepository', () => {
     });
   });
 
+  describe('updateBalance', () => {
+    it('should update balance and create history entry if none exists for the day', async () => {
+      const mockUpdatedAsset = { id: 'a1', balance: new Prisma.Decimal(1200) };
+      mockPrisma.asset.update.mockResolvedValue(mockUpdatedAsset);
+      mockPrisma.assetHistory.findFirst.mockResolvedValue(null);
+
+      const asset = await repository.updateBalance('a1', { balance: 1200 });
+      expect(asset.balance.toNumber()).toBe(1200);
+      expect(mockPrisma.assetHistory.create).toHaveBeenCalled();
+      expect(mockPrisma.assetHistory.update).not.toHaveBeenCalled();
+    });
+
+    it('should update balance and update history entry if one already exists for the day', async () => {
+      const mockUpdatedAsset = { id: 'a1', balance: new Prisma.Decimal(1200) };
+      mockPrisma.asset.update.mockResolvedValue(mockUpdatedAsset);
+      mockPrisma.assetHistory.findFirst.mockResolvedValue({
+        id: 'h1',
+        balance: new Prisma.Decimal(1000),
+      });
+
+      const asset = await repository.updateBalance('a1', { balance: 1200 });
+      expect(asset.balance.toNumber()).toBe(1200);
+      expect(mockPrisma.assetHistory.create).not.toHaveBeenCalled();
+      expect(mockPrisma.assetHistory.update).toHaveBeenCalledWith({
+        where: { id: 'h1' },
+        data: { balance: new Prisma.Decimal(1200) },
+      });
+    });
+  });
+
   describe('updateBalanceWithDelta', () => {
     it('should increment balance and create history entry', async () => {
       const mockUpdatedAsset = { id: 'a1', balance: new Prisma.Decimal(1200) };
       const updateMock = mockPrisma.asset.update;
       updateMock.mockResolvedValue(mockUpdatedAsset);
+      mockPrisma.assetHistory.findFirst.mockResolvedValue(null);
 
       const asset = await repository.updateBalanceWithDelta('a1', 200);
       expect(asset.balance.toNumber()).toBe(1200);
@@ -89,10 +124,14 @@ describe('AssetsRepository', () => {
       mockPrisma.asset.findUniqueOrThrow.mockResolvedValue({
         id: 'a1',
       });
-      mockPrisma.assetHistory.findFirst.mockResolvedValue({
+      // First call (Anchor Point)
+      mockPrisma.assetHistory.findFirst.mockResolvedValueOnce({
         balance: new Prisma.Decimal(1000),
         date: new Date('2025-01-01'),
       });
+      // Second call (Upsert check)
+      mockPrisma.assetHistory.findFirst.mockResolvedValueOnce(null);
+
       mockPrisma.enrichedTransaction.aggregate.mockResolvedValue({
         _sum: { amount: new Prisma.Decimal(500) },
       });
@@ -104,13 +143,7 @@ describe('AssetsRepository', () => {
       const result = await repository.recalculateBalance('a1');
       expect(result.newBalance.toNumber()).toBe(1500);
       expect(result.transactionsSum.toNumber()).toBe(500);
-      expect(updateMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: {
-            balance: expect.any(Prisma.Decimal) as Prisma.Decimal,
-          },
-        }),
-      );
+      expect(mockPrisma.assetHistory.create).toHaveBeenCalled();
     });
   });
 });

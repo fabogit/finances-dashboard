@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { AssetType } from '@prisma/client';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator';
 
 /**
@@ -49,4 +49,15 @@ export class CreateAssetDto {
   @IsOptional()
   @IsString()
   currency?: string;
+
+  @ApiProperty({
+    example: true,
+    default: true,
+    required: false,
+    description:
+      'Flag indicating whether this asset is included in budget calculations',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isOnBudget?: boolean;
 }

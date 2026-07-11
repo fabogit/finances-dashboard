@@ -54,6 +54,14 @@ export class AssetResponseDto {
 
   @Expose()
   @ApiProperty({
+    example: true,
+    description:
+      'Flag indicating whether this asset is included in budget calculations',
+  })
+  isOnBudget: boolean;
+
+  @Expose()
+  @ApiProperty({
     example: '2025-01-01T12:00:00Z',
     description: 'Creation date',
   })
