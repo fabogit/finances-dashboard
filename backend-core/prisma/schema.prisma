@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,186 +9,280 @@ datasource db {
   provider = "postgresql"
 }
 
-// --- ENUMS ---
-
+/// Defines the type/category of a financial asset for statistical grouping.
 enum AssetType {
-  CASH // Liquidity, Current accounts, Cash on hand
-  INVESTMENT // Stocks, ETFs, Crypto, Funds
-  REAL_ESTATE // Property, Real Estate
-  VEHICLE // Cars, Bikes, Boats
-  DEBT // Mortgages, Personal loans (Liabilities)
-  OTHER // Jewelry, Art, Other valuables
+  /// Cash on hand, checking accounts, and immediate liquidity.
+  CASH
+  /// Liabilities like mortgages or personal loans.
+  DEBT
+  /// Investments such as stocks, ETFs, crypto assets, or mutual funds.
+  INVESTMENT
+  /// Other physical valuables (e.g., jewelry, art).
+  OTHER
+  /// Real estate property holdings.
+  REAL_ESTATE
+  /// Vehicles like cars, motorcycles, or boats.
+  VEHICLE
 }
 
+/// Defines the rule type for budgeting limits.
 enum BudgetRuleType {
+  /// A static amount limit (e.g., max 200 EUR per month).
   FIXED_AMOUNT
+  /// A relative limit based on a percentage of the total user income.
   PERCENTAGE_OF_INCOME
 }
 
+/// Categorizes expenses using the 50/30/20 budget framework.
 enum ExpenseType {
+  /// Essential, non-discretionary expenses (e.g., rent, utilities, groceries).
   NEEDS
-  WANTS
+  /// Allocation to savings, investments, or debt paydown.
   SAVINGS
+  /// Uncategorized or unclassified expenses.
   UNCLASSIFIED
+  /// Discretionary expenses (e.g., dining out, travel, entertainment).
+  WANTS
 }
 
+/// Reflects the execution status of a savings goal.
 enum GoalStatus {
+  /// Goal is active and currently accumulating funds.
   ACTIVE
-  PAUSED
-  COMPLETED
+  /// Goal has been aborted and is no longer active.
   CANCELLED
+  /// Target amount has been fully reached.
+  COMPLETED
+  /// Goal is paused and not currently receiving contributions.
+  PAUSED
 }
 
-// --- MODELS ---
-
+/// Represents a financial asset container holding economic value.
 model Asset {
+  /// Unique identifier of the asset.
   id     String @id @default(uuid())
-  userId String @default("demo_user") // Future-proofing
-
-  name        String
-  institution String? // e.g., "Chase", "Binance", "Coinbase"
-  type        AssetType
-  balance     Decimal   @default(0) @db.Decimal(15, 2) // Current value
-  currency    String    @default("EUR") @db.VarChar(3)
-
-  // Relations
-  history      AssetHistory[]
-  transactions EnrichedTransaction[] // Transactions affecting this asset
-
-  // Back-link for automation (Categories pointing to this asset by default)
-  defaultForCategories Category[] @relation("CategoryDefaultAsset")
-
-  // Goals linked to this asset
-  savingsGoals SavingsGoal[] @relation("GoalAsset")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model AssetHistory {
-  id      String @id @default(uuid())
-  assetId String
-  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  date    DateTime // Snapshot date
-  balance Decimal  @db.Decimal(15, 2)
-
-  createdAt DateTime @default(now())
-}
-
-model BudgetRule {
-  id String @id @default(uuid())
-
-  categoryId String   @unique
-  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  ruleType   BudgetRuleType
-  limitValue Decimal        @db.Decimal(10, 2)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Category {
-  id   String @id @default(uuid())
-  name String
-
-  // Hierarchy
-  parentId String?
-  parent   Category?  @relation("Hierarchy", fields: [parentId], references: [id], onDelete: Restrict)
-  children Category[] @relation("Hierarchy")
-
-  // Properties
-  type  ExpenseType @default(UNCLASSIFIED)
-  icon  String?
-  color String?
-
-  // Flags
-  isSystem   Boolean @default(false)
-  isVerified Boolean @default(true)
-
-  budgetRule   BudgetRule?
-  transactions EnrichedTransaction[]
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  defaultAssetId String?
-  defaultAsset   Asset?   @relation("CategoryDefaultAsset", fields: [defaultAssetId], references: [id], onDelete: SetNull)
-
-  // Link Category to a Savings Goal for automatic contribution
-  defaultGoalId String?
-  defaultGoal   SavingsGoal? @relation("CategoryDefaultGoal", fields: [defaultGoalId], references: [id], onDelete: SetNull)
-
-  // Uniqueness constraint: Unique name within the same parent (or among root categories if parentId is null)
-  @@unique([name, parentId])
-}
-
-model EnrichedTransaction {
-  id            String @id @default(uuid())
-  importBatchId String
-  originalLine  Int
-
-  date     DateTime
-  amount   Decimal  @db.Decimal(10, 2) // Using Decimal on Postgres for currency precision
-  currency String   @default("EUR") @db.VarChar(3) // ISO 4217 (EUR, USD, etc.)
-
-  operation String?
-  details   String?
-  account   String?
-
-  // Hierarchy
-  categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  assetId   String?
-  asset     Asset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
-
-  transactionHash String? @unique
-
-  // Links the transaction to a Goal (e.g., Monthly savings -> Vacation Goal)
-  savingsGoalId String?
-  savingsGoal   SavingsGoal? @relation(fields: [savingsGoalId], references: [id], onDelete: SetNull)
-}
-
-model RawTransaction {
-  id               String   @id @default(uuid())
-  importBatchId    String
-  originalLine     Int
-  date             String
-  operation        String?
-  details          String?
-  account          String?
-  amount           String?
-  currency         String?
-  accountingStatus String?
-  category         String?
-  createdAt        DateTime @default(now())
-}
-
-model SavingsGoal {
-  id     String @id @default(uuid())
+  /// Tenant identifier for data isolation. Defaults to "demo_user".
   userId String @default("demo_user")
 
-  name          String
-  targetAmount  Decimal    @db.Decimal(15, 2)
-  currentAmount Decimal    @default(0) @db.Decimal(15, 2)
-  deadline      DateTime?
-  status        GoalStatus @default(ACTIVE)
-  icon          String? // Emoji 🏠
-  color         String? // Hex #FF0000
+  /// Current calculated or declared balance of the asset.
+  balance              Decimal               @default(0) @db.Decimal(15, 2)
+  /// ISO 4217 base currency of the asset (default: EUR).
+  currency             String                @default("EUR") @db.VarChar(3)
+  /// Default asset link back from categories.
+  defaultForCategories Category[]            @relation("CategoryDefaultAsset")
+  /// Historic balance snapshots for tracking changes.
+  history              AssetHistory[]
+  /// Financial institution managing this asset (e.g. Fineco, Binance).
+  institution          String?
+  /// If true, the asset is liquid and part of everyday budget calculations. Otherwise, tracked only for Net Worth.
+  isOnBudget           Boolean               @default(true)
+  /// Friendly identification name of the asset.
+  name                 String
+  /// Savings goals physically residing in this asset.
+  savingsGoals         SavingsGoal[]         @relation("GoalAsset")
+  /// Enriched transactions associated with this asset.
+  transactions         EnrichedTransaction[]
+  /// Asset type classification.
+  type                 AssetType
 
-  // Transactions contributing to this goal (Accumulation)
-  transactions EnrichedTransaction[]
-
-  // Asset linked to this goal (where the funds reside physically)
-  assetId String?
-  asset   Asset?  @relation("GoalAsset", fields: [assetId], references: [id], onDelete: SetNull)
-
-  // Categories linked to this goal for automation
-  categories Category[] @relation("CategoryDefaultGoal")
-
+  /// Audit timestamp when the asset was created.
   createdAt DateTime @default(now())
+  /// Audit timestamp when the asset was last updated.
+  updatedAt DateTime @updatedAt
+}
+
+/// Represents a historical balance snapshot for an asset at a specific point in time.
+model AssetHistory {
+  /// Unique snapshot identifier.
+  id String @id @default(uuid())
+
+  /// Relation to the parent asset. Cascade deletes the history if the asset is deleted.
+  asset   Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  /// Reference to the parent asset.
+  assetId String
+  /// Balance amount at the snapshot date.
+  balance Decimal  @db.Decimal(15, 2)
+  /// Date of the balance snapshot.
+  date    DateTime
+
+  /// Audit timestamp when the snapshot was recorded.
+  createdAt DateTime @default(now())
+}
+
+/// Represents a budget rule configuration linked to a specific category.
+model BudgetRule {
+  /// Unique identifier of the budget rule.
+  id String @id @default(uuid())
+
+  /// Relation to the category. Cascade deletes the rule if the category is deleted.
+  category   Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  /// Reference to the associated category.
+  categoryId String         @unique
+  /// The maximum spend limit value.
+  limitValue Decimal        @db.Decimal(10, 2)
+  /// Type of budget rule (fixed amount or percentage of income).
+  ruleType   BudgetRuleType
+
+  /// Audit timestamp when the rule was created.
+  createdAt DateTime @default(now())
+  /// Audit timestamp when the rule was last updated.
+  updatedAt DateTime @updatedAt
+}
+
+/// Represents a hierarchical category structure for expense classification.
+model Category {
+  /// Unique identifier of the category.
+  id     String @id @default(uuid())
+  /// Tenant identifier for data isolation. Defaults to "demo_user".
+  userId String @default("demo_user")
+
+  /// Linked budget rule if defined.
+  budgetRule     BudgetRule?
+  /// Child categories under this category.
+  children       Category[]            @relation("Hierarchy")
+  /// Hex color code for visualization.
+  color          String?
+  /// Relation to default asset. Sets default to null if the asset is deleted.
+  defaultAsset   Asset?                @relation("CategoryDefaultAsset", fields: [defaultAssetId], references: [id], onDelete: SetNull)
+  /// Default asset for transactions under this category.
+  defaultAssetId String?
+  /// Relation to default savings goal. Sets default to null if the savings goal is deleted.
+  defaultGoal    SavingsGoal?          @relation("CategoryDefaultGoal", fields: [defaultGoalId], references: [id], onDelete: SetNull)
+  /// Default savings goal for transactions under this category.
+  defaultGoalId  String?
+  /// Emoji or key representing the icon.
+  icon           String?
+  /// True if the category is system-protected and cannot be deleted.
+  isSystem       Boolean               @default(false)
+  /// True if the category classification has been verified by the user.
+  isVerified     Boolean               @default(true)
+  /// Friendly name of the category.
+  name           String
+  /// Self-relation to parent category. Restricts parent deletion if children exist.
+  parent         Category?             @relation("Hierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  /// Parent category identifier (null for top-level categories).
+  parentId       String?
+  /// Immutable system key for mapping AI categorizations and system-wide logic.
+  systemKey      String?
+  /// Enriched transactions associated with this category.
+  transactions   EnrichedTransaction[]
+  /// Categorization framework classification (Needs, Wants, Savings).
+  type           ExpenseType           @default(UNCLASSIFIED)
+
+  /// Audit timestamp when the category was created.
+  createdAt DateTime @default(now())
+  /// Audit timestamp when the category was last updated.
+  updatedAt DateTime @updatedAt
+
+  /// Enforces unique category names within the same hierarchical level per tenant/user.
+  /// Prevents duplicate category names under the same parent category for a given user.
+  @@unique([name, parentId, userId])
+}
+
+/// Represents a cleaned, parsed, and enriched transaction presented to the user.
+model EnrichedTransaction {
+  /// Unique identifier of the enriched transaction.
+  id String @id @default(uuid())
+
+  /// Account info from import source.
+  account         String?
+  /// Transaction value (negative for expenses, positive for incomes).
+  amount          Decimal      @db.Decimal(10, 2)
+  /// Relation to the asset. Sets asset reference to null if the asset is deleted.
+  asset           Asset?       @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  /// Reference to the affected asset.
+  assetId         String?
+  /// Relation to the category. Restricts category deletion if it has transactions.
+  category        Category?    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  /// Reference to the associated category.
+  categoryId      String?
+  /// ISO 4217 transaction currency code (default: EUR).
+  currency        String       @default("EUR") @db.VarChar(3)
+  /// Transaction timestamp.
+  date            DateTime
+  /// Detailed description or memo of the transaction.
+  details         String?
+  /// Identifier of the batch in which this transaction was imported.
+  importBatchId   String
+  /// Operational description/type of transaction.
+  operation       String?
+  /// Index number of the row in the original raw file.
+  originalLine    Int
+  /// Relation to the savings goal. Sets reference to null if the goal is deleted.
+  savingsGoal     SavingsGoal? @relation(fields: [savingsGoalId], references: [id], onDelete: SetNull)
+  /// Reference to a linked savings goal if this transaction contributes to it.
+  savingsGoalId   String?
+  /// Unique hash of the transaction computed to prevent import duplicates.
+  transactionHash String?      @unique
+
+  /// Audit timestamp when the transaction was created.
+  createdAt DateTime @default(now())
+  /// Audit timestamp when the transaction was last updated.
+  updatedAt DateTime @updatedAt
+}
+
+/// Represents a raw imported transaction prior to parsing and enrichment.
+model RawTransaction {
+  /// Unique identifier of the raw transaction.
+  id String @id @default(uuid())
+
+  /// Raw account reference from import source.
+  account          String?
+  /// Raw status during the import process.
+  accountingStatus String?
+  /// Raw amount string from import source.
+  amount           String?
+  /// Raw category string from import source.
+  category         String?
+  /// Raw currency string from import source.
+  currency         String?
+  /// Raw date string from import source.
+  date             String
+  /// Raw details string from import source.
+  details          String?
+  /// Identifier of the batch in which this raw transaction was imported.
+  importBatchId    String
+  /// Raw operation string from import source.
+  operation        String?
+  /// Line index number in the imported source file.
+  originalLine     Int
+
+  /// Audit timestamp when the raw transaction was imported.
+  createdAt DateTime @default(now())
+}
+
+/// Represents a long-term target savings goal.
+model SavingsGoal {
+  /// Unique identifier of the savings goal.
+  id     String @id @default(uuid())
+  /// Tenant identifier for data isolation. Defaults to "demo_user".
+  userId String @default("demo_user")
+
+  /// Relation to the asset. Sets asset reference to null if the asset is deleted.
+  asset         Asset?                @relation("GoalAsset", fields: [assetId], references: [id], onDelete: SetNull)
+  /// Reference to the physical asset holding the goal funds.
+  assetId       String?
+  /// Default categories linked to automate contributions.
+  categories    Category[]            @relation("CategoryDefaultGoal")
+  /// Hex color code for frontend widgets.
+  color         String?
+  /// Current accumulated value of the savings goal.
+  currentAmount Decimal               @default(0) @db.Decimal(15, 2)
+  /// Optional target deadline date.
+  deadline      DateTime?
+  /// Icon representation (e.g. emoji).
+  icon          String?
+  /// Friendly name of the savings goal.
+  name          String
+  /// Status of the savings goal.
+  status        GoalStatus            @default(ACTIVE)
+  /// Monetary target amount to be accumulated.
+  targetAmount  Decimal               @db.Decimal(15, 2)
+  /// Transactions contributing to this goal.
+  transactions  EnrichedTransaction[]
+
+  /// Audit timestamp when the goal was created.
+  createdAt DateTime @default(now())
+  /// Audit timestamp when the goal was last updated.
   updatedAt DateTime @updatedAt
 }

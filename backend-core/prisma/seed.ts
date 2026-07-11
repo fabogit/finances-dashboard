@@ -321,6 +321,10 @@ async function seedCategories() {
 
     if (createdMacro) {
       // Update logic if needed
+      await prisma.category.update({
+        where: { id: createdMacro.id },
+        data: { systemKey: macro.name },
+      });
     } else {
       createdMacro = await prisma.category.create({
         data: {
@@ -330,6 +334,7 @@ async function seedCategories() {
           isSystem: true,
           isVerified: true,
           parentId: null,
+          systemKey: macro.name,
         },
       });
     }
@@ -363,11 +368,14 @@ async function seedCategories() {
         defaultGoalId = longTermSavingsGoal?.id || null;
       }
 
+      const systemKey = sub.name.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+
       const subCat = await prisma.category.upsert({
         where: {
-          name_parentId: {
+          name_parentId_userId: {
             name: sub.name,
             parentId: createdMacro.id,
+            userId: 'demo_user',
           },
         },
         update: {
@@ -376,6 +384,7 @@ async function seedCategories() {
           isVerified: true,
           defaultAssetId: defaultAssetId,
           defaultGoalId: defaultGoalId,
+          systemKey: systemKey,
         },
         create: {
           name: sub.name,
@@ -385,6 +394,7 @@ async function seedCategories() {
           isVerified: true,
           defaultAssetId: defaultAssetId,
           defaultGoalId: defaultGoalId,
+          systemKey: systemKey,
         },
       });
 
