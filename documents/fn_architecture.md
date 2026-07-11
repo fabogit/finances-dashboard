@@ -2,6 +2,8 @@
 
 This document describes the technical architecture of the system, focusing on module interaction and data flow.
 
+---
+
 ## 🏗️ Overview
 
 The system follows a microservices (or decoupled services) architecture where the core business logic resides in a NestJS application, supported by a Python-based Data Science engine (FastAPI).
@@ -16,30 +18,32 @@ graph TD
 
 ---
 
-## 🔄 Transaction Life Cycle
+## 🔄 Transaction Life Cycle (Staging-First Flow) `[PLANNED]`
 
-The import process is the heart of the system and goes through several validation and enrichment stages.
+The import process does not write directly to the database. It passes through a stateless staging area for preview, validation, and de-duplication before final commitment.
 
 ```mermaid
 sequenceDiagram
-    participant U as User (Excel)
+    participant U as User (Excel/CSV)
     participant N as NestJS (TransactionsService)
     participant D as Database (Prisma)
     participant S as Science Service (Python)
 
-    U->>N: Upload Excel file
-    N->>N: Parse Excel (XLSX)
-    N->>D: Save RawTransactions (Carbon copy of Excel)
-    N->>S: Send RawTransactions for processing
-    S->>S: AI Cleaning & Categorization
-    S-->>N: Return Enriched data
-    N->>D: Save EnrichedTransactions
+    U->>N: Upload Excel file to /stage-import
+    N->>N: Parse file rows in-memory
+    N->>S: POST /process (AI Categorization & Payee Cleanup)
+    S-->>N: Return suggested categories & normalized payees
+    N->>D: Search DB for duplicate hashes & paired transfers
+    N-->>U: Return StagedTransactionsResponseDto (Stateless Grid)
+    Note over U: User reviews suggestions, handles duplicates,<br/>edits categories, and clicks Confirm.
+    U->>N: POST /confirm-import (Staged Payload)
     rect rgb(200, 230, 200)
-    Note over N,D: Automation Bridge
-    N->>D: Update Asset Balances (Transactional)
-    N->>D: Update Savings Goal Progress (Transactional)
+    Note over N,D: Prisma Transaction (Atomic Commit)
+    N->>D: Write Raw & Enriched Transactions
+    N->>D: Update Asset Daily Closing Balances
+    N->>D: Update Savings Goal Progress
     end
-    N-->>U: Return BatchId confirmation
+    N-->>U: Return success HTTP 201
 ```
 
 ---
@@ -48,13 +52,16 @@ sequenceDiagram
 
 All business logic is strictly encapsulated within the `src/modules/` directory:
 
-1.  **Transactions**: Handles the upload, persistence, and filtering of financial movements.
-2.  **Assets**: Responsible for Net Worth calculation and historical snapshot management.
-3.  **Categories**: Manages the hierarchical tree of categories and associated budget rules.
-4.  **Goals**: Monitors progress toward specific savings targets and calculates ETAs via ML.
-5.  **Analytics**: Aggregates data to provide KPIs and visual trends.
-6.  **Automation Bridge**: Logic residing in `TransactionsRepository` that links Transactions to Assets and Goals based on Category metadata.
-7.  **Science Service Wrapper**: Proxy that handles resilient communication with the Python service.
+1.  **Auth & Identity** `[PLANNED]`: Handles user registration, password hashing (bcrypt), and JWT token emission.
+2.  **Transactions**: Handles manual transaction CRUD, Excel upload, and duplicate detection. Staging area parsing and HTTP `QUERY` method are `[PLANNED]`.
+3.  **Assets**: Manages asset configuration, daily closing balance snapshots, and multi-currency conversions.
+4.  **Categories**: Manages the hierarchical tree of categories, systemKey mapping, re-routing deletions, and budget rules.
+5.  **Payees** `[PLANNED]`: Stores normalized transaction beneficiaries and their default category mappings.
+6.  **Subscriptions** `[PLANNED]`: Handles explicit recurring payments, status tracking, and forecast suppression hooks.
+7.  **Exchange Rates** `[PLANNED]`: Manages manual historical currency conversion rates for Net Worth charts.
+8.  **Goals**: Monitors progress toward specific savings targets and calculates ETAs via ML.
+9.  **Analytics**: Aggregates data to provide Net Worth, Cash Flow KPIs, and integrates linear projections from Python.
+10. **Multi-Tenancy Extension** `[PLANNED]`: Intercepts ORM queries to automatically inject context `userId` isolation.
 
 ---
 
@@ -62,22 +69,21 @@ All business logic is strictly encapsulated within the `src/modules/` directory:
 
 ### ACID Transactions
 
-Critical operations (such as creating a transaction and updating the associated account balance) are executed within **Prisma Transactions**. This ensures that the balance is never misaligned with the sum of movements.
+Critical operations (such as creating/deleting a transaction and updating the associated account balance, or executing a staged import) are executed within **Prisma Transactions**. This ensures that the balance is never misaligned with the sum of movements.
 
 ### Decimal Precision Protocol
 
 To avoid JavaScript floating-point errors in financial calculations, the system enforces a strict global protocol:
 
 - **Input**: `@ParseDecimal()` decorator converts incoming strings/numbers into `Prisma.Decimal`.
-- **Output**: `@SerializeDecimal()` interceptor converts `Prisma.Decimal` back into safe primitives for the frontend.
+- **Output**: `@SerializeDecimal()` interceptor converts `Prisma.Decimal` back into safe primitives (numbers) for the frontend.
 - **Enforcement**: A global `SerializeInterceptor` ensures that only explicitly exposed (`@Expose()`) properties leave the API.
 
 ---
 
-## 🏗️ Quality Management and CI/CD
+## 🔒 Multi-Tenant Security & Context `[PLANNED]`
 
-The integrity of the architecture is guaranteed by a multi-layered verification system:
-
-- **Core Module**: 100% coverage on critical Repositories and 90%+ on Services. Verified via Jest and E2E Integrated tests.
-- **Science Module**: Algorithmic validation via `pytest`.
-- **Global CI/CD**: Intelligent GitHub Actions pipeline with path-filtering that ensures every change is linted, tested, and container-verified before merging.
+Data isolation is enforced at the database query layer:
+- A NestJS Guard decodes the JWT and binds the `userId` to `nestjs-cls` (AsyncLocalStorage).
+- An extended Prisma Client intercepts all CRUD queries and injects the context `userId` into the `where` clause automatically.
+- Raw SQL query endpoints (`$queryRaw`) bypass this extension and must manually check and interpolate the `userId` parameter.
