@@ -107,6 +107,9 @@ model AssetHistory {
 
   /// Audit timestamp when the snapshot was recorded.
   createdAt DateTime @default(now())
+
+  /// Ensures only one snapshot per asset per day (Daily Closing Balance).
+  @@unique([assetId, date])
 }
 
 /// Represents a budget rule configuration linked to a specific category.

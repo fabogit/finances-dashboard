@@ -193,26 +193,12 @@ export class AssetsRepository {
     const targetDate = dateInput ? new Date(dateInput) : new Date();
     targetDate.setUTCHours(0, 0, 0, 0); // Truncate to UTC 00:00:00.000
 
-    const existing = await tx.assetHistory.findFirst({
+    await tx.assetHistory.upsert({
       where: {
-        assetId,
-        date: targetDate,
+        assetId_date: { assetId, date: targetDate },
       },
+      update: { balance },
+      create: { assetId, balance, date: targetDate },
     });
-
-    if (existing) {
-      await tx.assetHistory.update({
-        where: { id: existing.id },
-        data: { balance },
-      });
-    } else {
-      await tx.assetHistory.create({
-        data: {
-          assetId,
-          balance,
-          date: targetDate,
-        },
-      });
-    }
   }
 }
