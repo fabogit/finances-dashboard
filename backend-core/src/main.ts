@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { configureApp } from './app-setup';
+import { version } from '../package.json';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -18,7 +19,7 @@ async function bootstrap() {
     new DocumentBuilder()
       .setTitle('Finance Dashboard API')
       .setDescription('API for managing and analyzing personal expenses')
-      .setVersion('1.0')
+      .setVersion(version)
       .addTag('Transactions')
       .build(),
   );
