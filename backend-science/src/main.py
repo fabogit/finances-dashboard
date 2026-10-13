@@ -22,7 +22,9 @@ from modules.forecaster import Forecaster, TransactionInput
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Finance Science Service")
+__version__ = "1.0.0"
+
+app = FastAPI(title="Finance Science Service", version=__version__)
 
 # --- OUTPUT DTOs ---
 

@@ -17,6 +17,7 @@
     "noUnusedParameters": true,
     "outDir": "./dist",
     "removeComments": true,
+    "resolveJsonModule": true,
     "resolvePackageJsonExports": true,
     "skipLibCheck": true,
     "sourceMap": true,
