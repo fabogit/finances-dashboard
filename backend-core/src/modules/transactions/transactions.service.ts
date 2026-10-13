@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { TransactionsRepository } from './transactions.repository';
 import { ScienceService } from '../science/science.service';
 import { BankExportRow } from './interfaces/bank-export-row.interface';
@@ -37,6 +37,23 @@ export class TransactionsService {
       return error.message;
     }
     return String(error);
+  }
+
+  private generateTransactionHash(tx: {
+    date: Date;
+    amount: number | string | Prisma.Decimal;
+    details?: string | null;
+    account?: string | null;
+    operation?: string | null;
+  }): string {
+    const details = tx.details || '';
+    const account = tx.account || '';
+    const operation = tx.operation || '';
+    const dateStr = tx.date.toISOString().split('T')[0];
+    const amountStr = String(tx.amount);
+
+    const input = `${dateStr}|${amountStr}|${details}|${account}|${operation}`;
+    return createHash('sha256').update(input).digest('hex');
   }
 
   // --- UPLOAD FLOW ---
@@ -104,22 +121,93 @@ export class TransactionsService {
         );
 
         // MAPPING: JSON (Python) -> DB Object (Prisma)
-        const enrichedToSave = resultData.map((item) => ({
-          importBatchId: batchId, // Use the ID generated at the start
-          originalLine: parseInt(item.id), // Python returns the row as a string ID
-          date: new Date(item.date), // "2024-12-29" -> Date Object
-          amount: item.amount,
-          operation: item.operation,
-          details: item.details,
-          account: item.account,
-          category: item.category,
-          subCategory: item.subCategory,
-        }));
+        const enrichedToSave = resultData.map((item) => {
+          const dateObj = new Date(item.date);
+          const hash = this.generateTransactionHash({
+            date: dateObj,
+            amount: item.amount,
+            details: item.details,
+            account: item.account,
+            operation: item.operation,
+          });
 
-        // WRITING TO DB
-        const result =
-          await this.transactionsRepo.createManyEnriched(enrichedToSave);
-        savedEnrichedCount = result.count;
+          return {
+            importBatchId: batchId, // Use the ID generated at the start
+            originalLine: parseInt(item.id), // Python returns the row as a string ID
+            date: dateObj, // "2024-12-29" -> Date Object
+            amount: item.amount,
+            operation: item.operation,
+            details: item.details,
+            account: item.account,
+            category: item.category,
+            subCategory: item.subCategory,
+            transactionHash: hash,
+          };
+        });
+
+        // FILTER DUPLICATES
+        const hashes = enrichedToSave.map((tx) => tx.transactionHash);
+        const existingTransactions =
+          (await this.prisma.enrichedTransaction.findMany({
+            where: { transactionHash: { in: hashes } },
+            select: { transactionHash: true },
+          })) as { transactionHash: string | null }[];
+        const existingHashes = new Set(
+          existingTransactions
+            .map((tx) => tx.transactionHash)
+            .filter((h): h is string => h !== null),
+        );
+
+        const nonDuplicateEnriched = enrichedToSave.filter(
+          (tx) => !existingHashes.has(tx.transactionHash),
+        );
+
+        // WRITING TO DB (with ACID transaction)
+        await this.prisma.$transaction(async (tx) => {
+          let result = { count: 0 };
+          if (nonDuplicateEnriched.length > 0) {
+            result = await this.transactionsRepo.createManyEnriched(
+              nonDuplicateEnriched,
+              tx,
+            );
+
+            if (result.count > 0) {
+              // 1. Group deltas by asset in the database
+              const assetDeltas =
+                await this.transactionsRepo.getAssetDeltasByBatchId(
+                  batchId,
+                  tx,
+                );
+
+              // 2. Group deltas by goal in the database
+              const goalDeltas =
+                await this.transactionsRepo.getGoalDeltasByBatchId(batchId, tx);
+
+              // Apply asset balance updates
+              for (const group of assetDeltas) {
+                if (group.assetId && group._sum.amount) {
+                  await this.assetsService.updateBalanceWithDelta(
+                    group.assetId,
+                    group._sum.amount,
+                    tx,
+                  );
+                }
+              }
+
+              // Apply goal progress updates
+              for (const group of goalDeltas) {
+                if (group.savingsGoalId && group._sum.amount) {
+                  await this.goalsService.updateProgress(
+                    group.savingsGoalId,
+                    group._sum.amount,
+                    tx,
+                  );
+                }
+              }
+            }
+          }
+          savedEnrichedCount = result.count;
+        });
 
         this.logger.log(
           `✅ Saved ${savedEnrichedCount} enriched transactions to DB.`,
@@ -216,47 +304,71 @@ export class TransactionsService {
   async update(id: string, dto: UpdateTransactionDto) {
     try {
       return await this.prisma.$transaction(async (tx) => {
-        // 1. Retrieve old state for reversion
+        // 1. Retrieve old state for comparison
         const oldTx = await this.transactionsRepo.findById(id);
         if (!oldTx) {
           throw new NotFoundException(`Transaction with ID ${id} not found`);
         }
 
-        // 2. REVERSION PHASE (Undo old balances)
-        if (oldTx.assetId) {
-          await this.assetsService.updateBalanceWithDelta(
-            oldTx.assetId,
-            oldTx.amount.negated(),
-            tx,
-          );
-        }
-
-        if (oldTx.savingsGoalId) {
-          await this.goalsService.updateProgress(
-            oldTx.savingsGoalId,
-            oldTx.amount.negated(),
-            tx,
-          );
-        }
-
-        // 3. Update Transaction
+        // 2. Perform Update (within transaction)
         const updatedTx = await this.transactionsRepo.update(id, dto, tx);
 
-        // 4. APPLICATION PHASE (Apply new balances)
-        if (updatedTx.assetId) {
-          await this.assetsService.updateBalanceWithDelta(
-            updatedTx.assetId,
-            updatedTx.amount,
-            tx,
-          );
+        // 3. Optimized Asset Balance Update
+        const oldAssetId = oldTx.assetId;
+        const newAssetId = updatedTx.assetId;
+        const oldAmount = oldTx.amount;
+        const newAmount = updatedTx.amount;
+
+        if (oldAssetId === newAssetId) {
+          // If asset is the same, only update if the amount changed
+          if (oldAssetId && !oldAmount.equals(newAmount)) {
+            const assetDelta = newAmount.minus(oldAmount);
+            await this.assetsService.updateBalanceWithDelta(
+              oldAssetId,
+              assetDelta,
+              tx,
+            );
+          }
+        } else {
+          // If asset changed, revert old asset and apply to new asset
+          if (oldAssetId) {
+            await this.assetsService.updateBalanceWithDelta(
+              oldAssetId,
+              oldAmount.negated(),
+              tx,
+            );
+          }
+          if (newAssetId) {
+            await this.assetsService.updateBalanceWithDelta(
+              newAssetId,
+              newAmount,
+              tx,
+            );
+          }
         }
 
-        if (updatedTx.savingsGoalId) {
-          await this.goalsService.updateProgress(
-            updatedTx.savingsGoalId,
-            updatedTx.amount,
-            tx,
-          );
+        // 4. Optimized Savings Goal Progress Update
+        const oldGoalId = oldTx.savingsGoalId;
+        const newGoalId = updatedTx.savingsGoalId;
+
+        if (oldGoalId === newGoalId) {
+          // If goal is the same, only update if the amount changed
+          if (oldGoalId && !oldAmount.equals(newAmount)) {
+            const goalDelta = newAmount.minus(oldAmount);
+            await this.goalsService.updateProgress(oldGoalId, goalDelta, tx);
+          }
+        } else {
+          // If goal changed, revert old goal and apply to new goal
+          if (oldGoalId) {
+            await this.goalsService.updateProgress(
+              oldGoalId,
+              oldAmount.negated(),
+              tx,
+            );
+          }
+          if (newGoalId) {
+            await this.goalsService.updateProgress(newGoalId, newAmount, tx);
+          }
         }
 
         return updatedTx;

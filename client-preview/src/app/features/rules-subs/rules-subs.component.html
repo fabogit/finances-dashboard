@@ -1,0 +1,57 @@
+<div class="page-header">
+  <h2 class="neon-text-primary">Rules & Subscriptions</h2>
+  <p class="subtitle">Define keyword criteria for auto-classification and track recurring fixed contracts</p>
+</div>
+
+<div class="split-layout">
+  <!-- Local Rule Engine Mock -->
+  <div class="glass-card rules-card">
+    <h3>Local Rule Engine</h3>
+    <p class="section-desc">Create rules to auto-categorize statement lines before AI processing.</p>
+
+    <div class="rule-form">
+      <input class="rule-input" type="text" placeholder="If description matches..." [ngModel]="newKeyword()" (ngModelChange)="newKeyword.set($event)">
+      <select class="rule-select" [ngModel]="newCategory()" (ngModelChange)="newCategory.set($event)">
+        <option value="Food & Groceries">Food & Groceries</option>
+        <option value="Leisure">Leisure</option>
+        <option value="Transport">Transport</option>
+        <option value="Home">Home</option>
+        <option value="Utilities">Utilities</option>
+      </select>
+      <button class="rule-btn" (click)="addRule()">Create Rule</button>
+    </div>
+
+    <div class="rules-list">
+      <div class="rule-item" *ngFor="let rule of mockService.localRules()">
+        <div class="rule-info">
+          <span class="keyword">"{{ rule.keyword }}"</span>
+          <mat-icon>arrow_right_alt</mat-icon>
+          <span class="category-badge">{{ rule.assignCategory }}</span>
+        </div>
+        <button class="btn-delete" (click)="deleteRule(rule.id)">
+          <mat-icon>delete_outline</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Subscriptions Calendar/List -->
+  <div class="glass-card subs-card">
+    <h3>Recurring Contracts</h3>
+    <p class="section-desc">Monitored subscriptions. Integrates with forecasting calculations.</p>
+
+    <div class="subs-list">
+      <div class="sub-item" *ngFor="let sub of mockService.subscriptions()">
+        <div class="sub-icon"><mat-icon>refresh</mat-icon></div>
+        <div class="sub-details">
+          <h4>{{ sub.name }}</h4>
+          <span class="label">Next Billing: {{ sub.nextBillingDate }}</span>
+        </div>
+        <div class="sub-value">
+          <strong>{{ sub.amount | currency:'EUR' }}</strong>
+          <span class="label">/{{ sub.frequency | lowercase }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

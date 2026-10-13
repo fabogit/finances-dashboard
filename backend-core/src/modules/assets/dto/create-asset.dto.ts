@@ -1,8 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { AssetType } from '@prisma/client';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator';
 
+/**
+ * Input DTO for creating a new financial asset.
+ */
 export class CreateAssetDto {
   @ApiProperty({
     example: 'Main Bank Account',
@@ -37,8 +40,24 @@ export class CreateAssetDto {
   @ParseDecimal()
   balance: string | number;
 
-  @ApiProperty({ example: 'EUR', default: 'EUR', required: false })
+  @ApiProperty({
+    example: 'EUR',
+    default: 'EUR',
+    required: false,
+    description: 'Currency code (ISO 4217)',
+  })
   @IsOptional()
   @IsString()
   currency?: string;
+
+  @ApiProperty({
+    example: true,
+    default: true,
+    required: false,
+    description:
+      'Flag indicating whether this asset is included in budget calculations',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isOnBudget?: boolean;
 }

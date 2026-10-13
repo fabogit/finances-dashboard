@@ -1,0 +1,80 @@
+<div class="page-header">
+  <h2 class="neon-text-primary">Transactions Ledger</h2>
+  <p class="subtitle">Review statement imports, verify transfers, and adjust classifications</p>
+</div>
+
+<!-- Transfer Detection Banner (Strategy C Mock) -->
+<div class="glass-card transfer-banner" *ngIf="transferCandidates()">
+  <div class="banner-icon"><mat-icon>swap_horiz</mat-icon></div>
+  <div class="banner-content">
+    <h4>Potential Internal Transfer Detected</h4>
+    <p>
+      Found matched transactions of <strong>{{ transferCandidates()?.amount | currency:'EUR' }}</strong> on {{ transferCandidates()?.date }}. 
+      Transferring between <em>Main Account (Unicredit)</em> and <em>Trading Portfolio (Degiro)</em>.
+    </p>
+  </div>
+  <div class="banner-actions">
+    <button mat-flat-button class="btn-confirm" (click)="confirmTransfer()">Confirm</button>
+    <button mat-stroked-button class="btn-reject" (click)="rejectTransfer()">Discard</button>
+  </div>
+</div>
+
+<!-- Import file mockup -->
+<div class="glass-card upload-section" (click)="fileInput.click()">
+  <input type="file" #fileInput style="display:none" (change)="onFileDropped($event)">
+  <div class="upload-inner" *ngIf="!uploadProgress()">
+    <mat-icon class="upload-icon">cloud_upload</mat-icon>
+    <p>Drag and drop your bank Excel/CSV export, or <span>browse locally</span></p>
+    <span class="label">Max size 5MB • Standard formats</span>
+  </div>
+  <div class="progress-inner" *ngIf="uploadProgress()">
+    <mat-icon class="upload-icon spinning">sync</mat-icon>
+    <p>Importing transactions... ({{ uploadProgress() }}%)</p>
+  </div>
+</div>
+
+<!-- Transaction List Table -->
+<div class="glass-card table-card">
+  <h3>All Transactions</h3>
+  <table mat-table [dataSource]="mockService.transactions()" class="dark-table">
+    
+    <!-- Date Column -->
+    <ng-container matColumnDef="date">
+      <th mat-header-cell *matHeaderCellDef> Date </th>
+      <td mat-cell *matCellDef="let transaction"> {{transaction.date}} </td>
+    </ng-container>
+
+    <!-- Details Column -->
+    <ng-container matColumnDef="details">
+      <th mat-header-cell *matHeaderCellDef> Details </th>
+      <td mat-cell *matCellDef="let transaction"> {{transaction.details}} </td>
+    </ng-container>
+
+    <!-- Amount Column -->
+    <ng-container matColumnDef="amount">
+      <th mat-header-cell *matHeaderCellDef> Amount </th>
+      <td mat-cell *matCellDef="let transaction" [class]="transaction.amount > 0 ? 'text-income' : 'text-expense'"> 
+        {{transaction.amount | currency:'EUR'}} 
+      </td>
+    </ng-container>
+
+    <!-- Category Column -->
+    <ng-container matColumnDef="category">
+      <th mat-header-cell *matHeaderCellDef> Category </th>
+      <td mat-cell *matCellDef="let transaction">
+        <span [class]="transaction.category === 'Unclassified' ? 'chip unclassified' : 'chip classified'">
+          {{transaction.category}}
+        </span>
+      </td>
+    </ng-container>
+
+    <!-- Asset Column -->
+    <ng-container matColumnDef="asset">
+      <th mat-header-cell *matHeaderCellDef> Account </th>
+      <td mat-cell *matCellDef="let transaction"> Account {{transaction.assetId}} </td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+</div>

@@ -3,6 +3,9 @@ import { AssetType } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
 import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
 
+/**
+ * Response DTO representing an asset profile details.
+ */
 export class AssetResponseDto {
   @Expose()
   @ApiProperty({
@@ -51,6 +54,14 @@ export class AssetResponseDto {
 
   @Expose()
   @ApiProperty({
+    example: true,
+    description:
+      'Flag indicating whether this asset is included in budget calculations',
+  })
+  isOnBudget: boolean;
+
+  @Expose()
+  @ApiProperty({
     example: '2025-01-01T12:00:00Z',
     description: 'Creation date',
   })
@@ -72,6 +83,9 @@ export class AssetResponseDto {
   history?: AssetHistoryResponseDto[];
 }
 
+/**
+ * Response DTO representing a historical balance snapshot for an asset.
+ */
 export class AssetHistoryResponseDto {
   @Expose()
   @ApiProperty({

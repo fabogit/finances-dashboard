@@ -9,6 +9,9 @@ import {
 } from 'class-validator';
 import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator';
 
+/**
+ * Input DTO for creating a new savings goal.
+ */
 export class CreateGoalDto {
   @ApiProperty({
     example: 'Japan trip 🇯🇵',

@@ -223,7 +223,7 @@ export class AnalyticsService {
         } else if (
           category.budgetRule.ruleType === BudgetRuleType.PERCENTAGE_OF_INCOME
         ) {
-          limit = (monthlyIncome * ruleVal) / 100;
+          limit = (monthlyIncome.toNumber() * ruleVal) / 100;
         }
       }
 

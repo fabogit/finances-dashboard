@@ -279,6 +279,13 @@ class Forecaster:
             if avg_savings <= 0:
                 return {"error": "Average savings is zero or negative"}
             months_remaining = (target_amount - current_amount) / avg_savings
+            if months_remaining > 1200 or np.isinf(months_remaining) or np.isnan(months_remaining):
+                return {
+                    "estimated_date": "NEVER (Too slow or negative)",
+                    "monthly_avg": float(np.round(avg_savings, 2)),
+                    "months_remaining": 9999.0,
+                    "confidence": "LOW (Extremely slow progress)"
+                }
             eta_date = pd.Timestamp.now() + pd.DateOffset(months=int(months_remaining))
             return {
                 "estimated_date": eta_date.strftime('%Y-%m'),
@@ -306,9 +313,17 @@ class Forecaster:
 
         remaining_to_save = target_amount - current_amount
         if remaining_to_save <= 0:
-            return {"estimated_date": "COMPLETED", "months_remaining": 0}
+            return {"estimated_date": "COMPLETED", "months_remaining": 0.0}
 
         months_remaining = remaining_to_save / avg_future_velocity
+        if months_remaining > 1200 or np.isinf(months_remaining) or np.isnan(months_remaining):
+            return {
+                "estimated_date": "NEVER (Too slow or negative)",
+                "monthly_avg": Decimal(str(np.round(avg_future_velocity, 2))),
+                "months_remaining": Decimal("9999.0"),
+                "confidence": "LOW (Extremely slow progress)"
+            }
+
         eta_date = pd.Timestamp.now() + pd.DateOffset(months=int(months_remaining))
 
         return {

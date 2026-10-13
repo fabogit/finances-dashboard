@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { EnrichedTransaction, RawTransaction, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   SYSTEM_CATEGORIES,
@@ -16,6 +16,10 @@ import {
   transactionWithDetailsInclude,
   TransactionWithDetails,
 } from './interfaces/transaction-with-details.interface';
+import {
+  AssetDelta,
+  GoalDelta,
+} from './interfaces/transaction-deltas.interface';
 
 type CategoryMapData = {
   id: string;
@@ -122,7 +126,7 @@ export class TransactionsRepository {
   async createManyEnriched(
     data: EnrichedDataInput[],
     tx?: Prisma.TransactionClient,
-  ) {
+  ): Promise<Prisma.BatchPayload> {
     const client = tx || this.prisma;
     const uniqueMacros = new Set<string>();
     const uniqueSubs = new Set<string>();
@@ -134,7 +138,31 @@ export class TransactionsRepository {
       }
     }
 
-    // 2. Fallback Category
+    // 1. Resolve fallback category
+    const fallbackId = await this.resolveFallbackCategory(client);
+
+    // 2. Resolve / Create macro categories
+    const macroMap = await this.resolveOrCreateMacros(uniqueMacros, client);
+
+    // 3. Resolve / Create subcategories
+    const subMap = await this.resolveOrCreateSubs(uniqueSubs, macroMap, client);
+
+    // 4. Map transactions with automatic asset associations
+    const transactionsToInsert = this.buildEnrichedInsertData(
+      data,
+      fallbackId,
+      macroMap,
+      subMap,
+    );
+
+    return client.enrichedTransaction.createMany({
+      data: transactionsToInsert,
+    });
+  }
+
+  private async resolveFallbackCategory(
+    client: Prisma.TransactionClient,
+  ): Promise<string> {
     let fallbackCat = await client.category.findFirst({
       where: { name: SYSTEM_CATEGORIES.UNCATEGORIZED, parentId: null },
     });
@@ -142,6 +170,7 @@ export class TransactionsRepository {
       fallbackCat = await client.category.create({
         data: {
           name: SYSTEM_CATEGORIES.UNCATEGORIZED,
+          systemKey: SYSTEM_CATEGORIES.UNCATEGORIZED,
           isSystem: true,
           isVerified: true,
           type: EXPENSE_TYPES.UNCLASSIFIED,
@@ -149,9 +178,17 @@ export class TransactionsRepository {
         },
       });
     }
-    const fallbackId = fallbackCat.id;
+    return fallbackCat.id;
+  }
 
-    // 3. Create missing Macro (Bulk)
+  private async resolveOrCreateMacros(
+    uniqueMacros: Set<string>,
+    client: Prisma.TransactionClient,
+  ): Promise<Map<string, CategoryMapData>> {
+    if (uniqueMacros.size === 0) {
+      return new Map();
+    }
+
     const existingMacros = await client.category.findMany({
       where: { name: { in: Array.from(uniqueMacros) }, parentId: null },
       select: { id: true, name: true },
@@ -184,13 +221,38 @@ export class TransactionsRepository {
     allMacros.forEach((c) =>
       macroMap.set(c.name, { id: c.id, defaultAssetId: c.defaultAssetId }),
     );
+    return macroMap;
+  }
 
-    // 4. Create missing Sub (Bulk)
-    const subNamesOnly = Array.from(uniqueSubs).map((s) => s.split(':')[1]);
-    const existingSubs = await client.category.findMany({
-      where: { name: { in: subNamesOnly }, parentId: { not: null } },
+  private async resolveOrCreateSubs(
+    uniqueSubs: Set<string>,
+    macroMap: Map<string, CategoryMapData>,
+    client: Prisma.TransactionClient,
+  ): Promise<Map<string, CategoryMapData>> {
+    const subMap = new Map<string, CategoryMapData>();
+    if (uniqueSubs.size === 0) {
+      return subMap;
+    }
+
+    let existingSubs: Array<{
+      id: string;
+      name: string;
+      parent: { name: string } | null;
+    }> = [];
+
+    const orConditions = Array.from(uniqueSubs).map((s) => {
+      const [parentName, subName] = s.split(':');
+      return {
+        name: subName,
+        parent: { name: parentName, parentId: null },
+      };
+    });
+
+    existingSubs = await client.category.findMany({
+      where: { OR: orConditions },
       select: { id: true, name: true, parent: { select: { name: true } } },
     });
+
     const existingSubKeys = new Set(
       existingSubs.map((s) => `${s.parent?.name}:${s.name}`),
     );
@@ -211,6 +273,7 @@ export class TransactionsRepository {
         }
       }
     }
+
     if (transactionsToCreateSubs.length > 0) {
       await client.category.createMany({
         data: transactionsToCreateSubs,
@@ -218,12 +281,8 @@ export class TransactionsRepository {
       });
     }
 
-    // Reload updated Subcategories
     const allSubs = await client.category.findMany({
-      where: {
-        name: { in: subNamesOnly },
-        parentId: { in: Array.from(macroMap.values()).map((v) => v.id) },
-      },
+      where: { OR: orConditions },
       select: {
         id: true,
         name: true,
@@ -232,7 +291,6 @@ export class TransactionsRepository {
       },
     });
 
-    const subMap = new Map<string, CategoryMapData>();
     allSubs.forEach((s) => {
       if (s.parent) {
         subMap.set(`${s.parent.name}:${s.name}`, {
@@ -242,7 +300,15 @@ export class TransactionsRepository {
       }
     });
 
-    // 5. Prepare Transactions with Automatic Asset Mapping
+    return subMap;
+  }
+
+  private buildEnrichedInsertData(
+    data: EnrichedDataInput[],
+    fallbackId: string,
+    macroMap: Map<string, CategoryMapData>,
+    subMap: Map<string, CategoryMapData>,
+  ): Prisma.EnrichedTransactionCreateManyInput[] {
     const transactionsToInsert: Prisma.EnrichedTransactionCreateManyInput[] =
       [];
 
@@ -290,12 +356,11 @@ export class TransactionsRepository {
         account: item.account,
         categoryId: categoryId,
         assetId: assetId,
+        transactionHash: item.transactionHash ?? null,
       });
     }
 
-    return client.enrichedTransaction.createMany({
-      data: transactionsToInsert,
-    });
+    return transactionsToInsert;
   }
 
   // --- CRUD SINGLE ---
@@ -400,7 +465,10 @@ export class TransactionsRepository {
     });
   }
 
-  async delete(id: string, tx?: Prisma.TransactionClient) {
+  async delete(
+    id: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<EnrichedTransaction> {
     const client = tx || this.prisma;
     return client.enrichedTransaction.delete({ where: { id } });
   }
@@ -429,15 +497,53 @@ export class TransactionsRepository {
     return { total, transactions };
   }
 
-  async createManyRaw(data: Prisma.RawTransactionCreateManyInput[]) {
+  async createManyRaw(
+    data: Prisma.RawTransactionCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
     return this.prisma.rawTransaction.createMany({
       data,
     });
   }
 
-  async findAllRaw() {
+  async findAllRaw(): Promise<RawTransaction[]> {
     return this.prisma.rawTransaction.findMany({
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async getAssetDeltasByBatchId(
+    batchId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<AssetDelta[]> {
+    const client = tx || this.prisma;
+    const deltas = await client.enrichedTransaction.groupBy({
+      by: ['assetId'],
+      where: {
+        importBatchId: batchId,
+        assetId: { not: null },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+    return deltas;
+  }
+
+  async getGoalDeltasByBatchId(
+    batchId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<GoalDelta[]> {
+    const client = tx || this.prisma;
+    const deltas = await client.enrichedTransaction.groupBy({
+      by: ['savingsGoalId'],
+      where: {
+        importBatchId: batchId,
+        savingsGoalId: { not: null },
+      },
+      _sum: {
+        amount: true,
+      },
+    });
+    return deltas;
   }
 }

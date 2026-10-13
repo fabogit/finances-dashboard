@@ -17,6 +17,7 @@ describe('AssetsService', () => {
     type: AssetType.CASH,
     balance: new Prisma.Decimal(5000),
     currency: 'EUR',
+    isOnBudget: true,
     createdAt: new Date(),
     updatedAt: new Date(),
     history: [],

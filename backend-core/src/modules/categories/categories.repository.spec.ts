@@ -6,6 +6,7 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { SetBudgetDto } from './dto/set-budget.dto';
 import { BudgetRuleType } from '@prisma/client';
+import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants';
 
 describe('CategoriesRepository', () => {
   let repository: CategoriesRepository;
@@ -14,17 +15,33 @@ describe('CategoriesRepository', () => {
     category: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       delete: jest.fn(),
     },
     budgetRule: {
       upsert: jest.fn(),
+      deleteMany: jest.fn(),
     },
+    enrichedTransaction: {
+      updateMany: jest.fn(),
+    },
+    $transaction: jest.fn(),
   };
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPrisma.$transaction.mockImplementation(
+      async (cb: (prisma: unknown) => Promise<unknown>) => {
+        if (typeof cb === 'function') {
+          return cb(mockPrisma);
+        }
+        return Promise.all(cb as unknown as Promise<unknown>[]);
+      },
+    );
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CategoriesRepository,
@@ -122,6 +139,47 @@ describe('CategoriesRepository', () => {
         update: expect.objectContaining({
           limitValue: expect.any(Prisma.Decimal) as Prisma.Decimal,
         }) as Record<string, unknown>,
+      });
+    });
+  });
+
+  describe('findFallbackCategory', () => {
+    it('should call findFirst with systemKey UNCATEGORIZED and userId', async () => {
+      mockPrisma.category.findFirst.mockResolvedValue({ id: 'cat-fallback' });
+      const result = await repository.findFallbackCategory('demo_user');
+      expect(result?.id).toBe('cat-fallback');
+      expect(mockPrisma.category.findFirst).toHaveBeenCalledWith({
+        where: {
+          systemKey: SYSTEM_CATEGORIES.UNCATEGORIZED,
+          userId: 'demo_user',
+        },
+      });
+    });
+  });
+
+  describe('deleteWithReRouting', () => {
+    it('should perform delete operations within a transaction', async () => {
+      mockPrisma.category.delete.mockResolvedValue({ id: 'cat-to-delete' });
+      const result = await repository.deleteWithReRouting(
+        'cat-to-delete',
+        'cat-target',
+      );
+      expect(result.id).toBe('cat-to-delete');
+
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(mockPrisma.enrichedTransaction.updateMany).toHaveBeenCalledWith({
+        where: { categoryId: 'cat-to-delete' },
+        data: { categoryId: 'cat-target' },
+      });
+      expect(mockPrisma.category.updateMany).toHaveBeenCalledWith({
+        where: { parentId: 'cat-to-delete' },
+        data: { parentId: null },
+      });
+      expect(mockPrisma.budgetRule.deleteMany).toHaveBeenCalledWith({
+        where: { categoryId: 'cat-to-delete' },
+      });
+      expect(mockPrisma.category.delete).toHaveBeenCalledWith({
+        where: { id: 'cat-to-delete' },
       });
     });
   });

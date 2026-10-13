@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import {
+  CategoryDistributionItem,
+  MonthlyTrendItem,
+  ForecastItem,
+  MonthlyExpenseByCategoryItem,
+} from './interfaces/analytics-repository.interfaces';
 
 @Injectable()
 export class AnalyticsRepository {
@@ -8,7 +14,9 @@ export class AnalyticsRepository {
 
   // --- KPI QUERIES ---
 
-  async getSum(where: Prisma.EnrichedTransactionWhereInput) {
+  async getSum(
+    where: Prisma.EnrichedTransactionWhereInput,
+  ): Promise<Prisma.Decimal> {
     const agg = await this.prisma.enrichedTransaction.aggregate({
       _sum: { amount: true },
       where,
@@ -17,7 +25,9 @@ export class AnalyticsRepository {
   }
 
   // (amount > 0)
-  async getIncomeSum(baseWhere: Prisma.EnrichedTransactionWhereInput) {
+  async getIncomeSum(
+    baseWhere: Prisma.EnrichedTransactionWhereInput,
+  ): Promise<Prisma.Decimal> {
     const agg = await this.prisma.enrichedTransaction.aggregate({
       _sum: { amount: true },
       where: { ...baseWhere, amount: { gt: 0 } },
@@ -26,7 +36,9 @@ export class AnalyticsRepository {
   }
 
   // (amount < 0)
-  async getExpenseSum(baseWhere: Prisma.EnrichedTransactionWhereInput) {
+  async getExpenseSum(
+    baseWhere: Prisma.EnrichedTransactionWhereInput,
+  ): Promise<Prisma.Decimal> {
     const agg = await this.prisma.enrichedTransaction.aggregate({
       _sum: { amount: true },
       where: { ...baseWhere, amount: { lt: 0 } },
@@ -38,8 +50,8 @@ export class AnalyticsRepository {
 
   async findForCategoryDistribution(
     baseWhere: Prisma.EnrichedTransactionWhereInput,
-  ) {
-    return this.prisma.enrichedTransaction.findMany({
+  ): Promise<CategoryDistributionItem[]> {
+    const results = await this.prisma.enrichedTransaction.findMany({
       where: { ...baseWhere, amount: { lt: 0 } },
       select: {
         amount: true,
@@ -48,20 +60,27 @@ export class AnalyticsRepository {
         },
       },
     });
+    return results;
   }
 
-  async findForMonthlyTrends(where: Prisma.EnrichedTransactionWhereInput) {
-    return this.prisma.enrichedTransaction.findMany({
+  async findForMonthlyTrends(
+    where: Prisma.EnrichedTransactionWhereInput,
+  ): Promise<MonthlyTrendItem[]> {
+    const results = await this.prisma.enrichedTransaction.findMany({
       where,
       select: { date: true, amount: true },
       orderBy: { date: 'asc' },
     });
+    return results;
   }
 
   // --- FORECAST QUERY ---
 
-  async findForForecast(startDate: Date, endDate: Date) {
-    return this.prisma.enrichedTransaction.findMany({
+  async findForForecast(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<ForecastItem[]> {
+    const results = await this.prisma.enrichedTransaction.findMany({
       where: {
         date: { gte: startDate, lte: endDate },
       },
@@ -81,11 +100,12 @@ export class AnalyticsRepository {
         },
       },
     });
+    return results;
   }
 
   // --- BUDGET ANALYSIS QUERIES ---
 
-  async getMonthlyIncome(start: Date, end: Date) {
+  async getMonthlyIncome(start: Date, end: Date): Promise<Prisma.Decimal> {
     const agg = await this.prisma.enrichedTransaction.aggregate({
       _sum: { amount: true },
       where: {
@@ -93,11 +113,14 @@ export class AnalyticsRepository {
         amount: { gt: 0 },
       },
     });
-    return agg._sum.amount ? agg._sum.amount.toNumber() : 0;
+    return agg._sum.amount || new Prisma.Decimal(0);
   }
 
-  async getMonthlyExpensesByCategory(start: Date, end: Date) {
-    return this.prisma.enrichedTransaction.groupBy({
+  async getMonthlyExpensesByCategory(
+    start: Date,
+    end: Date,
+  ): Promise<MonthlyExpenseByCategoryItem[]> {
+    const results = await this.prisma.enrichedTransaction.groupBy({
       by: ['categoryId'],
       _sum: { amount: true },
       where: {
@@ -106,5 +129,6 @@ export class AnalyticsRepository {
         categoryId: { not: null },
       },
     });
+    return results;
   }
 }

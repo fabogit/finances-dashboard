@@ -9,6 +9,7 @@ import {
   Put,
   HttpStatus,
   ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
@@ -16,6 +17,7 @@ import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { SetBudgetDto } from './dto/set-budget.dto';
+import { DeleteCategoryQueryDto } from './dto/delete-category-query.dto';
 import {
   CategoryResponseDto,
   BudgetRuleResponseDto,
@@ -92,8 +94,11 @@ export class CategoriesController {
     status: HttpStatus.CONFLICT,
     description: 'Cannot delete: Category has sub-categories or transactions',
   })
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.categoriesService.remove(id);
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: DeleteCategoryQueryDto,
+  ) {
+    return this.categoriesService.remove(id, query.reassignToId);
   }
 
   // --- SET BUDGET ---

@@ -43,7 +43,7 @@ export class CategoriesService {
   }
 
   // --- 4. DELETE ---
-  async remove(id: string) {
+  async remove(id: string, reassignToId?: string) {
     const category = await this.categoriesRepo.findById(id);
 
     if (!category) {
@@ -56,19 +56,28 @@ export class CategoriesService {
       );
     }
 
-    try {
-      return await this.categoriesRepo.delete(id);
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2003'
-      ) {
+    let targetId = reassignToId;
+
+    if (!targetId) {
+      const fallbackCategory = await this.categoriesRepo.findFallbackCategory(
+        category.userId,
+      );
+      if (!fallbackCategory) {
         throw new ConflictException(
-          'Cannot delete category: it has sub-categories or linked transactions.',
+          'System UNCATEGORIZED fallback category not found.',
         );
       }
-      throw error;
+      targetId = fallbackCategory.id;
+    } else {
+      const targetCategory = await this.categoriesRepo.findById(targetId);
+      if (!targetCategory) {
+        throw new NotFoundException(
+          `Target reassignment category ${targetId} not found`,
+        );
+      }
     }
+
+    return this.categoriesRepo.deleteWithReRouting(id, targetId);
   }
 
   // --- 5. SET BUDGET (Upsert) ---

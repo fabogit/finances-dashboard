@@ -1,6 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
+/**
+ * Response DTO representing an un-enriched raw transaction imported directly from bank records.
+ */
 export class RawTransactionDto {
   @Expose()
   @ApiProperty({

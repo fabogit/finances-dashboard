@@ -18,4 +18,4 @@ RUN pnpm prisma generate
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "pnpm prisma db push && pnpm prisma db seed && pnpm run start:dev"]
+CMD ["sh", "-c", "pnpm prisma generate && pnpm prisma db push --accept-data-loss && pnpm prisma db seed && pnpm run start:dev"]

@@ -2,6 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
 // 1. Income/Expense
+/**
+ * Response DTO representing predicted income or expense flow details.
+ */
 export class ForecastFlowDto {
   @Expose()
   @ApiProperty({ example: 1200.5, description: 'Total predicted amount' })
@@ -22,6 +25,9 @@ export class ForecastFlowDto {
   variable: number;
 }
 
+/**
+ * Response DTO representing predicted metrics for a single month.
+ */
 export class MonthlyForecastDto {
   @Expose()
   @ApiProperty({ example: '2026-02', description: 'Target month (YYYY-MM)' })
@@ -46,8 +52,14 @@ export class MonthlyForecastDto {
   balance: number;
 }
 
+/**
+ * Response DTO containing forecast error information.
+ */
 export class ForecastErrorDto {
   @Expose()
-  @ApiProperty({ example: 'Not enough data in the selected period' })
+  @ApiProperty({
+    example: 'Not enough data in the selected period',
+    description: 'Error details message',
+  })
   error: string;
 }

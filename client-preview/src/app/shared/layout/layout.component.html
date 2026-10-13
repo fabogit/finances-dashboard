@@ -1,0 +1,47 @@
+<mat-sidenav-container class="sidenav-container">
+  <mat-sidenav mode="side" opened class="sidenav">
+    <div class="brand">
+      <mat-icon class="brand-icon">auto_graph</mat-icon>
+      <span class="brand-title">FN Dashboard</span>
+    </div>
+    
+    <mat-nav-list class="nav-list">
+      <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>dashboard</mat-icon>
+        <span matListItemTitle>Dashboard</span>
+      </a>
+      <a mat-list-item routerLink="/transactions" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>receipt_long</mat-icon>
+        <span matListItemTitle>Transactions</span>
+      </a>
+      <a mat-list-item routerLink="/assets" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>account_balance</mat-icon>
+        <span matListItemTitle>Assets & Liabilities</span>
+      </a>
+      <a mat-list-item routerLink="/budgets" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>track_changes</mat-icon>
+        <span matListItemTitle>Budgets & Goals</span>
+      </a>
+      <a mat-list-item routerLink="/rules-subs" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>settings_suggest</mat-icon>
+        <span matListItemTitle>Rules & Subs</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="main-content">
+    <mat-toolbar class="toolbar">
+      <button mat-icon-button class="menu-toggle">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span class="spacer"></span>
+      <div class="user-profile">
+        <span class="user-name">Demo User</span>
+        <mat-icon class="user-avatar">account_circle</mat-icon>
+      </div>
+    </mat-toolbar>
+    <div class="page-container">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

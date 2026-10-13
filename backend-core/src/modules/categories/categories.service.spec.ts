@@ -10,6 +10,7 @@ import { Prisma, ExpenseType, BudgetRuleType, Category } from '@prisma/client';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { SetBudgetDto } from './dto/set-budget.dto';
+import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants';
 
 type MockRepository<T> = {
   [P in keyof T]?: jest.Mock;
@@ -22,6 +23,8 @@ const createCategoriesMock = (): MockRepository<CategoriesRepository> => ({
   delete: jest.fn(),
   findById: jest.fn(),
   upsertBudget: jest.fn(),
+  findFallbackCategory: jest.fn(),
+  deleteWithReRouting: jest.fn(),
 });
 
 const createPrismaError = (
@@ -47,11 +50,21 @@ const mockCategory: Category = {
   updatedAt: new Date(),
   defaultAssetId: null,
   defaultGoalId: null,
+  userId: 'demo_user',
+  systemKey: null,
 };
 
 const mockSystemCategory: Category = {
   ...mockCategory,
   id: 'cat_sys',
+  isSystem: true,
+};
+
+const mockFallbackCategory: Category = {
+  ...mockCategory,
+  id: 'cat_fallback',
+  name: SYSTEM_CATEGORIES.UNCATEGORIZED,
+  systemKey: SYSTEM_CATEGORIES.UNCATEGORIZED,
   isSystem: true,
 };
 
@@ -149,22 +162,47 @@ describe('CategoriesService', () => {
   });
 
   describe('remove', () => {
-    it('Should delete non-system category', async () => {
-      categoriesRepo.findById!.mockResolvedValue(mockCategory); // isSystem: false
-      categoriesRepo.delete!.mockResolvedValue(mockCategory);
+    it('Should delete category and re-route to specified target category', async () => {
+      categoriesRepo.findById!.mockResolvedValueOnce(mockCategory); // deleted category
+      categoriesRepo.findById!.mockResolvedValueOnce({
+        ...mockCategory,
+        id: 'cat_target',
+      }); // target category
+      categoriesRepo.deleteWithReRouting!.mockResolvedValue(mockCategory);
+
+      await service.remove('cat_123', 'cat_target');
+
+      expect(categoriesRepo.deleteWithReRouting).toHaveBeenCalledWith(
+        'cat_123',
+        'cat_target',
+      );
+    });
+
+    it('Should delete category and re-route to system fallback UNCATEGORIZED if no target specified', async () => {
+      categoriesRepo.findById!.mockResolvedValueOnce(mockCategory);
+      categoriesRepo.findFallbackCategory!.mockResolvedValue(
+        mockFallbackCategory,
+      );
+      categoriesRepo.deleteWithReRouting!.mockResolvedValue(mockCategory);
 
       await service.remove('cat_123');
 
-      expect(categoriesRepo.delete).toHaveBeenCalledWith('cat_123');
+      expect(categoriesRepo.findFallbackCategory).toHaveBeenCalledWith(
+        mockCategory.userId,
+      );
+      expect(categoriesRepo.deleteWithReRouting).toHaveBeenCalledWith(
+        'cat_123',
+        'cat_fallback',
+      );
     });
 
     it('Should throw ForbiddenException if deleting SYSTEM category', async () => {
-      categoriesRepo.findById!.mockResolvedValue(mockSystemCategory); // isSystem: true
+      categoriesRepo.findById!.mockResolvedValue(mockSystemCategory);
 
       await expect(service.remove('cat_sys')).rejects.toThrow(
         ForbiddenException,
       );
-      expect(categoriesRepo.delete).not.toHaveBeenCalled();
+      expect(categoriesRepo.deleteWithReRouting).not.toHaveBeenCalled();
     });
 
     it('Should throw NotFoundException if category does not exist', async () => {
@@ -175,9 +213,18 @@ describe('CategoriesService', () => {
       );
     });
 
-    it('Should throw ConflictException if category has CHILDREN/TRANSACTIONS (P2003)', async () => {
-      categoriesRepo.findById!.mockResolvedValue(mockCategory);
-      categoriesRepo.delete!.mockRejectedValue(createPrismaError('P2003'));
+    it('Should throw NotFoundException if target reassignment category does not exist', async () => {
+      categoriesRepo.findById!.mockResolvedValueOnce(mockCategory);
+      categoriesRepo.findById!.mockResolvedValueOnce(null); // target doesn't exist
+
+      await expect(service.remove('cat_123', 'invalid_target')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('Should throw ConflictException if fallback UNCATEGORIZED category is not found', async () => {
+      categoriesRepo.findById!.mockResolvedValueOnce(mockCategory);
+      categoriesRepo.findFallbackCategory!.mockResolvedValue(null); // fallback doesn't exist
 
       await expect(service.remove('cat_123')).rejects.toThrow(
         ConflictException,

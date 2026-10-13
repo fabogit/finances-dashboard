@@ -2,6 +2,9 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsNumber, IsOptional, Max, Min } from 'class-validator';
 
+/**
+ * Query parameters DTO to request financial forecast calculations.
+ */
 export class GetForecastDto {
   @ApiPropertyOptional({
     description:

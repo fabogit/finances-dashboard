@@ -1,0 +1,85 @@
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        theme-type: dark,
+        primary: mat.$violet-palette,
+        tertiary: mat.$cyan-palette,
+      ),
+      typography: Outfit,
+      density: 0,
+    )
+  );
+}
+
+body {
+  color-scheme: dark;
+  background-color: #0c0c0e;
+  color: #e2e2e9;
+  font-family: 'Outfit', sans-serif;
+  margin: 0;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* Glassmorphic card variables */
+:root {
+  --bg-main: #0c0c0e;
+  --bg-surface: rgba(20, 20, 25, 0.7);
+  --bg-card: rgba(30, 30, 38, 0.6);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --accent-primary: #8a2be2;
+  --accent-secondary: #00f2fe;
+  --accent-success: #00f2a1;
+  --accent-warning: #ff4757;
+  --text-primary: #ffffff;
+  --text-muted: #a0a0b0;
+}
+
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  padding: 24px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.neon-text-primary {
+  background: linear-gradient(135deg, #8a2be2, #00f2fe);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.neon-text-secondary {
+  background: linear-gradient(135deg, #00f2a1, #00f2fe);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+}

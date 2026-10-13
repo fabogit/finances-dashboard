@@ -21,6 +21,9 @@ export enum SortOrder {
   DESC = 'desc',
 }
 
+/**
+ * Query parameters DTO for filtering, sorting, grouping, and paginating transactions.
+ */
 export class GetTransactionsFilterDto {
   @ApiPropertyOptional({
     description: 'Filter by categories (comma separated, case insensitive)',

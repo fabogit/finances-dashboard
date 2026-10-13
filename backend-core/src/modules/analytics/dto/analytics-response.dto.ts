@@ -1,6 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
+/**
+ * Response DTO containing high-level analytics summary data.
+ */
 export class AnalyticsSummaryDto {
   @Expose()
   @ApiProperty({ example: 2500.5, description: 'Total positive transactions' })
@@ -22,6 +25,9 @@ export class AnalyticsSummaryDto {
   savingsRate: number;
 }
 
+/**
+ * Response DTO representing distribution metrics for a category.
+ */
 export class CategoryDistributionDto {
   @Expose()
   @ApiProperty({ example: 'FOOD', description: 'Macro category name' })
@@ -39,6 +45,9 @@ export class CategoryDistributionDto {
   percentage: number;
 }
 
+/**
+ * Response DTO representing monthly financial trends.
+ */
 export class MonthlyTrendDto {
   @Expose()
   @ApiProperty({
