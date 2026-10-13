@@ -220,8 +220,10 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm prisma generate
 
-      - name: Run Migrations
-        run: pnpm prisma migrate deploy
+      # Keep in sync with the project's DB schema strategy: `db push` until the MVP
+      # baseline, then `prisma migrate deploy` once prisma/migrations/ exists again.
+      - name: Sync Database Schema
+        run: pnpm prisma db push
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/finance_test_db?schema=public
 
