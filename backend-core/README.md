@@ -47,25 +47,31 @@ cp .env.test_example .env.test
 cp ../.env.compose_example ../.env.compose
 ```
 
-### 2. Infrastructure (Docker)
+### 2. Run everything with Docker
 
-Start the database and science service:
-
-```bash
-# From the project root or backend-core
-pnpm run docker:up
-```
-
-### 3. Application Startup
+From `backend-core/` (the script reads `../.env.compose`):
 
 ```bash
-# Development (watch mode)
-pnpm run start:dev
-
-# Production
-pnpm run build
-pnpm run start:prod
+pnpm run docker:up     # PostgreSQL, the science service and this core (fn-core, port 3000, watch mode)
+pnpm run docker:down
 ```
+
+### 3. Run the core outside Docker
+
+`docker:up` already runs the core on port 3000, so `start:dev` would collide with it. Start only the database and the science service instead:
+
+```bash
+# From the project root
+docker compose --env-file .env.compose up -d db-postgres backend-science
+
+# Then, from backend-core (uses .env.local)
+pnpm run prisma:push
+pnpm run start:dev     # watch mode
+```
+
+`pnpm run build` followed by `pnpm run start:prod` is currently broken: the build writes `dist/src/main.js`, while `start:prod` runs `dist/main`. Fixed in #87.
+
+Full setup: [`documents/development/setup.md`](../documents/development/setup.md).
 
 ---
 
