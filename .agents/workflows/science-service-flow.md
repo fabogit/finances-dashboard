@@ -39,7 +39,7 @@ New functionality is computation only. If a change would move domain logic into 
 
 ## Calling it from the core
 
-The core reaches Python through `SCIENCE_SERVICE_URL`. Today that is the `ScienceService` HTTP proxy; issue #96 replaces it with the `ScienceClient` interface (timeouts, retries, circuit breaker, D-21). Every caller must handle the service being unavailable: degrade the feature, never fail an unrelated operation.
+The core reaches Python through `SCIENCE_SERVICE_URL`. Today that is the `ScienceService` HTTP proxy, with timeouts, retries and HTTP errors configured from the environment ([failure handling](../../documents/architecture/science-contract.md#failure-handling)); issue #96 replaces it with the `ScienceClient` interface (timeouts, retries, circuit breaker, D-21). Every caller must handle the service being unavailable: degrade the feature, never fail an unrelated operation.
 
 ## Dependencies
 

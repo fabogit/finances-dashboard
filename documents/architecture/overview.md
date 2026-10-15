@@ -16,7 +16,7 @@ graph TD
 - **Transport:** REST over HTTP, behind a `ScienceClient` interface in the core with timeouts, retries and a circuit breaker; NATS behind the same interface once a truly asynchronous job exists (D-21). The contract is in [science-contract.md](science-contract.md).
 - **`client-preview`** (Angular) is part of the MVP, built screen by screen once each API is closed and tested (D-34).
 
-**v1 difference:** the v1 import sends raw rows to Python (`POST /process`) for date and amount parsing and static categorisation; the HTTP proxy has no timeout or retry. Both change in v2 (issues #85, #93, #96).
+**v1 difference:** the v1 import sends raw rows to Python (`POST /process`) for date and amount parsing and static categorisation; this goes away with the v2 import (#93). The HTTP proxy (`ScienceService`) has bounded timeouts, retries and HTTP errors since #85; `ScienceClient` replaces it in #96.
 
 ## Local deployment
 
