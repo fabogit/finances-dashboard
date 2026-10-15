@@ -15,7 +15,7 @@ All commands run from `backend-core/`, from fish or a shell with fnm loaded. The
 
 ## Procedure
 
-1. **Edit** `prisma/schema.prisma`. Every model carries `userId`, and unique constraints and indexes include it ([ADR-0001](../../documents/adr/0001-userid-on-all-models.md)).
+1. **Edit** `prisma/schema.prisma`. From Schema v2 (#89), every model carries `userId` and unique constraints and indexes include it, enforced by the mechanism of D-48 ([ADR-0001](../../documents/adr/0001-userid-on-all-models.md)). In v1 this does not apply: do not add `userId` to v1 models.
 2. **Regenerate the client:** `pnpm prisma generate`.
 3. **Apply** to the local database: `pnpm run prisma:push`. If the change cannot be applied over the existing data, reset:
 
