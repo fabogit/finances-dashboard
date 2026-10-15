@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-09
-- **Decisions:** D-11 (design review R2.2)
+- **Decisions:** D-11
 
 ## Context
 
@@ -24,14 +24,14 @@ Investments and property do not have a transaction for every price change, so a 
 
 ## Alternatives considered
 
-- **(a) Stored balance updated by deltas, with snapshots on the transaction's date.** Each delta updates the snapshot of the transaction's day and every later one. Rejected: writes are expensive and fragile (a single back-dated transaction touches about 220 snapshot rows) and there are two sources of truth that can diverge, which is the v1 problem.
-- **(c) Derived as the truth, plus a cached `balance` updated by deltas from the start**, with a reconciliation check between cache and sum. Not adopted up front: it keeps part of the delta complexity for a speed-up nobody has measured. It stays available if measurements call for it.
+- **Stored balance updated by deltas, with snapshots on the transaction's date.** Each delta updates the snapshot of the transaction's day and every later one. Rejected: writes are expensive and fragile (a single back-dated transaction touches about 220 snapshot rows) and there are two sources of truth that can diverge, which is the v1 problem.
+- **Derived as the truth, plus a cached `balance` updated by deltas from the start**, with a reconciliation check between cache and sum. Not adopted up front: it keeps part of the delta complexity for a speed-up nobody has measured. It stays available if measurements call for it.
 
 ## Consequences
 
 - One source of truth: back-dated imports, edits and deletions are correct automatically, and the Net Worth history is correct for free.
 - Reconcile becomes simple: compare the derived balance with the bank's and record the difference as an adjustment. `POST /assets/:id/recalculate` becomes reconciliation.
 - Balances are computed on read; with an `(account, date)` index and the volumes of one person this costs milliseconds.
-- The delta logic and `AssetHistory` go away, with the work built on them in v1 (issue #60, commit `28fd8ee`). The v1 bug where an update or delete reads the old row outside the database transaction and can apply a delta twice (B3) disappears with the deltas; issue #91 checks the balance under concurrent edits.
+- The delta logic and `AssetHistory` go away, with the work built on them in v1 (issue #60, commit `28fd8ee`). The v1 bug where an update or delete reads the old row outside the database transaction and can apply a delta twice disappears with the deltas; issue #91 checks the balance under concurrent edits.
 - New transaction kinds are needed to tell starting balances and adjustments apart from income and spending ([ADR-0008](0008-transaction-kind.md)).
 - Savings goal progress follows the same principle: computed, never stored (D-26).

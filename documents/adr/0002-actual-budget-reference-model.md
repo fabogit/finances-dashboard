@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-08 (scope and divergences 2026-10-09)
-- **Decisions:** D-08 (design review Q8), D-12 (R2.3)
+- **Decisions:** D-08, D-12
 
 ## Context
 

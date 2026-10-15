@@ -1,10 +1,10 @@
 # Open questions
 
-Questions about post-MVP features, noted so they are not lost and **not decided**. Subscriptions, the forecast split and authentication are designed after the MVP (D-36), with what the MVP teaches; until then these questions block nothing. The IDs (C5, C7, …) are the contradictions found in the v1 documents by the design review.
+Questions about post-MVP features, noted so they are not lost and **not decided**. Subscriptions, the forecast split and authentication are designed after the MVP (D-36), with what the MVP teaches; until then these questions block nothing.
 
 When one of these features is designed, its question is answered by a decision (an ADR or the feature's flow document) and removed from here.
 
-## C5 · Who suppresses paused subscriptions in the forecast?
+## Who suppresses paused subscriptions in the forecast?
 
 **Context.** The proposed forecast split ([science contract](../architecture/science-contract.md#post-mvp-proposal-forecast-split)) has Python suppress the recurrences that match a paused subscription. But the trend endpoint receives monthly totals already aggregated by the core, where individual transactions are no longer visible.
 
@@ -12,7 +12,7 @@ When one of these features is designed, its question is answered by a decision (
 
 **Issues:** #77 (forecast split), #78 (subscriptions).
 
-## C7 · Which roles exist?
+## Which roles exist?
 
 **Context.** Earlier specs listed `ADMIN`, `USER` and `GUEST`; the RBAC issue and the v1 data dictionary only `USER` and `GUEST`. The demo sandbox issue needs an administrative endpoint (resetting the demo), which implies some admin capability.
 
@@ -20,7 +20,7 @@ When one of these features is designed, its question is answered by a decision (
 
 **Issues:** #64 (RBAC), #65 (demo sandbox).
 
-## C8 · What can a guest do?
+## What can a guest do?
 
 **Context.** One plan made guests read-only; the RBAC issue lets them `POST` to "safe" endpoints. The client mockup has a "Reset demo" button, which the demo sandbox issue protects with an admin secret.
 
@@ -28,7 +28,7 @@ When one of these features is designed, its question is answered by a decision (
 
 **Issues:** #64, #65.
 
-## C11 · Do subscriptions need authentication first?
+## Do subscriptions need authentication first?
 
 **Context.** The subscriptions issue requires a `JwtAuthGuard` on its endpoints, while authentication was planned for later. Both are now after the MVP, but their order is not set. Until authentication exists, requests run as a fixed, configured user (D-48), so a feature does not strictly need authentication to be built.
 

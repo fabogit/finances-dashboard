@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-08
-- **Decisions:** D-06 (design review Q6)
+- **Decisions:** D-06
 
 ## Context
 
@@ -22,8 +22,8 @@ This is close to what Actual Budget does: preview in the client with deduplicati
 
 ## Alternatives considered
 
-- **(a) Direct import, as in v1 but fixed.** Rejected: mistakes land in balances, goals and analytics at once and cost more to correct; manual duplicates and transfers are handled after the fact.
-- **(c) Stateful staging**: rows saved in `ImportBatch` / `StagedTransaction` tables with a `PENDING` state, so a review can be interrupted and resumed, with an audit of every import. Rejected: new tables and states, pending rows to clean up, and every balance and analytics query would have to ignore them. It would become interesting only for rare, very large imports.
+- **Direct import, as in v1 but fixed.** Rejected: mistakes land in balances, goals and analytics at once and cost more to correct; manual duplicates and transfers are handled after the fact.
+- **Stateful staging**: rows saved in `ImportBatch` / `StagedTransaction` tables with a `PENDING` state, so a review can be interrupted and resumed, with an audit of every import. Rejected: new tables and states, pending rows to clean up, and every balance and analytics query would have to ignore them. It would become interesting only for rare, very large imports.
 
 ## Consequences
 

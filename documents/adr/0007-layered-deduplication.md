@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-09
-- **Decisions:** D-16 (design review R2.7)
+- **Decisions:** D-16
 
 ## Context
 
@@ -27,8 +27,8 @@ Uniqueness is **per account**, not global. Every duplicate found is **shown in t
 
 ## Alternatives considered
 
-- **(a) Exact hash only, scoped per account or user.** Rejected: it does not solve the real cases, manual entries and legitimate identical movements.
-- **(b) Approximate match only (as in Actual Budget).** Not enough alone: it covers manual entries, but it gives up the certainty of bank IDs and exact re-imports and can flag recurring identical amounts (the same subscription every month) when they fall inside the date window.
+- **Exact hash only, scoped per account or user.** Rejected: it does not solve the real cases, manual entries and legitimate identical movements.
+- **Approximate match only (as in Actual Budget).** Not enough alone: it covers manual entries, but it gives up the certainty of bank IDs and exact re-imports and can flag recurring identical amounts (the same subscription every month) when they fall inside the date window.
 
 ## Consequences
 

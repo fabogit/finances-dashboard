@@ -56,5 +56,5 @@ Ideas accepted as direction, not designed and not scheduled. Open questions are 
 - **Subscriptions** (Actual's schedules): explicit recurring payments with a calendar, feeding the forecast (#78), and a forecast split into trend and recurrence (#77).
 - **Wealth:** holdings with tickers and automatic prices that generate value adjustments; multiple currencies with manual, then automatic, exchange rates (#81); tax estimates such as capital gains.
 - **Multi-user:** authentication, tenancy, roles and the demo sandbox (#62–#65).
-- **Client:** translations (English by default; Italian, French, Spanish, German and Portuguese), and desktop packaging with Tauri. A fully offline desktop build with SQLite would conflict with today's PostgreSQL-specific choices (raw SQL, per-user isolation), so it would need its own design (contradiction C13).
+- **Client:** translations (English by default; Italian, French, Spanish, German and Portuguese), and desktop packaging with Tauri. A fully offline desktop build with SQLite would conflict with today's PostgreSQL-specific choices (raw SQL, per-user isolation), so it would need its own design.
 - **Open banking:** bank APIs instead of file uploads.

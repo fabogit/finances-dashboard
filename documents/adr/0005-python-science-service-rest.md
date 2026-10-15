@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-09
-- **Decisions:** D-14 (design review R2.5), D-21 (R3.1)
+- **Decisions:** D-14, D-21
 
 ## Context
 
@@ -30,17 +30,17 @@ The interactions expected between the services:
 
 ## Alternatives considered
 
-Role of Python (R2.5):
+Role of Python (D-14):
 
-- **(a) Python as the ingestion engine** (file and mapping in, clean rows out). Rejected: every preview would depend on Python, so Python down means no import; rules and payees would have to be sent to Python on every call.
-- **(c) Mixed, as in v1.** Rejected: the blurred boundary is one of the causes of the v1 inconsistencies.
+- **Python as the ingestion engine** (file and mapping in, clean rows out). Rejected: every preview would depend on Python, so Python down means no import; rules and payees would have to be sent to Python on every call.
+- **Mixed, as in v1.** Rejected: the blurred boundary is one of the causes of the v1 inconsistencies.
 
-Transport (R3.1):
+Transport (D-21):
 
-- **(b) REST plus a job queue on Postgres or Redis** (e.g. BullMQ). Rejected for now: two mechanisms, and a queue on a shared database couples the services to it.
-- **(c) NATS straight away.** Postponed: one mechanism for sync and async and light to run, but extra infrastructure in Compose and CI with no asynchronous job to justify it yet.
-- **(d) RabbitMQ.** Rejected: heavier than NATS, request/reply is awkward.
-- **(e) Kafka or Pulsar.** Rejected: event-streaming platforms built for huge volumes; request/reply would need request and reply topics and correlation.
+- **REST plus a job queue on Postgres or Redis** (e.g. BullMQ). Rejected for now: two mechanisms, and a queue on a shared database couples the services to it.
+- **NATS straight away.** Postponed: one mechanism for sync and async and light to run, but extra infrastructure in Compose and CI with no asynchronous job to justify it yet.
+- **RabbitMQ.** Rejected: heavier than NATS, request/reply is awkward.
+- **Kafka or Pulsar.** Rejected: event-streaming platforms built for huge volumes; request/reply would need request and reply topics and correlation.
 
 ## Consequences
 

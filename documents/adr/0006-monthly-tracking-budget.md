@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-09 (model chosen 2026-10-08)
-- **Decisions:** D-09 (design review Q9), D-17 (R2.8)
+- **Decisions:** D-09, D-17
 
 ## Context
 
@@ -24,15 +24,15 @@ Two questions were open. **Which budgeting model?** In October 2,500 comes in; g
 
 ## Alternatives considered
 
-Model (Q9):
+Model (D-09):
 
 - **Envelope only.** Rejected for now: a new data model (monthly assignments, rollover, "To Budget") and monthly discipline for the user, while envelope budgeting is not what sets this project apart.
 - **Both, chosen by the user.** Deferred, not rejected: it is the intended later direction (D-09), once tracking works. Not now because two models mean double code and double tests.
 
-Amounts (R2.8):
+Amounts (D-17):
 
-- **(a) One cap per category (v1).** Rejected: cannot represent December or August, and blocks envelope budgeting later.
-- **(c) A default cap plus monthly overrides.** Rejected: two concepts to explain (default and override) for what per-month amounts already cover with convenience commands.
+- **One cap per category (v1).** Rejected: cannot represent December or August, and blocks envelope budgeting later.
+- **A default cap plus monthly overrides.** Rejected: two concepts to explain (default and override) for what per-month amounts already cover with convenience commands.
 
 ## Consequences
 

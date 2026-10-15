@@ -2,13 +2,13 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-09
-- **Decisions:** D-25 (design review R3.5)
+- **Decisions:** D-25
 
 ## Context
 
 With derived balances ([ADR-0003](0003-derived-balances.md)) some transactions are neither spending nor income: starting balances, reconciliation and revaluation adjustments, transfers. In v1 "Transfers", "Investments" and "Withdrawals" count as spending or income and inflate every analytics figure; `isOnBudget` is never read.
 
-The previous specs also contradicted each other (contradiction C3): one plan excluded every transfer from the analytics, while the design spec made on-budget → off-budget and off-budget → on-budget transfers real spending and income, which a blanket filter would remove.
+The previous specs also contradicted each other: one plan excluded every transfer from the analytics, while the design spec made on-budget → off-budget and off-budget → on-budget transfers real spending and income, which a blanket filter would remove.
 
 **Example.** October: salary +2,500; expenses −1,800; transfer from checking to a savings account, both on-budget, −500/+500; transfer to the off-budget investment account −300; ETF revaluation +350; a new card account opened with a starting balance of +200.
 
@@ -26,12 +26,12 @@ Every transaction has a **`kind`**: `REGULAR`, `TRANSFER`, `STARTING_BALANCE` or
 
 ## Alternatives considered
 
-- **(b) Boolean flags** such as `isTransfer` and `isAdjustment`. Rejected: they allow impossible combinations (`isTransfer` and `isAdjustment` together) and tend to multiply over time.
-- **(c) Special system categories** such as "Transfer" or "Starting balance", excluded from the analytics. Rejected: they mix *what a transaction is* with *how it is classified*, and bring back the ambiguity of special system categories (contradiction C2, settled by D-28: uncategorised is an empty category).
+- **Boolean flags** such as `isTransfer` and `isAdjustment`. Rejected: they allow impossible combinations (`isTransfer` and `isAdjustment` together) and tend to multiply over time.
+- **Special system categories** such as "Transfer" or "Starting balance", excluded from the analytics. Rejected: they mix *what a transaction is* with *how it is classified*, and bring back the ambiguity of v1's special system category for uncategorised transactions, which D-28 removed: uncategorised is an empty category.
 
 ## Consequences
 
-- Replaces the planned `isTransfer` flag and resolves contradiction C3.
+- Replaces the planned `isTransfer` flag and ends the contradiction between the old specs on how transfers count.
 - The analytics rule must be defined for every pair of kind and on/off-budget accounts; the flow document lists them with examples.
 - Starting balances and adjustments never distort income and spending, yet still move balances and Net Worth.
 - Issue #74 builds transactions with `kind` and transfers; issue #95 applies the rule in the database.

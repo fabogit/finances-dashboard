@@ -71,4 +71,4 @@ Issue #77 (Backlog) proposes replacing the single `/forecast` with two endpoints
 - **`POST /forecast/recurrence`:** fixed and variable recurring expenses from a minimal transaction history (date, amount, details, category), adjusted by the user's subscriptions: an active subscription overrides the statistical guess; a paused one removes its matching history.
 - The core combines the two; if the trend predicts total spending below the fixed costs, the variable part is clamped to 0.
 
-Who suppresses paused subscriptions is still open (C5, [product/open-questions.md](../product/open-questions.md)).
+Who suppresses paused subscriptions is still open ([product/open-questions.md](../product/open-questions.md#who-suppresses-paused-subscriptions-in-the-forecast)).
