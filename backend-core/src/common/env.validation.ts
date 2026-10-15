@@ -1,11 +1,17 @@
 import { plainToInstance } from 'class-transformer';
 import {
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
+  Min,
   validateSync,
 } from 'class-validator';
+import {
+  DEFAULT_SCIENCE_RETRY_COUNT,
+  DEFAULT_SCIENCE_TIMEOUT_MS,
+} from '../modules/science/science.constants';
 
 export enum Environment {
   Development = 'development',
@@ -36,6 +42,16 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   SCIENCE_SERVICE_URL: string = 'http://backend-science:8000';
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  SCIENCE_TIMEOUT_MS: number = DEFAULT_SCIENCE_TIMEOUT_MS;
+
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  SCIENCE_RETRY_COUNT: number = DEFAULT_SCIENCE_RETRY_COUNT;
 }
 
 export function validate(config: Record<string, unknown>) {
