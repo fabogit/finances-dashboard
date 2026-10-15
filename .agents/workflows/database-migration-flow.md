@@ -1,112 +1,55 @@
 ---
-description: Procedura standard per la gestione delle migrazioni Prisma, il reset del database e il seeding in ambiente locale con Docker.
+description: Change the Prisma schema, apply it with db push, reset the database and reseed, keeping CI and scripts aligned.
 ---
 
-# Database Migration & Development Workflow
+# Schema changes, reset and seed
 
-Questa guida definisce la procedura standard per gestire le modifiche allo schema di Prisma, l'applicazione delle migrazioni, e il ripopolamento del database (seeding) in locale.
+Until the MVP the schema is applied with **`prisma db push`**, without migration files, and the local database can be reset at any time (D-19). There is no `prisma/migrations/` folder: do not create one.
 
----
+All commands run from `backend-core/`, from fish or a shell with fnm loaded. They use `backend-core/.env.local` ([Environment files](../../documents/development/setup.md#environment-files)); the database must be up (`fn-postgres`, see [start-backend.md](start-backend.md)).
 
-## 📋 Prerequisiti
+## Before you start
 
-- Container Docker con Postgres (`fn-postgres`) **online e in salute**
-- File `.env.local` configurato in `backend-core/` con `DATABASE_URL` corretto
+- **The issue must say it touches the schema.** Only one open session changes `schema.prisma` at a time; if the issue does not declare it, stop and ask ([`AGENTS.md` § Rules](../../AGENTS.md#rules)).
+- Read the data model in [`documents/domain/data-model.md`](../../documents/domain/data-model.md): the schema follows the spec, and a deviation updates the spec in the same pull request.
 
-> [!IMPORTANT]
-> Tutte le operazioni di migrazione e seeding richiedono che il container Docker con Postgres (`fn-postgres`) sia online e in salute.
+## Procedure
 
-> [!NOTE]
-> Tutti i comandi si eseguono dalla directory `backend-core/`. L'agente deve specificare `Cwd: backend-core/` nel parametro del tool `run_command`.
+1. **Edit** `prisma/schema.prisma`. Every model carries `userId`, and unique constraints and indexes include it ([ADR-0001](../../documents/adr/0001-userid-on-all-models.md)).
+2. **Regenerate the client:** `pnpm prisma generate`.
+3. **Apply** to the local database: `pnpm run prisma:push`. If the change cannot be applied over the existing data, reset:
 
-Per verificare lo stato dei container:
-```fish
-docker ps
-```
-Se il container `fn-postgres` non è in esecuzione, avvia l'ambiente:
-> *Esegui dalla directory `backend-core/`:*
-```fish
-pnpm run docker:up
-```
+   ```bash
+   pnpm exec dotenv -e .env.local -- prisma db push --force-reset
+   pnpm run prisma:seed
+   ```
 
----
+   This erases the local database. Imports must stay repeatable: the bank files are the source.
+4. **Update the seed** (`prisma/seed.ts`, the profile generator after #90) in the same pull request: the seed always matches the current schema (D-31).
+5. **Update the spec** (`documents/domain/data-model.md`) if the model changed.
+6. **Verify** with [test-backend.md](test-backend.md). The end-to-end script applies the schema to a fresh test database with `db push`, so it catches a schema that does not apply.
 
-## 🛠️ Skill da Consultare
+## Do not use
 
-* [prisma-cli](../skills/prisma-cli/SKILL.md) — Comandi CLI Prisma (migrate, generate, db push, seed)
-* [prisma-client-api](../skills/prisma-client-api/SKILL.md) — Modifiche al modello e impatto sulle query
-* [backend-core-ops](../skills/backend-core-ops/SKILL.md) — Gestione container Docker e script di progetto
+`prisma:migrate`, `prisma:reset`, `prisma:deploy` and `db:test:migrate` are leftovers of `prisma migrate`. `prisma:migrate` would create a migrations folder, and `prisma:reset` (`migrate reset`) leaves an empty database when there are no migrations. Issue #89 removes or aligns them.
 
----
+## Changing the method
 
-## 📦 Procedura
+When the project moves to `prisma migrate` (a baseline at the end of the MVP) or changes the method in any other way, the same pull request updates:
 
-### 1. Modifica del file schema.prisma
+- the `core-e2e-tests` job in `.github/workflows/ci.yaml` (today `prisma db push`);
+- the `package.json` scripts (`db:test:*`, `prisma:*`);
+- the `fn-core` start command in `backend-core/Dockerfile`;
+- this workflow and [`documents/development/testing.md`](../../documents/development/testing.md#database-sync-method-and-ci).
 
-Apporta le modifiche necessarie al file [schema.prisma](../../backend-core/prisma/schema.prisma) (es. aggiunta di campi, tabelle o indici).
+A mismatch between the project and CI already broke CI once (fixed in #83).
 
-### 2. Generazione e Applicazione della Migrazione
+## Troubleshooting
 
-Per creare una nuova migrazione SQL e applicarla al database locale di sviluppo:
-> *Esegui dalla directory `backend-core/`:*
-```fish
-pnpm run prisma:migrate
-```
-*Ti verrà richiesto di inserire un nome per la migrazione.* Questo comando creerà la cartella SQL in `prisma/migrations/` e aggiornerà il database locale.
-
-> [!TIP]
-> Per creare la migrazione senza applicarla immediatamente (ad esempio, se vuoi ispezionare il codice SQL generato prima di eseguirlo):
-> ```fish
-> pnpm prisma migrate dev --create-only
-> ```
-
-### 3. Push rapido (Prototipazione)
-
-Per spingere le modifiche allo schema senza creare una migrazione (utile per prototipazione rapida):
-> *Esegui dalla directory `backend-core/`:*
-```fish
-pnpm run prisma:push
-```
-
-### 4. Ripopolamento del Database (Seeding)
-
-All'avvio del container Docker il seed viene eseguito in automatico. Se hai bisogno di ri-eseguire il seed manualmente in locale per aggiornare i dati di sviluppo:
-> *Esegui dalla directory `backend-core/`:*
-```fish
-pnpm run prisma:seed
-```
-
----
-
-## 🔄 Prototipazione Rapida e Hard Reset (Database Wiping)
-
-Dato che siamo in fase di sviluppo locale e prototipazione, è possibile distruggere completamente il database e ricrearlo da zero con tutte le migrazioni e i dati di seed applicati:
-> *Esegui dalla directory `backend-core/`:*
-```fish
-pnpm run prisma:reset
-```
-*Questo comando eliminerà tutti i dati presenti nel database locale, riapplicherà tutte le migrazioni in ordine cronologico ed eseguirà il seed finale.*
-
----
-
-## 🧪 Validazione
-
-Dopo aver applicato una migrazione, è fondamentale assicurarsi che venga eseguita correttamente anche nell'ambiente di test temporaneo. Esegui i test end-to-end (che creano un container PostgreSQL pulito su una porta dedicata, applicano le migrazioni da zero e verificano le API):
-> *Esegui dalla directory `backend-core/`:*
-```fish
-pnpm run test:e2e:docker
-```
-Se tutti i test passano, la migrazione è considerata valida e pronta per essere committata nel controllo versione.
-
----
-
-## ❓ Troubleshooting
-
-| Problema | Causa | Soluzione |
-|----------|-------|-----------|
-| `P3009` - migrate found failed migrations | Una migrazione precedente è fallita e ha lasciato stato sporco | `pnpm run prisma:reset` per ripartire da zero (ambiente locale) |
-| `P3006` - migration applied to shadow database failed | SQL invalido nella migrazione generata | Ispezionare il file `.sql` in `prisma/migrations/`, correggere e ri-eseguire |
-| `P3014` - could not create shadow database | Permessi insufficienti sul DB o porta non raggiungibile | Verificare che `fn-postgres` sia running e che `DATABASE_URL` sia corretto |
-| Porta 5432 già occupata | Un altro processo Postgres è in esecuzione | `docker ps` per trovare il container in conflitto, `docker stop <id>` |
-| Seed fallito con errore di FK | Ordine di inserimento errato | Verificare che `prisma/seed.ts` inserisca le entità padre prima delle figlie |
-| `prisma generate` non trova il schema | Cwd errato | Assicurarsi di essere in `backend-core/` dove risiede `prisma/schema.prisma` |
+| Problem | Likely cause | Fix |
+| --- | --- | --- |
+| `db push` refuses because of data loss | The change drops or narrows a column with data | Reset with `--force-reset` as above (local data only) |
+| Seed fails on a foreign key | Parents inserted after children | Insert parent entities first in the seed |
+| `prisma generate` cannot find the schema | Wrong directory | Run from `backend-core/` |
+| Cannot reach the database | `fn-postgres` down, or `DATABASE_URL` wrong in `.env.local` | `docker ps`; compare `.env.local` with `.env.local_example` |
+| Port 5432 already in use | Another PostgreSQL running | `docker ps`, stop the conflicting container |

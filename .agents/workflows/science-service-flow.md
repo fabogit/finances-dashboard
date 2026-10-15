@@ -1,138 +1,73 @@
 ---
-description: Procedura standard per lo sviluppo, il test e l'audit del modulo Python/FastAPI (backend-science) e della sua integrazione con NestJS.
+description: Develop and test the Python/FastAPI science service and keep its contract with the NestJS core in sync.
 ---
 
-# Science Service Development Workflow
+# Science service
 
-Questo workflow definisce la procedura per lavorare sul servizio Python/FastAPI (`backend-science`), che gestisce la pulizia dati, la categorizzazione AI, il forecasting e le proiezioni dei savings goals.
+`backend-science` is a **computation service**: forecasts, goal projections and, later, machine-learning suggestions. It is optional and degradable: the core must keep working when it is down. Parsing, mapping, rules, deduplication and the import preview belong to the core, not here ([ADR-0005](../../documents/adr/0005-python-science-service-rest.md)).
 
----
+The contract (endpoints, payloads, failure handling) is in [`documents/architecture/science-contract.md`](../../documents/architecture/science-contract.md). It is the single place where endpoints are listed.
 
-## 📋 Prerequisiti
+## Layout
 
-- Python virtual environment attivo (tramite `direnv` in `backend-science/`)
-- Se `direnv` non è configurato, eseguire `direnv allow` nella directory `backend-science/`
-- Dipendenze Python installate: `pip install -r requirements.txt`
-- Per l'integrazione con NestJS: container Docker avviati (vedi [start-backend.md](start-backend.md))
-
-> [!NOTE]
-> I comandi Python si eseguono dalla directory `backend-science/`. I comandi NestJS dalla directory `backend-core/`. L'agente deve specificare il `Cwd` appropriato nel parametro del tool `run_command`.
-
----
-
-## 🛠️ Skill da Consultare
-
-* [fastapi](../skills/fastapi/SKILL.md) — Best practices FastAPI, modelli Pydantic, routing
-* [pandas-pro](../skills/pandas-pro/SKILL.md) — Operazioni DataFrame, pulizia dati, aggregazioni
-* [backend-core-ops](../skills/backend-core-ops/SKILL.md) — Gestione container Docker
-* [backend-core-dev](../skills/backend-core-dev/SKILL.md) — Pattern del proxy NestJS (`ScienceService`)
-
----
-
-## 📦 Procedura
-
-### 1. Architettura del Servizio
-
-Il servizio Python è strutturato come segue:
-
-```
+```text
 backend-science/
 ├── src/
-│   ├── main.py              # Entry point FastAPI, definizione router e endpoint
-│   ├── modules/
-│   │   ├── processor.py      # Pulizia dati: normalizzazione date, importi, descrizioni
-│   │   ├── forecaster.py     # Previsioni a 3 mesi: aggregazione, trend, regressione
-│   │   ├── rules.py          # Mapping regole di categorizzazione (keyword → category)
-│   │   └── util/             # Utility condivise
-│   └── __init__.py
-├── tests/                    # Suite pytest
+│   ├── main.py            # FastAPI app, Pydantic models, routes
+│   └── modules/
+│       ├── processor.py   # v1 import cleaning (POST /process), retired in v2
+│       ├── forecaster.py  # forecast and goal projection
+│       ├── rules.py       # v1 static category dictionary, retired in v2
+│       └── util/
+├── tests/                 # pytest
 ├── requirements.txt
-└── .envrc                    # direnv config (attiva venv + PYTHONPATH)
+└── .envrc                 # direnv: virtual environment and PYTHONPATH
 ```
 
-### 2. Aggiungere un Nuovo Endpoint FastAPI
+## Change or add an endpoint
 
-1. **Definire il modello Pydantic** (input/output) in `main.py` o in un file dedicato
-2. **Implementare la logica** nel modulo appropriato (`modules/`)
-3. **Aggiungere la rotta** in `main.py`
-4. **Scrivere i test** in `tests/`
-5. **Aggiornare il proxy NestJS** nel modulo `science` di `backend-core` (`src/modules/science/`)
+1. Pydantic input and output models in `src/main.py` (or a dedicated module).
+2. Logic in `src/modules/`.
+3. The route in `src/main.py`.
+4. Tests in `tests/`, written first.
+5. In the same pull request:
+   - the TypeScript DTOs and the caller in `backend-core/src/modules/science/`;
+   - [`science-contract.md`](../../documents/architecture/science-contract.md).
+6. Money stays `Decimal`; remember that it travels as a JSON string ([Types](../../documents/architecture/science-contract.md#types)).
 
-### 3. Comunicazione NestJS → FastAPI (Proxy Pattern)
+New functionality is computation only. If a change would move domain logic into Python (parsing, categorisation rules, persistence), stop and ask: it contradicts ADR-0005.
 
-Il `ScienceService` in NestJS funge da proxy resiliente:
+## Calling it from the core
 
-- Utilizza `HttpService` (Axios) per le chiamate HTTP verso `SCIENCE_SERVICE_URL`
-- Implementa un **fallback**: se il servizio Python non risponde, l'operazione non fallisce ma restituisce uno stato degradato (`science: failed`)
-- I DTO di input/output devono essere allineati tra i modelli Pydantic Python e le classi TypeScript
+The core reaches Python through `SCIENCE_SERVICE_URL`. Today that is the `ScienceService` HTTP proxy; issue #96 replaces it with the `ScienceClient` interface (timeouts, retries, circuit breaker, D-21). Every caller must handle the service being unavailable: degrade the feature, never fail an unrelated operation.
 
-> [!IMPORTANT]
-> Ogni modifica agli endpoint Python o ai modelli Pydantic richiede un aggiornamento corrispondente dei DTO TypeScript in `backend-core/src/modules/science/`.
+## Dependencies
 
-### 4. Gestione delle Dipendenze Python
+With the environment active, from `backend-science/`:
 
-Per aggiungere una nuova dipendenza:
-> *Esegui dalla directory `backend-science/` (con venv attivo):*
-```fish
+```bash
 pip install <package>
 pip freeze > requirements.txt
 ```
 
-> [!WARNING]
-> Verificare che `requirements.txt` non contenga dipendenze specifiche della piattaforma (es. path assoluti). Pulire manualmente se necessario.
+Check that `requirements.txt` has no platform-specific or path entries.
 
-### 5. Endpoint Esposti
+## Verify
 
-| Endpoint | Descrizione | Input | Output |
-|----------|-------------|-------|--------|
-| `POST /process` | Pulizia e categorizzazione transazioni | Array di `RawTransaction` | Array di `ProcessedTransactionDto` |
-| `POST /forecast` | Previsione cash flow a 3 mesi | Storico transazioni + `std_deviation_threshold` | Forecast per Income, Expenses, Cash Flow |
-| `POST /goals/projection` | Stima ETA obiettivo di risparmio | Transazioni storiche + target/current amount | `estimated_date`, `monthly_avg`, `confidence` |
+From `backend-science/`, with the environment of [setup.md](../../documents/development/setup.md#python-environment):
 
----
+- `python -m pytest tests/` (as in CI), `pytest --cov=src` for coverage;
+- `pyright .` (as in CI);
+- if the contract changed, the core's tests too ([test-backend.md](test-backend.md)).
 
-## 🧪 Validazione
+With the stack running, the FastAPI docs are on `http://localhost:8000/docs`.
 
-### Test Python
-> *Esegui dalla directory `backend-science/`:*
-```fish
-pytest
-```
+## Troubleshooting
 
-Per output verboso:
-```fish
-pytest -v
-```
-
-Per coverage:
-```fish
-pytest --cov=src
-```
-
-### Test di Integrazione (via NestJS)
-
-Verificare che il proxy funzioni correttamente:
-> *Esegui dalla directory `backend-core/`:*
-```fish
-pnpm run test:e2e:docker
-```
-
-### Verifica Swagger
-
-Con il servizio avviato, controllare la documentazione interattiva:
-- **FastAPI Swagger**: http://localhost:8000/docs
-- **FastAPI ReDoc**: http://localhost:8000/redoc
-
----
-
-## ❓ Troubleshooting
-
-| Problema | Causa | Soluzione |
-|----------|-------|-----------|
-| `ModuleNotFoundError` | `PYTHONPATH` non configurato | Eseguire `direnv allow` oppure `set -x PYTHONPATH src` in fish |
-| `direnv` non si attiva | `.envrc` non approvato | `direnv allow` nella directory `backend-science/` |
-| Import circolari in Python | Moduli che si importano reciprocamente | Ristrutturare con import lazy o funzioni factory |
-| NestJS non raggiunge Python | Container non avviato o URL errato | Verificare `SCIENCE_SERVICE_URL` in `.env.compose` (default: `http://backend-science:8000`) |
-| Pydantic validation error | DTO disallineato tra Python e NestJS | Confrontare i modelli Pydantic con i DTO TypeScript in `src/modules/science/` |
-| `pip freeze` include pacchetti di sistema | venv non attivo durante il freeze | Assicurarsi che il venv sia attivo prima di fare `pip freeze` |
-| Pandas `SettingWithCopyWarning` | Modifica su slice di DataFrame | Usare `.loc[]` o `.copy()` per evitare il warning |
+| Problem | Likely cause | Fix |
+| --- | --- | --- |
+| `ModuleNotFoundError` | `src` not on `PYTHONPATH` | `direnv allow`, or `env PYTHONPATH=src …`, or `python -m pytest tests/` from `backend-science/` |
+| The core cannot reach Python | Container down or wrong URL | `docker ps`; check `SCIENCE_SERVICE_URL` (`http://backend-science:8000` in Compose, `http://localhost:8000` locally) |
+| Pydantic validation error from the core | DTOs out of sync | Compare the Pydantic models with the TypeScript DTOs in `src/modules/science/` |
+| `pip freeze` lists system packages | Environment not active | Activate it before freezing |
+| pandas `SettingWithCopyWarning` | Writing to a slice | Use `.loc[]` or `.copy()` |

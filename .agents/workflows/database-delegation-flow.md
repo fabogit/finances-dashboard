@@ -1,123 +1,61 @@
 ---
-description: Guida e procedura standard per identificare e migrare logiche di elaborazione dati in-memory dei servizi NestJS a livello di database (PostgreSQL/Prisma).
+description: Find in-memory data processing in NestJS services and move it into PostgreSQL through Prisma or parameterised raw SQL.
 ---
 
-# Database Delegation & Optimization Workflow
+# Delegating work to the database
 
-Questo workflow definisce la procedura standard per ottimizzare le performance del backend migrando logiche di calcolo, aggregazione, raggruppamento e filtraggio in-memory dai servizi NestJS direttamente al database PostgreSQL tramite query ottimizzate o Prisma Client.
+Aggregations, grouping, filtering and sorting belong in PostgreSQL, not in TypeScript loops. This workflow finds in-memory processing and moves it into the database. It is the procedure behind the analytics rewrite (#95).
 
----
+All commands run from `backend-core/`. Prerequisites: the stack is running ([start-backend.md](start-backend.md)) and the schema is applied ([database-migration-flow.md](database-migration-flow.md)).
 
-## 📋 Prerequisiti
+## 1. Find it
 
-- Container Docker avviati e in salute, con `fn-postgres` raggiungibile
-- Migrazioni Prisma applicate (vedi [database-migration-flow.md](database-migration-flow.md))
-- Familiarità con l'architettura Repository Pattern del progetto
+Signs that work can move to the database:
 
-> [!NOTE]
-> Tutti i comandi si eseguono dalla directory `backend-core/`. L'agente deve specificare `Cwd: backend-core/` nel parametro del tool `run_command`.
+1. **Grouping or aggregating in code:** `Map`, `forEach`, `reduce` or `for…of` loops computing sums, counts or averages, for example per month.
+2. **Filtering after the query:** `.filter()` on rows the database just returned.
+3. **Sorting after the query:** `.sort()` instead of `ORDER BY` on an index.
+4. **Date keys built in code:** `toISOString().slice(0, 7)`, `getFullYear()` and the like to group by month.
+5. **Money summed as numbers:** `toNumber()` or `parseFloat` before adding amounts. Floating-point sums are wrong for money (v1 analytics do this).
 
----
+## 2. Choose the tool
 
-## 🛠️ Skill da Consultare
+| Scenario | Tool | Why |
+| --- | --- | --- |
+| Simple aggregations on fixed fields (`sum`, `avg`, `count`, `groupBy`) | Prisma Client API | Type-safe, no hand-written SQL |
+| Grouping on expressions, such as the month of a date | `$queryRaw` with `date_trunc` or `to_char` | Prisma cannot group on expressions |
+| Dynamic filters and complex joins | `$queryRaw` with `Prisma.sql` and `Prisma.join` | Composable `WHERE` clauses that stay parameterised |
+| Running totals (balance history) | Window functions (`SUM(...) OVER (ORDER BY date)`) | Derived balances are cumulative sums ([ADR-0003](../../documents/adr/0003-derived-balances.md)) |
+| Trees or recursive structures | Common table expressions | Avoids N+1 queries |
 
-* [prisma-client-api](../skills/prisma-client-api/SKILL.md) — Query complesse, filtri, `groupBy`, transazioni `$transaction`
-* [postgresql-optimization](../skills/postgresql-optimization/SKILL.md) — Ottimizzazione query SQL, indici, CTE, `JSONB`, funzioni window
-* [typescript-magician](../skills/typescript-magician/SKILL.md) — Tipizzazione corretta dei risultati raw SQL e `Prisma.Decimal`
-* [backend-core-dev](../skills/backend-core-dev/SKILL.md) — Pattern Repository, DTO, Swagger decorators
+## 3. Rules for the query
 
----
+- **Parameterise everything.** Never build SQL by concatenation or plain template strings; use the `$queryRaw` tagged template or `Prisma.sql`. `$queryRawUnsafe` with user input is forbidden.
+- **Filter by user explicitly.** Raw SQL bypasses the Prisma extension that adds `userId` to ordinary queries, so every raw query reads the user from the request context and filters on it ([multi-tenancy-flow.md](multi-tenancy-flow.md)).
+- **Group on the calendar date.** Transactions have a calendar `DATE`; group on it directly, without time-zone conversion (D-30). (v1 still has a `DateTime` grouped by UTC month.)
+- **Count what the analytics rules say.** Income and spending count `REGULAR` transactions plus transfers that cross the on/off-budget boundary; Net Worth counts everything ([ADR-0008](../../documents/adr/0008-transaction-kind.md); exact rules in `documents/flows/analytics.md` once #104 writes it). Do not invent a filter.
+- **Keep money decimal.** `SUM` on `Decimal` columns returns `Prisma.Decimal`; keep it decimal through the service and convert only when serialising the response.
+- **Handle empty sets.** `COALESCE(SUM(t."amount"), 0)`; `COUNT(*)::int` to avoid `bigint`.
+- **Quote identifiers.** PostgreSQL is case-sensitive with quoted names: `"EnrichedTransaction"`, `"assetId"`.
 
-## 📦 Procedura
+## 4. Implement
 
-### Fase 1: Identificazione (Audit del Codice)
+- **Repository:** one method per aggregation (for example `getMonthlyTrends(filters)`), building the query with `Prisma.sql` and `Prisma.join` for optional filters, and returning typed rows.
+- **Service:** calls the repository and maps rows to the response DTO; business rules stay here.
+- Write the tests first, from the spec's examples (the `ANL-` examples for analytics).
 
-Analizza i servizi ed i repository della codebase per individuare "code smell" di elaborazione dati inefficiente in-memory.
+## 5. Verify
 
-#### Indicatori di logica delegabile al database:
-1. **Cicli di Raggruppamento/Aggregazione**: Uso di `Map`, `forEach`, `reduce`, o cicli `for...of` per calcolare somme, conteggi o medie basate su date o altri attributi (es. raggruppamento mensile).
-2. **Filtraggio post-query**: Array restituiti da query DB filtrati in NestJS usando `.filter()` (es. controlli di valore, controllo su relazioni).
-3. **Ordinamento post-query**: Array ordinati in memoria con `.sort()` invece di sfruttare l'indice del database.
-4. **Manipolazione delle Date per Raggruppamento**: Utilizzo di metodi come `date.toISOString().slice(0, 7)` o `date.getFullYear()` per creare chiavi di raggruppamento temporali.
+1. **Service unit tests** (`*.service.spec.ts`): mock the new repository method; check the mapping, including `Prisma.Decimal` values.
+2. **Repository unit tests** (`*.repository.spec.ts`): mock `$queryRaw` and check the parameters for each filter combination.
+3. **End-to-end tests:** `pnpm run test:e2e:docker`; results must not change unless the issue says they should.
 
----
+## Troubleshooting
 
-### Fase 2: Valutazione della Soluzione (Prisma vs Raw SQL)
-
-Valuta quale sia lo strumento migliore per la delega in base alla complessità:
-
-| Scenario | Strumento Consigliato | Rationale |
-| :--- | :--- | :--- |
-| Aggregazioni semplici su campi fissi (`sum`, `avg`, `count`, `groupBy`) | **Prisma standard API** | Sfrutta la type-safety nativa senza scrivere SQL manuale. |
-| Aggregazioni basate su componenti di date (es. per mese/anno) o funzioni DB | **`Prisma.$queryRaw` con `TO_CHAR` o `DATE_TRUNC`** | Prisma non supporta nativamente il raggruppamento su funzioni di espressione o parti di date. |
-| Query con filtri di ricerca dinamici e join complesse | **`Prisma.$queryRaw` + `Prisma.sql` / `Prisma.join`** | Permette di comporre la query WHERE in modo flessibile mantenendo la sicurezza delle query parametrizzate. |
-| Calcoli ricorsivi o gerarchie complesse a più livelli | **PostgreSQL Common Table Expressions (CTE)** | Ottimizza le performance su alberi (es. categorie padri/figli) evitando query N+1. |
-
----
-
-### Fase 3: Progettazione e Sicurezza SQL
-
-Quando si implementa una query raw SQL (`$queryRaw`), attenersi alle seguenti regole di sicurezza e stabilità:
-
-> [!CAUTION]
-> **Prevenzione SQL Injection**: Non concatenare mai stringhe o usare stringhe template standard Javascript/Typescript per comporre query. Usa sempre il tag `Prisma.sql` per parametrizzare i valori di input.
->
-> *   **Corretto**: `` prisma.$queryRaw`SELECT * FROM "User" WHERE id = ${id}` ``
-> *   **Errato**: `prisma.$queryRawUnsafe("SELECT * FROM \"User\" WHERE id = " + id)`
-
-#### Gestione dei Valori Nulli e Precisione
-- Usa **`COALESCE`** per assicurarti che funzioni di aggregazione come `SUM` o `AVG` restituiscano `0` (o un valore di default coerente) anziché `null` quando non ci sono corrispondenze:
-  ```sql
-  COALESCE(SUM(t."amount"), 0) AS "total"
-  ```
-- Per i campi monetari (`Decimal` in Prisma/PostgreSQL), tieni presente che `$queryRaw` restituirà istanze di `Prisma.Decimal`. Nel servizio, convertile in `number` usando `.toNumber()` o `parseFloat(val.toFixed(2))`.
-
----
-
-### Fase 4: Implementazione
-
-Segui la separazione delle responsabilità (Separation of Concerns):
-
-1. **Repository (Data Access)**:
-   - Definisce il metodo per eseguire l'aggregazione o il filtraggio (es. `getMonthlyTrendsAggregated(filters)`).
-   - Costruisce la query SQL dinamica tramite `Prisma.sql` e `Prisma.join` per i filtri opzionali.
-   - Esegue la query tramite `this.prisma.$queryRaw`.
-2. **Service (Business Logic)**:
-   - Chiama il metodo del repository passando i filtri validati.
-   - Converte i dati grezzi restituiti dal database nel DTO di risposta richiesto (es. formattazione decimali, arrotondamenti).
-   - Gestisce la logica di business di alto livello.
-
----
-
-## 🧪 Validazione
-
-Ogni migrazione di logica verso il database richiede l'adeguamento dei test.
-
-### 1. Unit Test del Servizio
-Aggiorna gli unit test in `*.service.spec.ts`:
-- Sostituisci il mock del vecchio metodo di fetch dettagliato con il mock del nuovo metodo aggregato del repository.
-- Verifica che il servizio mappi correttamente i risultati aggregati restituiti dal mock (comprese le istanze `Prisma.Decimal`).
-
-### 2. Unit Test del Repository
-Crea o aggiorna i test in `*.repository.spec.ts` per testare la corretta costruzione della query SQL dinamica:
-- Mocka `$queryRaw` di Prisma per intercettare la chiamata.
-- Verifica che la chiamata avvenga con i parametri corretti in base ai filtri passati.
-
-### 3. Test E2E / Integrazione
-Esegui la suite di test E2E per garantire che il comportamento delle API rimanga inalterato (nessuna regressione):
-> *Esegui dalla directory `backend-core/`:*
-```fish
-pnpm run test:e2e:docker
-```
-
----
-
-## ❓ Troubleshooting
-
-| Problema | Causa | Soluzione |
-|----------|-------|-----------|
-| `$queryRaw` restituisce `BigInt` invece di `number` | PostgreSQL `COUNT(*)` restituisce `bigint` | Usare `COUNT(*)::int` nel SQL oppure convertire con `Number()` nel servizio |
-| Nomi tabella non trovati | Nomi non quotati nel SQL raw | Usare sempre doppi apici: `"EnrichedTransaction"` (case-sensitive in PG) |
-| `Prisma.Decimal` non serializzabile | JSON.stringify non supporta Decimal nativamente | Usare `.toNumber()` nel mapping del servizio prima di restituire il DTO |
-| Risultato `null` su aggregazione senza righe | `SUM` su set vuoto restituisce `null` | Wrappare con `COALESCE(SUM(...), 0)` |
-| Errore `Prisma.join` su array vuoto | `IN ()` è SQL invalido | Gestire il caso `filters.length === 0` prima di costruire la query |
+| Problem | Likely cause | Fix |
+| --- | --- | --- |
+| `$queryRaw` returns `BigInt` | `COUNT(*)` is `bigint` in PostgreSQL | `COUNT(*)::int`, or `Number()` in the service |
+| Table or column not found | Unquoted identifier | Quote it: `"EnrichedTransaction"` |
+| `null` instead of 0 | `SUM` over no rows | `COALESCE(SUM(...), 0)` |
+| `Prisma.join` fails | Empty array gives `IN ()` | Skip the condition when the list is empty |
+| Totals off by cents | Amounts converted to `number` before summing | Sum in SQL, keep `Decimal` until serialisation |
