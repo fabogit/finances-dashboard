@@ -8,8 +8,7 @@ Every row belongs to a user, and no request may read or change another user's da
 
 ## Today (v1)
 
-- `userId` exists only on `Asset`, `Category` and `SavingsGoal`, with the default `"demo_user"`.
-- **Nothing filters by user.** There is no request context and no Prisma extension yet; do not write code that assumes either exists.
+What v1 has is described in [architecture § Multi-tenancy](../../documents/architecture/overview.md#multi-tenancy) (the "v1 difference"). The consequence for code: there is no request context and no Prisma extension yet, so do not write code that assumes either exists.
 
 ## Being built (M2, D-48)
 
