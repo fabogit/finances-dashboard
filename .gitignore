@@ -195,7 +195,9 @@ docs
 
 # Ai agents
 skills-lock.json
-.agent*
+.agent/
+.agents/*
+!.agents/workflows/
 .claude*
 .antigravityrules
 .superpowers
