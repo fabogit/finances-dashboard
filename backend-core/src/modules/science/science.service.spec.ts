@@ -246,14 +246,31 @@ describe('ScienceService', () => {
       throw new Error('Expected the call to fail');
     };
 
-    afterEach(async () => {
+    const stopStub = async () => {
       const stub = server;
       server = undefined;
       if (stub) {
         stub.closeAllConnections();
         await new Promise<void>((resolve) => stub.close(() => resolve()));
       }
+    };
+
+    /**
+     * In jest the first real request that times out pays a one-off cold
+     * start of about 190 ms (391 ms against 207 ms for the next one), which
+     * would eat the timeout margin. One timed-out request up front keeps it
+     * out of the timed tests.
+     */
+    beforeAll(async () => {
+      const url = await startStub(() => {
+        /* never answers */
+      });
+      const service = await buildService(url);
+      await captureError(service.getForecast(forecastInput));
+      await stopStub();
     });
+
+    afterEach(stopStub);
 
     describe('timeout', () => {
       it('should fail with 504 within the timeout plus a small margin, without retrying', async () => {
