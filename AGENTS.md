@@ -95,19 +95,11 @@ One version for the whole repository (D-42). A release commit aligns it in `back
 
 ## Commands
 
-From `backend-core/` unless noted. Details: [`documents/development/testing.md`](documents/development/testing.md) and [`documents/development/setup.md`](documents/development/setup.md).
+Each set of commands has one home:
 
-| What | Command |
-| --- | --- |
-| Install | `pnpm install && pnpm prisma generate` |
-| Start the stack | `pnpm run docker:up` |
-| Types | `pnpm exec tsc --noEmit -p tsconfig.json` |
-| Lint (fixes files) | `pnpm run lint` |
-| Unit tests | `pnpm test` |
-| End-to-end tests | `pnpm run test:e2e:docker` |
-| Python tests (`backend-science/`) | `python -m pytest tests/` |
-| Python types (`backend-science/`) | `pyright .` |
-| Seed | `pnpm run prisma:seed` |
+- **Verification** (types, lint, unit, end-to-end, Python): [`documents/development/testing.md` § Verification commands](documents/development/testing.md#verification-commands).
+- **Install, start the stack, run locally, seed:** [`documents/development/setup.md`](documents/development/setup.md).
+- **Schema changes, reset:** [`.agents/workflows/database-migration-flow.md`](.agents/workflows/database-migration-flow.md).
 
 ## Tooling
 

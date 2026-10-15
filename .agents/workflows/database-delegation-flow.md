@@ -48,7 +48,7 @@ Signs that work can move to the database:
 
 1. **Service unit tests** (`*.service.spec.ts`): mock the new repository method; check the mapping, including `Prisma.Decimal` values.
 2. **Repository unit tests** (`*.repository.spec.ts`): mock `$queryRaw` and check the parameters for each filter combination.
-3. **End-to-end tests:** `pnpm run test:e2e:docker`; results must not change unless the issue says they should.
+3. **The full verification** ([test-backend.md](test-backend.md)): end-to-end results must not change unless the issue says they should.
 
 ## Troubleshooting
 
