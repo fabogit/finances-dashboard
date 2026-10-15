@@ -40,11 +40,11 @@ Copy the example environment files:
 
 ```bash
 # In backend-core
-cp .env.example .env.local
-cp .env.test.example .env.test
+cp .env.local_example .env.local
+cp .env.test_example .env.test
 
 # In the project root
-cp ../.env.compose.example ../.env.compose
+cp ../.env.compose_example ../.env.compose
 ```
 
 ### 2. Infrastructure (Docker)
@@ -71,12 +71,14 @@ pnpm run start:prod
 
 ## 🗄️ Database Management (Prisma)
 
-```bash
-# Run migrations (dev)
-pnpm run prisma:migrate
+Until the MVP the schema is applied with `prisma db push`, without migrations. See [`.agents/workflows/database-migration-flow.md`](../.agents/workflows/database-migration-flow.md) before changing the schema.
 
-# Reset database (Deletes all data)
-pnpm run prisma:reset
+```bash
+# Apply the schema to the local database
+pnpm run prisma:push
+
+# Seed the local database
+pnpm run prisma:seed
 
 # Open Prisma Studio (UI for database)
 pnpm run prisma:studio
@@ -106,7 +108,7 @@ pnpm run test:cov
 Requires a running test database.
 
 ```bash
-# 1-step command (Docker up -> Migrate -> Test -> Docker down)
+# 1-step command (Docker up -> db push -> Test -> Docker down)
 pnpm run test:e2e:docker
 
 # Manual run (if test DB is already up)
@@ -137,8 +139,4 @@ Once the server is running, visit:
 
 ## 🏗️ Architecture
 
-For deep architectural details, refer to the root documentation:
-
-- [System Architecture](../fn_architecture.md)
-- [Science Integration](../fn_science_integration.md)
-- [Product Roadmap](../fn_product_roadmap.md)
+For architecture, decisions and the roadmap, start from the [project documentation](../documents/README.md); agent rules are in [`AGENTS.md`](../AGENTS.md).
