@@ -35,14 +35,7 @@ All commands run from `backend-core/`, from fish or a shell with fnm loaded. The
 
 ## Changing the method
 
-When the project moves to `prisma migrate` (a baseline at the end of the MVP) or changes the method in any other way, the same pull request updates:
-
-- the `core-e2e-tests` job in `.github/workflows/ci.yaml` (today `prisma db push`);
-- the `package.json` scripts (`db:test:*`, `prisma:*`);
-- the `fn-core` start command in `backend-core/Dockerfile`;
-- this workflow and [`documents/development/testing.md`](../../documents/development/testing.md#database-sync-method-and-ci).
-
-A mismatch between the project and CI already broke CI once (fixed in #83).
+When the project moves to `prisma migrate` (a baseline at the end of the MVP) or changes the method in any other way, update everything listed in [`AGENTS.md` § Database sync method](../../AGENTS.md#database-sync-method), in the same pull request.
 
 ## Troubleshooting
 

@@ -35,11 +35,24 @@ A personal finance dashboard: a NestJS core (`backend-core/`, Prisma, PostgreSQL
 
 - **Perimeter.** Touch only the modules of the issue's area. A bug found elsewhere becomes a new issue, not a drive-by fix.
 - **Schema ownership.** An issue that changes `backend-core/prisma/schema.prisma` says so in its description, and no other open session changes the schema at the same time. Procedure: [`.agents/workflows/database-migration-flow.md`](.agents/workflows/database-migration-flow.md).
-- **Database sync method and CI.** The schema is applied with `prisma db push` until the MVP (D-19). Changing the method updates, in the same pull request, the `core-e2e-tests` job in `.github/workflows/ci.yaml` and the `package.json` scripts.
+- **Database sync method.** The schema is applied with `prisma db push` until the MVP (D-19). A change of method follows [Database sync method](#database-sync-method).
 - **Specs** (D-46, D-47). Examples are Given / When / Then with a per-area ID (`DM-`, `BAL-`, `TRF-`, `CAT-`, `IMP-`, `RUL-`, `BUD-`, `GOL-`, `ANL-` + number), never renumbered or reused. A spec with an open `[NEEDS CLARIFICATION: …]` marker does not unblock the issues that depend on it. Every pull request that changes behaviour updates the spec. Details: [`documents/README.md` § Specs](documents/README.md#specs).
 - **Per-user isolation.** From Schema v2 (#89) every model carries `userId`, and the request context plus a Prisma extension enforce it (D-48, built in M2); raw SQL then filters on the user from the context. In v1 none of this exists yet: see [`.agents/workflows/multi-tenancy-flow.md`](.agents/workflows/multi-tenancy-flow.md) for what holds today.
 - **Workflows.** A change that makes a workflow in [`.agents/workflows/`](.agents/workflows/README.md) stale updates it in the same pull request.
 - **Rebase before the pull request:** `git fetch && git rebase origin/main`; the issue session resolves conflicts.
+
+## Database sync method
+
+The schema is applied with `prisma db push`, without migration files, until the MVP; then a `prisma migrate` baseline (D-19). Every place that applies the schema must use the same method: a mismatch already broke CI once (fixed in #83).
+
+A pull request that changes the method updates, in the same pull request:
+
+- `backend-core/Dockerfile`: the `fn-core` start command (`CMD`, today `prisma db push --accept-data-loss`);
+- `.github/workflows/ci.yaml`: the `core-e2e-tests` job (today `prisma db push`);
+- `backend-core/package.json`: the scripts that apply the schema (`db:test:push`, used by `test:e2e:docker`, and `prisma:push`) and the leftovers of `migrate` (`db:test:migrate`, `prisma:deploy`, `prisma:migrate`, `prisma:reset`);
+- the documents and workflows that describe the method: `documents/development/setup.md`, `documents/development/testing.md`, `.agents/workflows/database-migration-flow.md`.
+
+This list is the single source; other documents link here.
 
 ## Commits and pull requests
 
@@ -61,7 +74,7 @@ A personal finance dashboard: a NestJS core (`backend-core/`, Prisma, PostgreSQL
 - [ ] The seed is updated if the area has new data.
 - [ ] Swagger is updated (DTOs and decorators).
 - [ ] New or changed exported constants have JSDoc: what they represent and why they have that value.
-- [ ] If the database sync or migration method changed: CI and `package.json` scripts updated.
+- [ ] If the database sync method changed: everything listed in [Database sync method](#database-sync-method) updated.
 - [ ] Workflows in `.agents/workflows/` made stale by the change are updated.
 - [ ] No file outside the issue's perimeter changed.
 - [ ] No design decision taken silently: new ones are recorded (ADR or flow document).

@@ -53,7 +53,7 @@ CI uses Node 24 and pnpm 10. `pnpm run format` rewrites files with Prettier and 
 
 ## Database sync method and CI
 
-Until the MVP the schema is applied with `prisma db push` (D-19), in development, in the end-to-end script and in the `core-e2e-tests` job. A change of method (for example the `prisma migrate` baseline at the end of the MVP) updates, in the same pull request, the CI job and the `package.json` scripts. The leftovers of `migrate` (`prisma:migrate`, `prisma:reset`, `prisma:deploy`, `db:test:migrate`) are not used until then; #89 removes or aligns them.
+Until the MVP the end-to-end script and the `core-e2e-tests` job apply the schema with `prisma db push` (D-19). What a change of method must update is listed in [`AGENTS.md` § Database sync method](../../AGENTS.md#database-sync-method). The leftovers of `migrate` are not used until then ([database-migration-flow.md](../../.agents/workflows/database-migration-flow.md#do-not-use)).
 
 ## Troubleshooting
 
