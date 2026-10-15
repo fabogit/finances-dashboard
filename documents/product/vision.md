@@ -7,7 +7,7 @@ What the Finance Dashboard is for, what the MVP contains and where it can go aft
 A personal finance tool that also serves as a public portfolio demo (D-02):
 
 - **Now:** one person's finances, plus a demo running on generated data.
-- **After the MVP:** a real multi-user product. The foundations for it are laid now: every model carries `userId` and isolation is enforced from the start ([ADR-0001](../adr/0001-userid-on-all-models.md), D-18, D-48).
+- **After the MVP:** a real multi-user product. The foundations for it are laid now: from Schema v2 every model carries `userId` ([ADR-0001](../adr/0001-userid-on-all-models.md), D-18), and isolation is enforced from M2, before authentication (D-48).
 
 The goal is to move from *seeing what was spent* to *planning*: a monthly budget, savings goals with an estimated completion date, a forecast, and an accurate Net Worth history.
 
