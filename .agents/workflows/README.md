@@ -19,4 +19,3 @@ Step-by-step procedures for recurring tasks. They complement [`AGENTS.md`](../..
 
 - A change that makes a workflow stale (a command, a path, a decision) updates the workflow **in the same pull request**.
 - Every `Review & consolidation` issue checks that the workflows still match the code and the commands ([roadmap](../../documents/product/roadmap.md#review--consolidation)).
-- Skills mentioned here by name are optional helpers installed locally; they are not part of the repository.
