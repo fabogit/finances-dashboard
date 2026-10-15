@@ -18,6 +18,7 @@ import { UpdateGoalDto } from './dto/update-goal.dto';
 import { GetGoalQueryDto } from './dto/get-goal-query.dto';
 import { GoalResponseDto } from './dto/goal-response.dto';
 import { GoalProjectionResponseDto } from '../science/dto/goal-projection-response.dto';
+import { ApiScienceErrors } from '../science/api-science-errors.decorator';
 import { Serialize } from '../../common/interceptors/serialize.interceptor';
 
 @ApiTags('Savings Goals')
@@ -105,13 +106,12 @@ export class GoalsController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Goal projection retrieved successfully.',
+    description:
+      'Goal projection retrieved successfully. If the history is insufficient, `error` explains why and the projection fields are empty.',
     type: GoalProjectionResponseDto,
   })
-  @ApiResponse({
-    status: 404,
-    description: 'Goal not found or insufficient data for projection.',
-  })
+  @ApiResponse({ status: 404, description: 'Goal not found.' })
+  @ApiScienceErrors()
   getProjection(@Param('id', ParseUUIDPipe) id: string) {
     return this.goalsService.getProjection(id);
   }

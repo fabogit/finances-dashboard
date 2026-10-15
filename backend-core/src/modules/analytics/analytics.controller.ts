@@ -1,6 +1,12 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { Serialize } from '../../common/interceptors/serialize.interceptor';
-import { ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiExtraModels,
+  ApiOperation,
+  ApiTags,
+  ApiResponse,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { GetTransactionsFilterDto } from '../transactions/dto/get-transactions.dto';
 import {
@@ -14,6 +20,7 @@ import {
 } from './dto/forecast-response.dto';
 import { GetForecastDto } from './dto/get-forecast.dto';
 import { ForecastResponse } from 'src/modules/science/dto/forecast-response.dto';
+import { ApiScienceErrors } from '../science/api-science-errors.decorator';
 import {
   BudgetAnalysisResponseDto,
   GetBudgetAnalysisDto,
@@ -27,17 +34,19 @@ export class AnalyticsController {
   @Get('forecast')
   @Serialize(MonthlyForecastDto)
   @ApiOperation({ summary: 'Predict financial flows for the next 3 months' })
+  @ApiExtraModels(MonthlyForecastDto, ForecastErrorDto)
   @ApiResponse({
     status: 200,
     description:
-      'Returns a list of 3 monthly forecasts (Income, Expense, Balance)',
-    type: [MonthlyForecastDto], // Array response
+      'A list of 3 monthly forecasts (Income, Expense, Balance), or an error object if the data is insufficient',
+    schema: {
+      oneOf: [
+        { type: 'array', items: { $ref: getSchemaPath(MonthlyForecastDto) } },
+        { $ref: getSchemaPath(ForecastErrorDto) },
+      ],
+    },
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns error object if data is insufficient',
-    type: ForecastErrorDto,
-  })
+  @ApiScienceErrors()
   async getForecast(@Query() query: GetForecastDto): Promise<ForecastResponse> {
     return this.analyticsService.getForecast(query.threshold ?? 0.2);
   }

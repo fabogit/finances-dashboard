@@ -8,8 +8,15 @@ This document details the communication protocol and processing logic delegated 
 
 The Python code is modularized within the `src/` directory (e.g., `src/modules/processor.py`).
 The service is run via uvicorn targeting `src.main:app`.
-It is contacted via NestJS's `HttpService`. The URL is configurable via an environment variable:
-`SCIENCE_SERVICE_URL` (default: `http://backend-science:8000`)
+It is contacted via NestJS's `HttpService` (`ScienceService` in `backend-core/src/modules/science/`). The client is configured through environment variables, validated at startup:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `SCIENCE_SERVICE_URL` | `http://backend-science:8000` | Base URL of the Python service |
+| `SCIENCE_TIMEOUT_MS` | `10000` | Timeout of each attempt, in milliseconds (integer ≥ 1) |
+| `SCIENCE_RETRY_COUNT` | `2` | Retries after the first attempt for transient failures (integer ≥ 0) |
+
+The defaults and the reasons behind them live in `science.constants.ts`. The call contract (timeouts, retries, errors) is described in [Call contract and errors](#-call-contract-and-errors).
 
 ---
 
@@ -99,14 +106,45 @@ Used to estimate the completion date (ETA) of a savings goal.
 
 ---
 
-## 🚑 Resilience and Fallback
+## 🚑 Call contract and errors
 
-The `ScienceService` proxy in the NestJS backend core implements a protection mechanism:
-- If the Python service does not respond or is offline:
-  - Staging does not fail.
-  - A status of `science: failed` is returned.
-  - Transactions are presented to the user in the staging grid with categories set to `null` ("Unclassified"). The user can manually classify them or retry the AI analysis later.
-- If the forecaster fails, NestJS falls back to presenting only the fixed subscriptions as future projections.
+Every call from NestJS to the Python service goes through the same path in `ScienceService`.
+
+**Timeout.** Each attempt has a timeout of `SCIENCE_TIMEOUT_MS`, covering the whole request. A timed-out attempt is **not** retried, so a call that exceeds the timeout fails after roughly `SCIENCE_TIMEOUT_MS`.
+
+**Retry.** All three endpoints (`/process`, `/forecast`, `/goals/projection`) are stateless computations, so repeating a call is safe. Only transient failures are retried, up to `SCIENCE_RETRY_COUNT` times, with exponential backoff (200 ms, 400 ms, …):
+
+| Failure | Retried |
+|---------|---------|
+| Network error (connection refused or reset, DNS failure) | Yes |
+| Response `502`, `503`, `504` | Yes |
+| Timeout | No |
+| Any other `4xx` or `5xx` response (e.g. `422` validation, `500` crash) | No |
+
+**Errors.** When the last attempt fails, the call becomes an HTTP error. Bodies follow the global exception filter format; the `error` field carries a stable code:
+
+| Cause | NestJS status | `error` |
+|-------|---------------|---------|
+| Timeout | `504 Gateway Timeout` | `SCIENCE_TIMEOUT` |
+| Service unreachable (network error after the retries) | `503 Service Unavailable` | `SCIENCE_UNAVAILABLE` |
+| Service answered with an error (any status, including `502`/`503`/`504` after the retries) | `502 Bad Gateway` | `SCIENCE_BAD_RESPONSE` |
+
+Example (`GET /api/v1/analytics/forecast` with the Python service stopped):
+
+```json
+{
+  "statusCode": 503,
+  "timestamp": "2026-10-15T13:00:00.000Z",
+  "path": "/api/v1/analytics/forecast",
+  "message": "Science service unreachable on /forecast: ECONNREFUSED",
+  "error": "SCIENCE_UNAVAILABLE"
+}
+```
+
+**Per endpoint:**
+- **Forecast** (`GET /analytics/forecast`) and **goal projection** (`GET /goals/:id/projection`) answer the errors above. A failure is never returned as `200 {error}`.
+- **Insufficient data is not a failure.** When the history is too short, Python answers `200` with `{ "error": "..." }` and NestJS passes it through unchanged. The same holds for the forecast when the database has no transactions in the period (`{ "error": "No data available in DB for forecast" }`, without calling Python).
+- **Upload** (`POST /transactions/upload`) does not fail: the raw transactions are saved, `/process` errors are caught, and the response reports `science.status: "failed"` with the error message. No enriched transactions are created for that batch.
 
 ---
 
