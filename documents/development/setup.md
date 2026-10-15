@@ -90,6 +90,12 @@ In either environment, install **pyright** for the type check, as CI does: it is
 pip install pyright
 ```
 
+pyright resolves imports through the active Python interpreter. With direnv the environment is already active; with the external environment, activate it or point pyright at it, otherwise every third-party import is reported as missing:
+
+```bash
+~/.venvs/finances-science/bin/pyright --pythonpath ~/.venvs/finances-science/bin/python .
+```
+
 ## Seed
 
 `pnpm run prisma:seed` (from `backend-core/`, with `.env.local`) runs `prisma/seed.ts`: the bootstrap categories and sample data. The Docker container runs it on every start. The profile-based generator (`empty`, `minimal`, `demo`, `edge`) replaces it in #90 (D-31).
