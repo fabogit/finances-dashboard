@@ -31,7 +31,7 @@ Signs that work can move to the database:
 ## 3. Rules for the query
 
 - **Parameterise everything.** Never build SQL by concatenation or plain template strings; use the `$queryRaw` tagged template or `Prisma.sql`. `$queryRawUnsafe` with user input is forbidden.
-- **Filter by user explicitly.** Raw SQL bypasses the Prisma extension that adds `userId` to ordinary queries, so every raw query reads the user from the request context and filters on it ([multi-tenancy-flow.md](multi-tenancy-flow.md)).
+- **Filter by user explicitly** (once the D-48 mechanism exists, M2). Raw SQL bypasses the Prisma extension that adds `userId` to ordinary queries, so every raw query reads the user from the request context and filters on it. In v1 there is no context yet ([multi-tenancy-flow.md](multi-tenancy-flow.md) § Today).
 - **Group on the calendar date.** Transactions have a calendar `DATE`; group on it directly, without time-zone conversion (D-30). (v1 still has a `DateTime` grouped by UTC month.)
 - **Count what the analytics rules say.** Income and spending count `REGULAR` transactions plus transfers that cross the on/off-budget boundary; Net Worth counts everything ([ADR-0008](../../documents/adr/0008-transaction-kind.md); exact rules in `documents/flows/analytics.md` once #104 writes it). Do not invent a filter.
 - **Keep money decimal.** `SUM` on `Decimal` columns returns `Prisma.Decimal`; keep it decimal through the service and convert only when serialising the response.

@@ -33,7 +33,7 @@ The v2 behaviour is specified before it is built (D-46): `domain/data-model.md` 
 
 - Examples are written as **Given / When / Then** and carry a per-area ID: `DM-`, `BAL-`, `TRF-`, `CAT-`, `IMP-`, `RUL-`, `BUD-`, `GOL-`, `ANL-` followed by a number. Tests cite the ID (D-38).
 - An ID is never renumbered or reused; a deleted example leaves a gap.
-- Every undecided point is marked `[NEEDS CLARIFICATION: <question>]`. A spec with open markers does not unblock the issues that depend on it.
+- Every undecided point is marked `[NEEDS CLARIFICATION: <question>]`. The maintainer resolves the markers in batches, each resolution recorded as a decision; a spec with open markers does not unblock the issues that depend on it. Writing the specs is treated as a design session, not as implementation.
 - Every pull request that changes behaviour updates the spec in the same pull request.
 
 API contracts and UX details are not specified up front: they are written at the step that builds them.

@@ -46,6 +46,6 @@ Transport (R3.1):
 
 - The Python parsing and static categorisation used by the v1 import (`POST /process`) are retired; robust parsing is written in TypeScript and tested end to end with Jest.
 - The whole import flow is in one service; Python can be lost without breaking it.
-- `ScienceClient` (issue #96) owns timeouts, retries, the circuit breaker and error mapping; issue #85 adds timeouts, retries and real HTTP errors to the v1 proxy first.
+- `ScienceClient` (issue #96) owns timeouts, retries, the circuit breaker and error mapping; issue #85 first adds timeouts, retries and real HTTP errors for transport failures to the v1 proxy. "No result" outcomes (insufficient data, unreachable goal) get their own responses (D-49, [science contract](../architecture/science-contract.md#failure-handling)).
 - The HTTP contract is documented in [`architecture/science-contract.md`](../architecture/science-contract.md).
 - When NATS arrives it is one more container in Compose and CI, and a second implementation of the same interface.

@@ -26,27 +26,24 @@ const userId = this.cls.get('userId');
 const scoped = await this.prisma.asset.findMany({ where: { userId } });
 ```
 
-4. **Raw SQL is the exception.** Extensions do not see `$queryRaw` or `$executeRaw`. Every raw query reads the user from the context and filters explicitly; a missing user is an error, never "all users".
+4. **Raw SQL is the exception.** Extensions do not see `$queryRaw` or `$executeRaw`. Every raw query reads the user from the context and filters explicitly.
 
 ```typescript
 const userId = this.cls.get<string>('userId');
-if (!userId) {
-  throw new UnauthorizedException('User context missing');
-}
 const rows = await this.prisma.$queryRaw<Row[]>`
   SELECT "id", "name" FROM "Asset" WHERE "userId" = ${userId}
 `;
 ```
 
-5. **System actions** (seed, bootstrap of a new user's categories) run inside an explicit context for the user they write for, for example `this.cls.runWith({ userId }, …)`, rather than bypassing the extension.
+Whether `userId` references a `User` table is decided by the v2 data model (#104). The seed can create two users, so that tests catch leaks.
 
-Whether `userId` references a `User` table is decided by the v2 data model (#104).
+## Not decided yet
 
-## Tests
+D-48 fixes the mechanism above, not these details. The issue that builds it (M2) settles them with the maintainer; until then, do not pick one silently.
 
-- Every new model gets an isolation test: with user A in the context, user B's rows are invisible to reads and untouched by updates and deletes; creates get user A's `userId`.
-- Raw queries get the same test, plus one with an empty context that must fail.
-- The seed can create two users so that end-to-end tests catch leaks.
+- **An empty context** (no user): reject the request or query, or run without a user? The pre-v2 version of this workflow let system jobs run without raising.
+- **System actions** (seed, bootstrap of a new user's categories): run inside an explicit context for the user they write for (for example `this.cls.runWith({ userId }, …)`), or bypass the extension?
+- **Isolation tests:** which tests every model and every raw query must have (for example: with user A in the context, user B's rows are invisible to reads and untouched by updates and deletes).
 
 ## After the MVP
 

@@ -39,7 +39,7 @@ The tests pass without the science service running, as they do in CI.
 
 ## CI
 
-`.github/workflows/ci.yaml` runs on pushes and pull requests to `main` that touch `backend-core/`, `backend-science/` or the workflows. A first job detects which side changed; then:
+`.github/workflows/ci.yaml` runs on pushes and pull requests to `main` (and to `develop`, a branch name left over from before D-39) that touch `backend-core/`, `backend-science/` or the workflows. A first job detects which side changed; then:
 
 | Job | Side | Steps |
 | --- | --- | --- |

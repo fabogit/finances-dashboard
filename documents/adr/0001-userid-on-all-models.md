@@ -3,7 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-07-11
 **Decision Makers:** @fabogit
-**Context Session:** stabilization session of 2026-07-11, decision D1 (session notes, not versioned)
+**Origin:** decision D1 of the stabilization session of 2026-07-11
 
 ---
 
@@ -86,6 +86,7 @@ Add `userId` only to models that are direct entry points for queries (e.g., `Enr
 ## Update 2026-10-09 and 2026-10-15 (v2 design review)
 
 - **When (D-18, 2026-10-09):** `userId` goes on every model in the Schema v2 rewrite ([#89](https://github.com/fabogit/finances-dashboard/issues/89)), not in Phase C, with unique constraints and indexes scoped per user. The product starts as a personal tool with a portfolio demo and grows into a real multi-user product after the MVP (D-02), so the foundations are laid now.
+- **Where v1 stands:** at `v1.0.0`, `userId` exists on `Asset`, `Category` and `SavingsGoal` (default `"demo_user"`), and nothing filters on it.
 - **The models named above are v1 models.** In v2 `AssetHistory` disappears (balances are derived, [ADR-0003](0003-derived-balances.md)) and `BudgetRule` becomes a monthly budget per category ([ADR-0006](0006-monthly-tracking-budget.md)); the decision applies to whatever models v2 has. The constraint example above is historical.
 - **Enforcement before authentication (D-48, 2026-10-15):** the mechanism this ADR assumes is built in M2, without waiting for authentication. A middleware puts a fixed, configured user into the request context (`nestjs-cls`); the Prisma extension adds `where: { userId }` to every query and `userId` to every create; raw SQL reads the user from the context and filters on it explicitly, because extensions do not see raw queries. When authentication arrives (#62, #63), a JWT guard replaces the middleware and the repositories do not change. Rejected: a column default with no filtering (isolation never exercised before the post-MVP), and an explicit filter in every repository (duplicates the extension and is easy to forget once). Whether `userId` references a `User` table is decided by the v2 data model (#104).
 

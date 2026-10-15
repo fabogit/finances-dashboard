@@ -28,7 +28,7 @@ Uniqueness is **per account**, not global. Every duplicate found is **shown in t
 ## Alternatives considered
 
 - **(a) Exact hash only, scoped per account or user.** Rejected: it does not solve the real cases, manual entries and legitimate identical movements.
-- **(b) Approximate match only (as in Actual Budget).** Not enough alone: it covers manual entries, but it gives up the certainty of bank IDs and exact re-imports and produces more false positives on recurring amounts.
+- **(b) Approximate match only (as in Actual Budget).** Not enough alone: it covers manual entries, but it gives up the certainty of bank IDs and exact re-imports and can flag recurring identical amounts (the same subscription every month) when they fall inside the date window.
 
 ## Consequences
 

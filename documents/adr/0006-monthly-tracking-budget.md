@@ -27,7 +27,7 @@ Two questions were open. **Which budgeting model?** In October 2,500 comes in; g
 Model (Q9):
 
 - **Envelope only.** Rejected for now: a new data model (monthly assignments, rollover, "To Budget") and monthly discipline for the user, while envelope budgeting is not what sets this project apart.
-- **Both, chosen by the user.** Rejected for now: two models means double code and double tests. Envelope stays a possible future addition.
+- **Both, chosen by the user.** Deferred, not rejected: it is the intended later direction (D-09), once tracking works. Not now because two models mean double code and double tests.
 
 Amounts (R2.8):
 

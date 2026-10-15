@@ -16,7 +16,7 @@ In v1 an upload is saved straight away. Duplicates are dropped by an exact hash,
 
 - The upload returns a preview **without writing anything**: every row with its proposed category and where it came from, duplicates highlighted, suggested transfer pairs.
 - The user fixes, discards and confirms in the client.
-- The client sends the rows back; the server **re-validates everything** (duplicates, accounts, categories) and saves them in one database transaction.
+- The client sends the rows back; the server **re-validates everything**, hashes and balances included, and saves them in one database transaction.
 
 This is close to what Actual Budget does: preview in the client with deduplication and rules applied, then import.
 

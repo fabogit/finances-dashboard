@@ -50,13 +50,18 @@ Python serialises `Decimal` values as JSON strings, while the core's DTOs type t
 **Today (v1):**
 
 - The HTTP client (`HttpModule`) has no timeout and no retry.
-- Forecast and goal-projection failures are caught in the proxy and returned as HTTP 200 with a body `{ "error": "..." }`.
+- **Transport failures** (Python down, timeout, 5xx) on forecast and goal projection are caught in the proxy and returned as HTTP 200 with a body `{ "error": "..." }`.
+- **"No result" outcomes** are also 200 `{ "error": "..." }`, produced by Python itself (`/forecast` and `/goals/projection` return an error object when the history is insufficient, the dates are invalid or the goal cannot be reached) or by the core ("No data available in DB for forecast").
 - A `/process` failure during an upload still answers 201, with the science status marked as failed.
 
 **Planned:**
 
-- Issue #85: timeouts and retries configured from the environment, and real HTTP errors instead of 200 `{error}`.
-- Issue #96 (D-21): a `ScienceClient` interface with timeout, retry with backoff and a circuit breaker. When Python is unavailable, features that depend on it degrade (no forecast, no suggestion) and everything else keeps working.
+- **Transport failures, issue #85:** timeouts and retries configured from the environment; failures become real HTTP errors (502, 503, 504) instead of 200 `{error}`.
+- **"No result" outcomes, D-49** (not in #85; implemented with #96 or the forecast and goals issues):
+  - insufficient history → `422` with `error: "INSUFFICIENT_DATA"`, in the global error format; the core translates it, because with the #85 mapping a 4xx from Python would become 502;
+  - a goal that cannot be reached at the current pace → `200` with an explicit outcome (for example `status: "UNREACHABLE_AT_CURRENT_PACE"`, projection fields `null`): it is information for the user, not an error;
+  - "No valid dates in data" → an internal error (502), since the core always sends ISO dates.
+- **`ScienceClient`, issue #96 (D-21):** an interface with timeout, retry with backoff and a circuit breaker. When Python is unavailable, features that depend on it degrade (no forecast, no suggestion) and everything else keeps working.
 
 ## Post-MVP proposal: forecast split
 
