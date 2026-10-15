@@ -1,100 +1,74 @@
-# Data Dictionary
+# Data model (v1)
 
-This document defines the data models used in the system, their purposes, and the meaning of enumerated values.
+> **This is the v1 model, as implemented on `main` at `v1.0.0`** (`backend-core/prisma/schema.prisma`). The v2 model replaces it: issue #104 rewrites this document as the v2 spec, and Schema v2 (#89) implements it. The decisions that change it are in [ADR-0001](../adr/0001-userid-on-all-models.md), [ADR-0003](../adr/0003-derived-balances.md), [ADR-0006](../adr/0006-monthly-tracking-budget.md) and [ADR-0008](../adr/0008-transaction-kind.md); terms are in the [glossary](../CONTEXT.md).
 
----
+Money columns are `Decimal`; every model has a UUID `id`, and most have `createdAt` / `updatedAt`.
 
-## 🗄️ Main Models (Entities)
+## Models
 
-### 1. User `[PLANNED]`
-Represents a registered user in the multi-tenant system.
-- `email`: Unique login identifier.
-- `passwordHash`: Bcrypt-hashed password.
-- `role`: Access level (USER, GUEST).
-- `createdAt` / `updatedAt`: Auditing timestamps.
+### Asset
 
-### 2. Asset
-Represents a "container" of economic value (checking account, securities portfolio, real estate, cash).
-- `name`: Identification name (e.g., "Fineco Account").
-- `type`: Asset category (see `AssetType` Enum).
-- `balance`: The current calculated or declared value.
-- `currency`: Base currency (default: EUR).
-- `isOnBudget`: If `true`, the asset is liquid and part of everyday budget calculations. If `false`, it is tracked only for Net Worth (e.g. tracking broker).
+An account: a container of money or value (checking account, investment portfolio, property, cash, debt).
 
-### 3. EnrichedTransaction
-The "clean" and classified transaction shown to the user.
-- `amount`: Monetary value (positive for income, negative for expenses).
-- `category`: Relationship with a hierarchical Category.
-- `asset`: The asset on which the transaction had an impact.
-- `savingsGoal`: (Optional) Goal to which this transaction contributes.
-- `payee`: (Optional) Normalized payee (e.g. "Amazon").
-- `transactionHash`: Deterministic SHA-256 hash used to prevent duplicate transaction imports.
-- `isTransfer`: `[PLANNED]` Boolean flag indicating if this is an internal transfer.
-- `pairedTransactionId`: `[PLANNED]` Self-referential UUID pointing to the symmetric counterpart of a transfer.
+- `userId`: owner, default `"demo_user"`.
+- `name`, `institution` (optional), `type` (`AssetType`), `currency` (3 letters, default `EUR`).
+- `balance`: `Decimal(15,2)`, stored and updated by deltas when transactions change.
+- `isOnBudget`: `true` for liquid accounts that belong to the everyday budget, `false` for accounts tracked only for Net Worth. No logic reads it in v1.
+- Relations: `transactions`, `history` (`AssetHistory`), `savingsGoals`, `defaultForCategories`.
 
-### 4. Category
-Hierarchical structure for expense classification.
-- `name`: Category label.
-- `systemKey`: `[PLANNED]` (Optional) Immutable string (e.g. `DINING_OUT`) to link AI categorizations even if the user renames the category label.
-- `parentId`: ID of the macro-category (if present).
-- `type`: Classification according to the 50/30/20 rule (Needs, Wants, Savings).
-- `isSystem`: If `true`, the category is protected and cannot be deleted (e.g., "Unclassified").
+### AssetHistory
 
-### 5. Payee `[PLANNED]`
-Normalized entity representing a transaction beneficiary.
-- `name`: Cleaned name (e.g. "Lidl", "Netflix").
-- `defaultCategoryId`: (Optional) Default category assigned to new transactions matching this payee.
+Daily closing balance of an asset.
 
-### 6. Subscription `[PLANNED]`
-Represents a recurring payment managed explicitly.
-- `name`: Subscription name (e.g. "Spotify").
-- `amount`: Recurring cost.
-- `frequency`: Recurrence interval (WEEKLY, MONTHLY, YEARLY).
-- `status`: Active or suspended status (ACTIVE, PAUSED).
-- `nextBillingDate`: Upcoming billing event date.
-- `startDate` / `endDate`: Timeframe limits of the subscription.
+- `assetId` (cascade delete), `date` (`DateTime`), `balance` (`Decimal(15,2)`); unique on `(assetId, date)`.
+- The snapshot is written for the day the change is made, not for the transaction's date.
 
-### 7. ExchangeRate `[PLANNED]`
-Stores manual currency conversion rates for Net Worth reporting.
-- `from`: Origin currency ISO code (e.g. "USD").
-- `to`: Target currency ISO code (e.g. "EUR").
-- `rate`: Conversion multiplier.
-- `date`: Date when the conversion rate is effective.
+### EnrichedTransaction
 
-### 8. SavingsGoal
-Long-term savings target.
-- `targetAmount`: The target amount to reach.
-- `currentAmount`: The accumulated amount (updated via linked transactions).
+A clean, classified transaction, shown to the user.
 
----
+- `amount`: `Decimal(10,2)`, positive for income, negative for spending. Note the different precision from balances (`15,2`).
+- `date`: `DateTime`. `currency` (default `EUR`).
+- `assetId`: optional; deleting the asset sets it to `null`. A transaction can therefore exist without an account.
+- `categoryId`: optional; deleting a referenced category is restricted.
+- `savingsGoalId`: optional; deleting the goal sets it to `null`.
+- `details`, `operation`, `account`: bank text and fields as imported.
+- `importBatchId`, `originalLine`: where the row came from.
+- `transactionHash`: SHA-256 of `date|amount|details|account|operation`, **unique across the whole database**; empty for manual transactions.
 
-## 🔢 Enumerations (Enums)
+### RawTransaction
 
-### AssetType
-Defines the nature of the asset for statistical aggregations:
-- `CASH`: Checking accounts, cash, and immediate liquidity.
-- `INVESTMENT`: Stocks, ETFs, Funds, and Crypto.
-- `REAL_ESTATE`: Real estate properties.
-- `VEHICLE`: Cars, motorcycles, etc.
-- `DEBT`: Mortgages or loans (values that negatively affect Net Worth).
+A bank row as read from the file, all fields as strings: `date`, `amount`, `details`, `operation`, `account`, `category`, `currency`, `accountingStatus`, plus `importBatchId` and `originalLine`. Saved outside the database transaction of the import and never deduplicated.
 
-### ExpenseType
-Used for budget analysis according to the 50/30/20 framework:
-- `NEEDS`: Essential expenses (rent, utilities, groceries).
-- `WANTS`: Discretionary expenses (restaurants, hobbies, travel).
-- `SAVINGS`: Savings, investments, or debt repayment.
+### Category
 
-### GoalStatus
-- `ACTIVE`: The goal is in progress.
-- `COMPLETED`: Goal achieved.
-- `PAUSED/CANCELLED`: States for goals that are no longer a priority.
+Two-level hierarchy through a self-relation (`parentId`, delete restricted while children exist). Nothing stops a third level from being written.
 
----
+- `userId` (default `"demo_user"`), `name`, `type` (`ExpenseType`, default `UNCLASSIFIED`), `color`, `icon`.
+- `systemKey`: stable key for seeded categories; `isSystem`: protected from deletion; `isVerified`: `false` for categories created automatically by an import.
+- `defaultAssetId`, `defaultGoalId`: where the upload routes a transaction of this category.
+- Unique on `(name, parentId, userId)`. In PostgreSQL a `NULL` `parentId` is always distinct, so duplicate top-level categories are possible.
+- `budgetRule`: at most one.
 
-## 🔗 Key Relationships
+### BudgetRule
 
-- **User <-> All Entities** `[PLANNED]`: Every table contains a cascading `userId` link for multi-tenant isolation.
-- **Asset <-> Transaction**: Every transaction must belong to an asset. Deleting a transaction recalculates the asset's daily closing balance snapshot.
-- **Category <-> BudgetRule**: Each category can have one budget rule (1:1).
-- **Category hierarchy**: Supports recursive parents/children.
-- **Transaction <-> Transaction** `[PLANNED]`: Bidirectional 1:1 relation mapping symmetric transfers via `pairedTransactionId`.
+One budget per category, valid for every month.
+
+- `categoryId` (unique, cascade delete), `ruleType` (`BudgetRuleType`), `limitValue` (`Decimal(10,2)`): an amount or a percentage of income.
+
+### SavingsGoal
+
+- `userId` (default `"demo_user"`), `name`, `targetAmount`, `currentAmount` (`Decimal(15,2)`, stored and updated by deltas from linked transactions), `deadline` (optional), `status` (`GoalStatus`), `color`, `icon`.
+- `assetId`: optional; present in the schema but not settable through the create API.
+- Relations: `transactions`, `categories` that use it as their default goal.
+
+## Enumerations
+
+- **`AssetType`:** `CASH` (accounts, cash), `INVESTMENT` (stocks, ETFs, funds, crypto), `REAL_ESTATE`, `VEHICLE`, `DEBT` (mortgages and loans, negative for Net Worth), `OTHER`.
+- **`ExpenseType`** (50/30/20 rule): `NEEDS`, `WANTS`, `SAVINGS`, `UNCLASSIFIED`.
+- **`BudgetRuleType`:** `FIXED_AMOUNT`, `PERCENTAGE_OF_INCOME`.
+- **`GoalStatus`:** `ACTIVE`, `COMPLETED`, `PAUSED`, `CANCELLED`. `COMPLETED` is never set automatically.
+
+## Not in v1
+
+Entities that earlier documents described as planned do not exist in the v1 schema: `User`, `Payee`, `Subscription`, `ExchangeRate`, and the transfer fields `isTransfer` / `pairedTransactionId`. The v2 decisions replace them: payees and transfers as linked pairs (D-12, D-24), transaction `kind` instead of `isTransfer` (D-25), EUR only in the MVP (D-07), subscriptions and authentication after the MVP (D-36).

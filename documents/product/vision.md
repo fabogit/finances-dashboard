@@ -1,70 +1,60 @@
-# Product Roadmap & User Journey
+# Product vision
 
-This document outlines the current user experience and the future vision for the Finance Dashboard.
+What the Finance Dashboard is for, what the MVP contains and where it can go afterwards. Work status is on GitHub; the order of the work is in the [roadmap](roadmap.md).
 
-## 👤 User Journey (Current State)
+## Purpose
 
-1.  **Initial Setup**: The user defines their Assets (Accounts, Wallets, Properties).
-2.  **Budget Setup**: Spending caps are created for macro-categories (Home, Leisure, Transport).
-3.  **Data Ingestion**: The user uploads their bank's Excel export. The system automatically categorizes 80-90% of the transactions.
-4.  **Review**: The user manually corrects "Unclassified" transactions.
-5.  **Monitoring**: Visualization of monthly trends and monitoring of progress toward Savings Goals.
+A personal finance tool that also serves as a public portfolio demo (D-02):
 
----
+- **Now:** one person's finances, plus a demo running on generated data.
+- **After the MVP:** a real multi-user product. The foundations for it are laid now: every model carries `userId` and isolation is enforced from the start ([ADR-0001](../adr/0001-userid-on-all-models.md), D-18, D-48).
 
-## 🗺️ Evolutionary Roadmap
+The goal is to move from *seeing what was spent* to *planning*: a monthly budget, savings goals with an estimated completion date, a forecast, and an accurate Net Worth history.
 
-### Phase 1: Automation and Control (Short Term)
+## Reference model
 
-- [x] **Category-to-Goal Automation**: Implemented link between Categories, Assets, and Savings Goals for real-time updates.
-- [x] **ML Projections**: Integrated Science Service for ETA estimation of goals.
-- [ ] **Local Rule Engine & Payees**: Allow the user to define "If description contains X then Category Y" and extract clean Payee entities (e.g. "Amazon" instead of bank text) for autocompletion.
-- [ ] **Dynamic CSV Import & Review**: Allow dynamic column mapping for statement uploads, showing a pre-import screen to review, edit, or discard individual transaction lines before saving.
+[Actual Budget](https://actualbudget.org/) is the reference model ([ADR-0002](../adr/0002-actual-budget-reference-model.md)). The project follows Actual by default and declares where it differs:
 
-### Phase 2: Connectivity and Real-time (Medium Term)
+1. Analytics, forecasting and machine learning in a dedicated Python service.
+2. Savings goals with an estimated completion date.
+3. Guided import with a column mapper, saved templates and automatic category suggestions.
+4. A multi-tenant web application instead of local-first sync.
+5. The tracking budget as the default; envelope budgeting possibly later.
 
-- **Subscriptions**: Automatic detection of recurring payments with a calendar view.
-- **Transfer Management (Strategy C)**: Automatic identification of internal transfers between own assets using date/amount euristics and user confirmation to avoid polluting cash flow statistics.
+## MVP scope
 
-### Phase 3: Investments and Wealth (Long Term)
+The MVP is version `v2.0.0` (D-33, D-42).
 
-- **Ticker Integration**: Automatic update of stock and crypto prices.
-- **Multi-Currency**: Seamless management of assets in different currencies with historical exchange rates.
-- **Tax Analysis**: Automatic estimation of capital gains taxes or property taxes (IVAFE/IMU).
+| Area | In the MVP | After the MVP |
+| --- | --- | --- |
+| Schema | One rewrite: `userId` everywhere, transaction `kind`, calendar date plus optional time, category groups and categories, payees, rules, import templates, monthly budgets, transfer pairs | Holdings, exchange rates, subscriptions |
+| Accounts | Starting balance, derived balance, reconciliation, on/off-budget accounts, value adjustments | Automatic prices |
+| Import | Templates and column mapper, stateless preview, layered deduplication, payees, rules, transfer detection | Machine-learning category suggestions |
+| Transactions | CRUD, manual transfers (`POST /transfers`), applying rules to existing transactions, search (`POST /transactions/search`) | Split transactions, tags, advanced notes |
+| Categories | Groups and categories, deletion that moves everything to a chosen category | Hidden categories |
+| Budget | Monthly amounts per category, percentage of the previous month's income, convenience commands | Envelope budgeting |
+| Goals | Linked to a dedicated account, computed progress, completion estimate | Shares of a common account |
+| Analytics | In the database, with the `kind` rules: summary, distribution, trends, budget analysis, Net Worth history in EUR | Multiple currencies |
+| Science | Robust `ScienceClient` over REST, goal projection, the existing forecast with filtered input | NATS, machine learning, forecast split |
+| Client | Angular screens for accounts, import, transactions, categories, budget and dashboard, each built once its API is closed (D-34) | Desktop packaging |
+| Development | Profile-based seed, versioned documentation | Authentication, roles, demo sandbox |
 
----
+An area is done when its flow document is written, the examples from the spec are tests, the `demo` seed profile exercises it, and Swagger is up to date.
 
-## 🏗️ GitHub Milestone Alignment
+## User journey (v2)
 
-### ✅ Completed Milestones
+1. **Accounts.** The user creates accounts, each with a starting balance, on-budget or off-budget, and optionally a default import template.
+2. **Import.** The user uploads a bank export (`.xlsx` or `.csv`) for an account. A template maps the columns; the preview shows every row with its payee, category and the source of each, duplicates and suggested transfers. The user fixes what is wrong, may save a payee default or a rule, and confirms.
+3. **Review.** Uncategorised transactions are a view of their own; rules can be applied to existing transactions, with a preview of the changes.
+4. **Planning.** The user sets monthly amounts per category and savings goals on dedicated accounts.
+5. **Insight.** Spending and income by category and month, budget analysis, Net Worth over time, the forecast and the estimated goal completion dates.
 
-| # | Milestone | Issues | Stato |
-|---|-----------|--------|-------|
-| 1 | Phase 1: Foundations & Data Ingestion | 8/8 ✅ | 🟢 Closed |
-| 2 | Phase 2: Python Science Service & Core Integration | 6/6 ✅ | 🟢 Closed |
-| 3 | Phase 3: Data Persistence & Business Logic | 6/6 ✅ | 🟢 Closed |
-| 4 | Phase 4: Analytics, CRUD & Dashboard APIs | 8/8 ✅ | 🟢 Closed |
-| 5 | Phase 5: Budgeting System & Advanced Category Management | 10/10 ✅ | 🟢 Closed |
-| 6 | Phase 6: Quality Assurance & CI/CD Pipeline | 10/10 ✅ | 🟢 Closed |
+## Beyond the MVP
 
-### 🟡 Open Milestones
+Ideas accepted as direction, not designed and not scheduled. Open questions are listed in [open-questions.md](open-questions.md).
 
-| # | Milestone | Open | Closed | Key Features |
-|---|-----------|------|--------|-------------|
-| 7 | Phase 7: Wealth Management & Goal Setting | 7 | 4 | API Refactoring (#73), Internal Transfers (#74), Asset History (#60), Net Worth (#61), Forecast refactor (#77), QUERY method (#80), ExchangeRate (#81) |
-| 8 | Phase 8: Security, Authentication & Multi-tenancy | 4 | 0 | Auth foundation (#62), Multi-tenancy (#63), RBAC (#64), Demo Sandbox (#65) |
-| 9 | Phase 9: Advanced Features & Tauri Desktop | 2 | 0 | Subscriptions (#78), Local Rule Engine (#79) |
-
-### Client & Desktop (Future — no GitHub milestone yet)
-
-- **Angular Client**: Full frontend implementation connected to backend APIs.
-- **i18n (Multi-Language)**: Client-side translation support using local asset JSONs (Default: EN; supported: IT, FR, ES, DE, PT).
-- **Tauri Desktop Compilation**: Compile the Angular client into a lightweight desktop app.
-  - **Distribution A (Cloud/Docker-link)**: Native wrapper connecting to a centralized NestJS/Postgres/Python Docker backend.
-  - **Distribution B (Local-Offline-First)**: Fully bundled desktop app containing local SQLite database and Python/Node sidecars running locally (packaged size ~1-2GB).
-
----
-
-## 🎯 Strategic Goal
-
-Transform from a "reactive tracking" tool into a **proactive planning platform**, where the user doesn't just see how much they spent but is guided toward optimizing their savings and investments.
+- **Subscriptions** (Actual's schedules): explicit recurring payments with a calendar, feeding the forecast (#78), and a forecast split into trend and recurrence (#77).
+- **Wealth:** holdings with tickers and automatic prices that generate value adjustments; multiple currencies with manual, then automatic, exchange rates (#81); tax estimates such as capital gains.
+- **Multi-user:** authentication, tenancy, roles and the demo sandbox (#62–#65).
+- **Client:** translations (English by default; Italian, French, Spanish, German and Portuguese), and desktop packaging with Tauri. A fully offline desktop build with SQLite would conflict with today's PostgreSQL-specific choices (raw SQL, per-user isolation), so it would need its own design (contradiction C13).
+- **Open banking:** bank APIs instead of file uploads.
