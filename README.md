@@ -14,16 +14,17 @@ The system is built on a modern, modular architecture:
 ### 1. Configure Environment
 
 ```bash
-cp .env.compose.example .env.compose
+cp .env.compose_example .env.compose
 ```
 
 ### 2. Launch Services
 
 ```bash
+cd backend-core
 pnpm run docker:up
 ```
 
-_Note: Make sure you have `pnpm` installed, or use `docker-compose --env-file .env.compose up --build`_
+_Note: Make sure you have `pnpm` installed, or use `docker-compose --env-file .env.compose up --build` from the repository root_
 
 ---
 
@@ -36,8 +37,5 @@ _Note: Make sure you have `pnpm` installed, or use `docker-compose --env-file .e
 
 ## 📚 Documentation
 
-- [System Architecture](./documents/fn_architecture.md)
-- [Product Roadmap](./documents/fn_product_roadmap.md)
-- [Science Integration](./documents/fn_science_integration.md)
-- [Codebase Analysis](./documents/fn_codebase_analysis.md)
-- [Data Dictionary](./documents/fn_data_dictionary.md)
+- [Project documentation](./documents/README.md): architecture, decisions (ADRs), domain, roadmap, development setup.
+- [AGENTS.md](./AGENTS.md): working rules for contributors and AI agents.
