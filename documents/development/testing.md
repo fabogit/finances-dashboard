@@ -11,7 +11,7 @@ The verification commands, how the end-to-end tests get their database, and what
 | Unit tests | `pnpm test` | `backend-core/` |
 | End-to-end tests | `pnpm run test:e2e:docker` (needs Docker and `.env.test`) | `backend-core/` |
 | Python tests | `python -m pytest tests/` (with the Python environment, see [setup.md](setup.md#python-environment)) | `backend-science/` |
-| Python types | `pyright .` (`pip install pyright` in the environment) | `backend-science/` |
+| Python types | `pyright .` (installed as in [setup.md](setup.md#python-environment)) | `backend-science/` |
 
 `pnpm run lint` runs ESLint with `--fix`: it rewrites files. Check `git status` afterwards and commit or discard the changes deliberately.
 

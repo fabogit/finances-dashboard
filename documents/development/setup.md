@@ -84,6 +84,12 @@ Any virtual environment with `backend-science/requirements.txt` installed works.
 
   Recreate it when `requirements.txt` changes.
 
+In either environment, install **pyright** for the type check, as CI does: it is not in `requirements.txt`.
+
+```bash
+pip install pyright
+```
+
 ## Seed
 
 `pnpm run prisma:seed` (from `backend-core/`, with `.env.local`) runs `prisma/seed.ts`: the bootstrap categories and sample data. The Docker container runs it on every start. The profile-based generator (`empty`, `minimal`, `demo`, `edge`) replaces it in #90 (D-31).
