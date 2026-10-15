@@ -56,7 +56,7 @@ Check that `requirements.txt` has no platform-specific or path entries.
 
 From `backend-science/`, with the environment of [setup.md](../../documents/development/setup.md#python-environment):
 
-- `python -m pytest tests/` (as in CI), `pytest --cov=src` for coverage;
+- `python -m pytest tests/` (as in CI);
 - `pyright .` (as in CI);
 - if the contract changed, the core's tests too ([test-backend.md](test-backend.md)).
 
