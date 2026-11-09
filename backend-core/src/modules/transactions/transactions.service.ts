@@ -7,18 +7,18 @@ import {
 import { Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 import { randomUUID, createHash } from 'crypto';
-import { TransactionsRepository } from './transactions.repository';
-import { ScienceService } from '../science/science.service';
-import { BankExportRow } from './interfaces/bank-export-row.interface';
-import { UploadScienceResult } from './interfaces/upload-science-result.interface';
-import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
+import { TransactionsRepository } from './transactions.repository.js';
+import { ScienceService } from '../science/science.service.js';
+import { BankExportRow } from './interfaces/bank-export-row.interface.js';
+import { UploadScienceResult } from './interfaces/upload-science-result.interface.js';
+import { GetTransactionsFilterDto } from './dto/get-transactions.dto.js';
 import {
   CreateTransactionDto,
   UpdateTransactionDto,
-} from './dto/create-update-transaction.dto';
-import { AssetsService } from '../assets/assets.service';
-import { GoalsService } from '../goals/goals.service';
-import { PrismaService } from '../../prisma/prisma.service';
+} from './dto/create-update-transaction.dto.js';
+import { AssetsService } from '../assets/assets.service.js';
+import { GoalsService } from '../goals/goals.service.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 
 @Injectable()
 export class TransactionsService {

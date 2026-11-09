@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { Asset, Prisma } from '@prisma/client';
-import { CreateAssetDto } from './dto/create-asset.dto';
-import { UpdateAssetDto } from './dto/update-asset.dto';
-import { UpdateAssetBalanceDto } from './dto/update-asset-balance.dto';
+import { CreateAssetDto } from './dto/create-asset.dto.js';
+import { UpdateAssetDto } from './dto/update-asset.dto.js';
+import { UpdateAssetBalanceDto } from './dto/update-asset-balance.dto.js';
 import {
   AssetWithHistory,
   RecalculateBalanceResult,
-} from './interfaces/asset-repository.interfaces';
+} from './interfaces/asset-repository.interfaces.js';
 
 @Injectable()
 export class AssetsRepository {

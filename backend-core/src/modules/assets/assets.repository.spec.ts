@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AssetsRepository } from './assets.repository';
-import { PrismaService } from '../../prisma/prisma.service';
+import { AssetsRepository } from './assets.repository.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { AssetType, Prisma } from '@prisma/client';
-import { CreateAssetDto } from './dto/create-asset.dto';
+import { CreateAssetDto } from './dto/create-asset.dto.js';
 
 describe('AssetsRepository', () => {
   let repository: AssetsRepository;

@@ -1,5 +1,5 @@
 import { PartialType, OmitType } from '@nestjs/swagger';
-import { CreateAssetDto } from './create-asset.dto';
+import { CreateAssetDto } from './create-asset.dto.js';
 
 // We remove 'balance' because it should be updated only via a dedicated endpoint that manages the history
 /**

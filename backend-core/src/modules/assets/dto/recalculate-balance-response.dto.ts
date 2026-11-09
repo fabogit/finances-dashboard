@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
-import { AssetResponseDto } from './asset-response.dto';
-import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
+import { AssetResponseDto } from './asset-response.dto.js';
+import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator.js';
 
 /**
  * Response DTO returning details of the asset balance recalculation.

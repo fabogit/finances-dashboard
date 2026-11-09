@@ -9,7 +9,7 @@ import {
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as dotenv from 'dotenv';
 import { createHash } from 'crypto';
-import { SYSTEM_CATEGORIES } from '../src/common/constants/domain.constants';
+import { SYSTEM_CATEGORIES } from '../src/common/constants/domain.constants.js';
 import {
   SEED_ASSET_NAMES,
   SEED_GOAL_NAMES,
@@ -20,7 +20,7 @@ import {
   SEED_OPERATIONS,
   SEED_DETAILS,
   SEED_CATEGORIES,
-} from './seed.constants';
+} from './seed.constants.js';
 
 dotenv.config();
 

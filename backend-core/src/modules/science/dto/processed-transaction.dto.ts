@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
+import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator.js';
 
 /**
  * Response DTO representing a transaction processed by the Science categorization engine.

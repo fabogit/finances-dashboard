@@ -13,16 +13,16 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 
-import { CategoriesService } from './categories.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
-import { SetBudgetDto } from './dto/set-budget.dto';
-import { DeleteCategoryQueryDto } from './dto/delete-category-query.dto';
+import { CategoriesService } from './categories.service.js';
+import { CreateCategoryDto } from './dto/create-category.dto.js';
+import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { SetBudgetDto } from './dto/set-budget.dto.js';
+import { DeleteCategoryQueryDto } from './dto/delete-category-query.dto.js';
 import {
   CategoryResponseDto,
   BudgetRuleResponseDto,
-} from './dto/category-response.dto';
-import { Serialize } from '../../common/interceptors/serialize.interceptor';
+} from './dto/category-response.dto.js';
+import { Serialize } from '../../common/interceptors/serialize.interceptor.js';
 
 @ApiTags('Categories')
 @Controller('categories')

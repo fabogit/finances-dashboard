@@ -19,17 +19,17 @@ import {
 } from 'rxjs';
 import { Prisma } from '@prisma/client';
 import { AxiosError, isAxiosError } from 'axios';
-import { ProcessedTransactionDto } from './dto/processed-transaction.dto';
-import { ForecastTransactionInputDto } from './dto/forecast-transaction-input.dto';
-import { ForecastResponse } from './dto/forecast-response.dto';
-import { ForecastRequestPayload } from './dto/forecast-request.dto';
-import { GoalProjectionRequestDto } from './dto/goal-projection-request.dto';
-import { GoalProjectionResponseDto } from './dto/goal-projection-response.dto';
+import { ProcessedTransactionDto } from './dto/processed-transaction.dto.js';
+import { ForecastTransactionInputDto } from './dto/forecast-transaction-input.dto.js';
+import { ForecastResponse } from './dto/forecast-response.dto.js';
+import { ForecastRequestPayload } from './dto/forecast-request.dto.js';
+import { GoalProjectionRequestDto } from './dto/goal-projection-request.dto.js';
+import { GoalProjectionResponseDto } from './dto/goal-projection-response.dto.js';
 import {
   DEFAULT_SCIENCE_RETRY_COUNT,
   DEFAULT_SCIENCE_TIMEOUT_MS,
   SCIENCE_RETRY_BASE_DELAY_MS,
-} from './science.constants';
+} from './science.constants.js';
 
 interface FastApiErrorResponse {
   detail?: string; // FastAPI returns { detail: "..." }

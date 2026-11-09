@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../../prisma/prisma.module';
-import { AssetsModule } from '../assets/assets.module';
-import { GoalsModule } from '../goals/goals.module';
-import { ScienceModule } from '../science/science.module';
-import { TransactionsController } from './transactions.controller';
-import { TransactionsService } from './transactions.service';
-import { TransactionsRepository } from './transactions.repository';
+import { PrismaModule } from '../../prisma/prisma.module.js';
+import { AssetsModule } from '../assets/assets.module.js';
+import { GoalsModule } from '../goals/goals.module.js';
+import { ScienceModule } from '../science/science.module.js';
+import { TransactionsController } from './transactions.controller.js';
+import { TransactionsService } from './transactions.service.js';
+import { TransactionsRepository } from './transactions.repository.js';
 
 @Module({
   controllers: [TransactionsController],

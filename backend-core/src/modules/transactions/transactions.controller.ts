@@ -21,19 +21,19 @@ import {
   ApiBody,
   ApiResponse,
 } from '@nestjs/swagger';
-import { TransactionsService } from './transactions.service';
-import { UploadTransactionResponseDto } from './dto/upload-transaction.dto';
-import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
+import { TransactionsService } from './transactions.service.js';
+import { UploadTransactionResponseDto } from './dto/upload-transaction.dto.js';
+import { GetTransactionsFilterDto } from './dto/get-transactions.dto.js';
 import {
   PaginatedTransactionsResponseDto,
   TransactionDto,
-} from './dto/transaction.dto';
+} from './dto/transaction.dto.js';
 import {
   CreateTransactionDto,
   UpdateTransactionDto,
-} from './dto/create-update-transaction.dto';
-import { RawTransactionDto } from './dto/raw-transaction.dto';
-import { Serialize } from '../../common/interceptors/serialize.interceptor';
+} from './dto/create-update-transaction.dto.js';
+import { RawTransactionDto } from './dto/raw-transaction.dto.js';
+import { Serialize } from '../../common/interceptors/serialize.interceptor.js';
 
 @ApiTags('Transactions')
 @Controller('transactions')

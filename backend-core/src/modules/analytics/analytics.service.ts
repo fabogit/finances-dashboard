@@ -1,20 +1,20 @@
 import { Injectable } from '@nestjs/common';
-import { TransactionsRepository } from '../transactions/transactions.repository';
-import { AnalyticsRepository } from './analytics.repository';
-import { ScienceService } from '../science/science.service';
-import { FORECAST_FALLBACKS } from '../../common/constants/domain.constants';
+import { TransactionsRepository } from '../transactions/transactions.repository.js';
+import { AnalyticsRepository } from './analytics.repository.js';
+import { ScienceService } from '../science/science.service.js';
+import { FORECAST_FALLBACKS } from '../../common/constants/domain.constants.js';
 import {
   GetTransactionsFilterDto,
   GroupByOption,
-} from '../transactions/dto/get-transactions.dto';
-import { ForecastTransactionInputDto } from '../science/dto/forecast-transaction-input.dto';
+} from '../transactions/dto/get-transactions.dto.js';
+import { ForecastTransactionInputDto } from '../science/dto/forecast-transaction-input.dto.js';
 import {
   BudgetAnalysisResponseDto,
   CategoryBudgetStatusDto,
   GetBudgetAnalysisDto,
-} from './dto/budget-analysis.dto';
+} from './dto/budget-analysis.dto.js';
 import { BudgetRule, BudgetRuleType, Category } from '@prisma/client';
-import { CategoriesRepository } from '../categories/categories.repository';
+import { CategoriesRepository } from '../categories/categories.repository.js';
 
 interface CategoryWithTree extends Category {
   budgetRule: BudgetRule | null;

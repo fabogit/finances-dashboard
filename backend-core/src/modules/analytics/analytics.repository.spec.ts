@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AnalyticsRepository } from './analytics.repository';
-import { PrismaService } from '../../prisma/prisma.service';
+import { AnalyticsRepository } from './analytics.repository.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { Prisma } from '@prisma/client';
 
 describe('AnalyticsRepository', () => {

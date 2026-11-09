@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
+import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator.js';
 
 /**
  * Response DTO returning the savings goal projection metrics calculated by the Science engine.

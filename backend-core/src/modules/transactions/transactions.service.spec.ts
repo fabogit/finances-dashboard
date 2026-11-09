@@ -1,24 +1,24 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { TransactionsService } from './transactions.service';
-import { TransactionsRepository } from './transactions.repository';
-import { ScienceService } from '../science/science.service';
+import { TransactionsService } from './transactions.service.js';
+import { TransactionsRepository } from './transactions.repository.js';
+import { ScienceService } from '../science/science.service.js';
 import {
   NotFoundException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import * as XLSX from 'xlsx';
 import { Prisma } from '@prisma/client';
-import { AssetsService } from '../assets/assets.service';
-import { GoalsService } from '../goals/goals.service';
-import { PrismaService } from '../../prisma/prisma.service';
-import { CreateTransactionDto } from './dto/create-update-transaction.dto';
-import { ProcessedTransactionDto } from '../science/dto/processed-transaction.dto';
+import { AssetsService } from '../assets/assets.service.js';
+import { GoalsService } from '../goals/goals.service.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { CreateTransactionDto } from './dto/create-update-transaction.dto.js';
+import { ProcessedTransactionDto } from '../science/dto/processed-transaction.dto.js';
 import {
   GetTransactionsFilterDto,
   GroupByOption,
   SortOrder,
-} from './dto/get-transactions.dto';
+} from './dto/get-transactions.dto.js';
 
 type MockRepository<T> = {
   [P in keyof T]?: Mock;

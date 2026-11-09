@@ -1,9 +1,9 @@
 import { Prisma } from '@prisma/client';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AssetsRepository } from './assets.repository';
-import { CreateAssetDto } from './dto/create-asset.dto';
-import { UpdateAssetDto } from './dto/update-asset.dto';
-import { UpdateAssetBalanceDto } from './dto/update-asset-balance.dto';
+import { AssetsRepository } from './assets.repository.js';
+import { CreateAssetDto } from './dto/create-asset.dto.js';
+import { UpdateAssetDto } from './dto/update-asset.dto.js';
+import { UpdateAssetBalanceDto } from './dto/update-asset-balance.dto.js';
 
 @Injectable()
 export class AssetsService {

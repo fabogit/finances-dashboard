@@ -2,8 +2,8 @@ import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import request from 'supertest';
 import { Server } from 'http';
-import { AppModule } from '../src/app.module';
-import { configureApp } from '../src/app-setup';
+import { AppModule } from '../src/app.module.js';
+import { configureApp } from '../src/app-setup.js';
 
 // Built with NestFactory, as in main.ts: a TestingModule instantiates
 // ServeStaticModule before the HTTP adapter exists, so it would serve nothing.

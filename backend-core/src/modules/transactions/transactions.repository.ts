@@ -1,25 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EnrichedTransaction, RawTransaction, Prisma } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import {
   SYSTEM_CATEGORIES,
   TRANSACTION_FALLBACKS,
   EXPENSE_TYPES,
-} from '../../common/constants/domain.constants';
-import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
+} from '../../common/constants/domain.constants.js';
+import { GetTransactionsFilterDto } from './dto/get-transactions.dto.js';
 import {
   CreateTransactionDto,
   UpdateTransactionDto,
-} from './dto/create-update-transaction.dto';
-import { EnrichedDataInput } from './interfaces/enriched-data-input.interface';
+} from './dto/create-update-transaction.dto.js';
+import { EnrichedDataInput } from './interfaces/enriched-data-input.interface.js';
 import {
   transactionWithDetailsInclude,
   TransactionWithDetails,
-} from './interfaces/transaction-with-details.interface';
+} from './interfaces/transaction-with-details.interface.js';
 import {
   AssetDelta,
   GoalDelta,
-} from './interfaces/transaction-deltas.interface';
+} from './interfaces/transaction-deltas.interface.js';
 
 type CategoryMapData = {
   id: string;

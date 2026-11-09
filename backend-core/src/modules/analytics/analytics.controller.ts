@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { Serialize } from '../../common/interceptors/serialize.interceptor';
+import { Serialize } from '../../common/interceptors/serialize.interceptor.js';
 import {
   ApiExtraModels,
   ApiOperation,
@@ -7,24 +7,24 @@ import {
   ApiResponse,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { AnalyticsService } from './analytics.service';
-import { GetTransactionsFilterDto } from '../transactions/dto/get-transactions.dto';
+import { AnalyticsService } from './analytics.service.js';
+import { GetTransactionsFilterDto } from '../transactions/dto/get-transactions.dto.js';
 import {
   AnalyticsSummaryDto,
   CategoryDistributionDto,
   MonthlyTrendDto,
-} from './dto/analytics-response.dto';
+} from './dto/analytics-response.dto.js';
 import {
   MonthlyForecastDto,
   ForecastErrorDto,
-} from './dto/forecast-response.dto';
-import { GetForecastDto } from './dto/get-forecast.dto';
-import { ForecastResponse } from '../science/dto/forecast-response.dto';
-import { ApiScienceErrors } from '../science/api-science-errors.decorator';
+} from './dto/forecast-response.dto.js';
+import { GetForecastDto } from './dto/get-forecast.dto.js';
+import { ForecastResponse } from '../science/dto/forecast-response.dto.js';
+import { ApiScienceErrors } from '../science/api-science-errors.decorator.js';
 import {
   BudgetAnalysisResponseDto,
   GetBudgetAnalysisDto,
-} from './dto/budget-analysis.dto';
+} from './dto/budget-analysis.dto.js';
 
 @ApiTags('Analytics')
 @Controller('analytics')

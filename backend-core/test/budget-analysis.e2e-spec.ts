@@ -2,17 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Server } from 'http';
-import { AppModule } from '../src/app.module';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { AppModule } from '../src/app.module.js';
+import { PrismaService } from '../src/prisma/prisma.service.js';
 import {
   ExpenseType,
   BudgetRuleType,
   EnrichedTransaction,
 } from '@prisma/client';
-import { CategoryResponseDto } from '../src/modules/categories/dto/category-response.dto';
-import { BudgetAnalysisResponseDto } from '../src/modules/analytics/dto/budget-analysis.dto';
-import { CreateCategoryDto } from '../src/modules/categories/dto/create-category.dto';
-import { configureApp } from '../src/app-setup';
+import { CategoryResponseDto } from '../src/modules/categories/dto/category-response.dto.js';
+import { BudgetAnalysisResponseDto } from '../src/modules/analytics/dto/budget-analysis.dto.js';
+import { CreateCategoryDto } from '../src/modules/categories/dto/create-category.dto.js';
+import { configureApp } from '../src/app-setup.js';
 
 const API_PREFIX = '/api/v1';
 const getCurrentMonth = () => new Date().toISOString().slice(0, 7);

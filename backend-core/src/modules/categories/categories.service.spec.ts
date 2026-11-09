@@ -1,17 +1,17 @@
 import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { CategoriesService } from './categories.service';
-import { CategoriesRepository } from './categories.repository';
+import { CategoriesService } from './categories.service.js';
+import { CategoriesRepository } from './categories.repository.js';
 import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
 import { Prisma, ExpenseType, BudgetRuleType, Category } from '@prisma/client';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
-import { SetBudgetDto } from './dto/set-budget.dto';
-import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants';
+import { CreateCategoryDto } from './dto/create-category.dto.js';
+import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { SetBudgetDto } from './dto/set-budget.dto.js';
+import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants.js';
 
 type MockRepository<T> = {
   [P in keyof T]?: Mock;

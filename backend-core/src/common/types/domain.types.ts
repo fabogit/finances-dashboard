@@ -3,7 +3,7 @@ import {
   BUDGET_RULE_TYPES,
   EXPENSE_TYPES,
   GOAL_STATUSES,
-} from '../constants/domain.constants';
+} from '../constants/domain.constants.js';
 
 /**
  * Union type representing the allowed asset classifications (e.g., CASH, INVESTMENT).

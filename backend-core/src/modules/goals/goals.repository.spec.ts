@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GoalsRepository } from './goals.repository';
-import { PrismaService } from '../../prisma/prisma.service';
+import { GoalsRepository } from './goals.repository.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { GoalStatus, Prisma } from '@prisma/client';
-import { CreateGoalDto } from './dto/create-goal.dto';
+import { CreateGoalDto } from './dto/create-goal.dto.js';
 
 describe('GoalsRepository', () => {
   let repository: GoalsRepository;

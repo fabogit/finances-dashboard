@@ -3,8 +3,8 @@ import request from 'supertest';
 import { createServer, Server, ServerResponse } from 'http';
 import { AddressInfo } from 'net';
 import { Test } from '@nestjs/testing';
-import { PrismaService } from '../src/prisma/prisma.service';
-import { configureApp } from '../src/app-setup';
+import { PrismaService } from '../src/prisma/prisma.service.js';
+import { configureApp } from '../src/app-setup.js';
 
 const API_PREFIX = '/api/v1';
 const SCIENCE_TIMEOUT_MS = 300;

@@ -1,10 +1,10 @@
 import type { Mock, Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AnalyticsService } from './analytics.service';
-import { AnalyticsRepository } from './analytics.repository';
-import { TransactionsRepository } from '../transactions/transactions.repository';
-import { CategoriesRepository } from '../categories/categories.repository';
-import { ScienceService } from '../science/science.service';
+import { AnalyticsService } from './analytics.service.js';
+import { AnalyticsRepository } from './analytics.repository.js';
+import { TransactionsRepository } from '../transactions/transactions.repository.js';
+import { CategoriesRepository } from '../categories/categories.repository.js';
+import { ScienceService } from '../science/science.service.js';
 import {
   BudgetRuleType,
   ExpenseType,
@@ -15,7 +15,7 @@ import { Decimal } from '@prisma/client/runtime/client';
 import {
   GetTransactionsFilterDto,
   GroupByOption,
-} from '../transactions/dto/get-transactions.dto';
+} from '../transactions/dto/get-transactions.dto.js';
 
 // --- TYPE HELPERS ---
 

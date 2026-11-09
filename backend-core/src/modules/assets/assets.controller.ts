@@ -12,14 +12,14 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { Serialize } from '../../common/interceptors/serialize.interceptor';
-import { AssetsService } from './assets.service';
-import { CreateAssetDto } from './dto/create-asset.dto';
-import { UpdateAssetDto } from './dto/update-asset.dto';
-import { UpdateAssetBalanceDto } from './dto/update-asset-balance.dto';
-import { GetAssetQueryDto } from './dto/get-asset-query.dto';
-import { AssetResponseDto } from './dto/asset-response.dto';
-import { RecalculateBalanceResponseDto } from './dto/recalculate-balance-response.dto';
+import { Serialize } from '../../common/interceptors/serialize.interceptor.js';
+import { AssetsService } from './assets.service.js';
+import { CreateAssetDto } from './dto/create-asset.dto.js';
+import { UpdateAssetDto } from './dto/update-asset.dto.js';
+import { UpdateAssetBalanceDto } from './dto/update-asset-balance.dto.js';
+import { GetAssetQueryDto } from './dto/get-asset-query.dto.js';
+import { AssetResponseDto } from './dto/asset-response.dto.js';
+import { RecalculateBalanceResponseDto } from './dto/recalculate-balance-response.dto.js';
 
 @ApiTags('Assets')
 @Controller('assets')

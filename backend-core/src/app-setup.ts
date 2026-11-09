@@ -7,7 +7,7 @@ import {
 import { HttpAdapterHost, Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 
 export function configureApp(app: INestApplication): void {
   const configService = app.get(ConfigService);

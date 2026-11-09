@@ -1,10 +1,10 @@
 import type { Mock, Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AssetsService } from './assets.service';
-import { AssetsRepository } from './assets.repository';
+import { AssetsService } from './assets.service.js';
+import { AssetsRepository } from './assets.repository.js';
 import { AssetType, Prisma } from '@prisma/client';
 import { NotFoundException } from '@nestjs/common';
-import { CreateAssetDto } from './dto/create-asset.dto';
+import { CreateAssetDto } from './dto/create-asset.dto.js';
 
 describe('AssetsService', () => {
   let service: AssetsService;

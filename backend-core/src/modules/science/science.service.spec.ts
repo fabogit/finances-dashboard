@@ -12,12 +12,12 @@ import { AxiosResponse, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { of } from 'rxjs';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
 import { AddressInfo } from 'net';
-import { ScienceService } from './science.service';
-import { SCIENCE_RETRY_BASE_DELAY_MS } from './science.constants';
+import { ScienceService } from './science.service.js';
+import { SCIENCE_RETRY_BASE_DELAY_MS } from './science.constants.js';
 import { RawTransaction } from '@prisma/client';
-import { ForecastTransactionInputDto } from './dto/forecast-transaction-input.dto';
-import { MonthlyForecastDto } from './dto/forecast-response.dto';
-import { ProcessedTransactionDto } from './dto/processed-transaction.dto';
+import { ForecastTransactionInputDto } from './dto/forecast-transaction-input.dto.js';
+import { MonthlyForecastDto } from './dto/forecast-response.dto.js';
+import { ProcessedTransactionDto } from './dto/processed-transaction.dto.js';
 
 const createAxiosResponse = <T>(data: T): AxiosResponse<T> => ({
   data,

@@ -11,7 +11,7 @@ import {
 import {
   DEFAULT_SCIENCE_RETRY_COUNT,
   DEFAULT_SCIENCE_TIMEOUT_MS,
-} from '../modules/science/science.constants';
+} from '../modules/science/science.constants.js';
 
 export enum Environment {
   Development = 'development',

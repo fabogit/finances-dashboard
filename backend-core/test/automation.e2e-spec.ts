@@ -2,10 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Server } from 'http';
-import { AppModule } from '../src/app.module';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { AppModule } from '../src/app.module.js';
+import { PrismaService } from '../src/prisma/prisma.service.js';
 import { AssetType, ExpenseType } from '@prisma/client';
-import { configureApp } from '../src/app-setup';
+import { configureApp } from '../src/app-setup.js';
 
 const API_PREFIX = '/api/v1';
 

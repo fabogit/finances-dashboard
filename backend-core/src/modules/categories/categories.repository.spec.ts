@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CategoriesRepository } from './categories.repository';
-import { PrismaService } from '../../prisma/prisma.service';
+import { CategoriesRepository } from './categories.repository.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { ExpenseType, Prisma } from '@prisma/client';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
-import { SetBudgetDto } from './dto/set-budget.dto';
+import { CreateCategoryDto } from './dto/create-category.dto.js';
+import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { SetBudgetDto } from './dto/set-budget.dto.js';
 import { BudgetRuleType } from '@prisma/client';
-import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants';
+import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants.js';
 
 describe('CategoriesRepository', () => {
   let repository: CategoriesRepository;

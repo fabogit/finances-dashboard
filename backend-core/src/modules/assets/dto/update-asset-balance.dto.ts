@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsOptional } from 'class-validator';
-import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator';
+import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator.js';
 
 /**
  * Input DTO for updating an asset's balance and creating a history snapshot.

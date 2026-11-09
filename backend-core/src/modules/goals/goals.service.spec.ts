@@ -1,11 +1,11 @@
 import type { Mock, Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { GoalsService } from './goals.service';
-import { GoalsRepository } from './goals.repository';
-import { ScienceService } from '../science/science.service';
+import { GoalsService } from './goals.service.js';
+import { GoalsRepository } from './goals.repository.js';
+import { ScienceService } from '../science/science.service.js';
 import { NotFoundException } from '@nestjs/common';
 import { Prisma, GoalStatus, SavingsGoal } from '@prisma/client';
-import { CreateGoalDto } from './dto/create-goal.dto';
+import { CreateGoalDto } from './dto/create-goal.dto.js';
 
 describe('GoalsService', () => {
   let service: GoalsService;

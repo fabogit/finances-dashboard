@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { Prisma } from '@prisma/client';
 import {
   CategoryDistributionItem,
   MonthlyTrendItem,
   ForecastItem,
   MonthlyExpenseByCategoryItem,
-} from './interfaces/analytics-repository.interfaces';
+} from './interfaces/analytics-repository.interfaces.js';
 
 @Injectable()
 export class AnalyticsRepository {

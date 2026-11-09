@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TransactionsRepository } from './transactions.repository';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AssetsRepository } from '../assets/assets.repository';
-import { GoalsRepository } from '../goals/goals.repository';
+import { TransactionsRepository } from './transactions.repository.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { AssetsRepository } from '../assets/assets.repository.js';
+import { GoalsRepository } from '../goals/goals.repository.js';
 import { Prisma } from '@prisma/client';
-import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
-import { EnrichedDataInput } from './interfaces/enriched-data-input.interface';
+import { GetTransactionsFilterDto } from './dto/get-transactions.dto.js';
+import { EnrichedDataInput } from './interfaces/enriched-data-input.interface.js';
 
 describe('TransactionsRepository', () => {
   let repository: TransactionsRepository;

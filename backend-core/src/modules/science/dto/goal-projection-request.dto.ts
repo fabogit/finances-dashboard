@@ -1,4 +1,4 @@
-import { ForecastTransactionInputDto } from './forecast-transaction-input.dto';
+import { ForecastTransactionInputDto } from './forecast-transaction-input.dto.js';
 
 /**
  * Request DTO sent to the Science service for projecting a savings goal's target achievement date.
