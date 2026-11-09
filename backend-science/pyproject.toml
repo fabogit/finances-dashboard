@@ -3,7 +3,7 @@ name = "finances-science"
 description = "Computation service of the finance dashboard: forecasts and goal projections."
 # The release version lives in `__version__` in src/main.py (D-42); uv does not need one here.
 dynamic = ["version"]
-requires-python = ">=3.14,<3.15"
+requires-python = ">=3.15,<3.16"
 dependencies = [
     "fastapi>=0.162.2",
     "numpy>=2.5.4",
@@ -32,7 +32,7 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 
 [tool.pyright]
-pythonVersion = "3.14"
+pythonVersion = "3.15"
 typeCheckingMode = "basic"
 include = ["src", "tests"]
 exclude = ["**/__pycache__", "**/.venv", "**/.direnv"]
