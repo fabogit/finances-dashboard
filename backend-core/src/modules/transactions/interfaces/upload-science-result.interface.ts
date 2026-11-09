@@ -1,4 +1,4 @@
-import { ProcessedTransactionDto } from '../../science/dto/processed-transaction.dto';
+import { ProcessedTransactionDto } from '../../science/dto/processed-transaction.dto.js';
 
 /**
  * Type representing the outcome of transaction enrichment processing in the Science module.

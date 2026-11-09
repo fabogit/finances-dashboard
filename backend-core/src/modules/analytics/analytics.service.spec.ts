@@ -1,9 +1,10 @@
+import type { Mock, Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AnalyticsService } from './analytics.service';
-import { AnalyticsRepository } from './analytics.repository';
-import { TransactionsRepository } from '../transactions/transactions.repository';
-import { CategoriesRepository } from '../categories/categories.repository';
-import { ScienceService } from '../science/science.service';
+import { AnalyticsService } from './analytics.service.js';
+import { AnalyticsRepository } from './analytics.repository.js';
+import { TransactionsRepository } from '../transactions/transactions.repository.js';
+import { CategoriesRepository } from '../categories/categories.repository.js';
+import { ScienceService } from '../science/science.service.js';
 import {
   BudgetRuleType,
   ExpenseType,
@@ -14,7 +15,7 @@ import { Decimal } from '@prisma/client/runtime/client';
 import {
   GetTransactionsFilterDto,
   GroupByOption,
-} from '../transactions/dto/get-transactions.dto';
+} from '../transactions/dto/get-transactions.dto.js';
 
 // --- TYPE HELPERS ---
 
@@ -71,10 +72,10 @@ const createMockRule = (overrides: Partial<BudgetRule> = {}): BudgetRule => {
 describe('AnalyticsService (Unit)', () => {
   let service: AnalyticsService;
 
-  let analyticsRepo: jest.Mocked<AnalyticsRepository>;
-  let categoriesRepo: jest.Mocked<CategoriesRepository>;
-  let transactionsRepo: jest.Mocked<TransactionsRepository>;
-  let scienceService: jest.Mocked<ScienceService>;
+  let analyticsRepo: Mocked<AnalyticsRepository>;
+  let categoriesRepo: Mocked<CategoriesRepository>;
+  let transactionsRepo: Mocked<TransactionsRepository>;
+  let scienceService: Mocked<ScienceService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -83,32 +84,32 @@ describe('AnalyticsService (Unit)', () => {
         {
           provide: AnalyticsRepository,
           useFactory: () => ({
-            getMonthlyIncome: jest.fn(),
-            getMonthlyExpensesByCategory: jest.fn(),
-            getSum: jest.fn(),
-            getIncomeSum: jest.fn(),
-            getExpenseSum: jest.fn(),
-            findForCategoryDistribution: jest.fn(),
-            findForMonthlyTrends: jest.fn(),
-            findForForecast: jest.fn(),
+            getMonthlyIncome: vi.fn(),
+            getMonthlyExpensesByCategory: vi.fn(),
+            getSum: vi.fn(),
+            getIncomeSum: vi.fn(),
+            getExpenseSum: vi.fn(),
+            findForCategoryDistribution: vi.fn(),
+            findForMonthlyTrends: vi.fn(),
+            findForForecast: vi.fn(),
           }),
         },
         {
           provide: CategoriesRepository,
           useFactory: () => ({
-            findAllTree: jest.fn(),
+            findAllTree: vi.fn(),
           }),
         },
         {
           provide: TransactionsRepository,
           useFactory: () => ({
-            buildWhereClause: jest.fn(),
+            buildWhereClause: vi.fn(),
           }),
         },
         {
           provide: ScienceService,
           useFactory: () => ({
-            getForecast: jest.fn(),
+            getForecast: vi.fn(),
           }),
         },
       ],
@@ -144,16 +145,14 @@ describe('AnalyticsService (Unit)', () => {
         }),
       ];
 
-      (analyticsRepo.getMonthlyIncome as jest.Mock).mockResolvedValue(
+      (analyticsRepo.getMonthlyIncome as Mock).mockResolvedValue(
         mkDecimal(monthlyIncome),
       );
-      (
-        analyticsRepo.getMonthlyExpensesByCategory as jest.Mock
-      ).mockResolvedValue([
+      (analyticsRepo.getMonthlyExpensesByCategory as Mock).mockResolvedValue([
         { categoryId: 'cat_home', _sum: { amount: mkDecimal(-845.33) } },
         { categoryId: 'cat_groc', _sum: { amount: mkDecimal(-88.94) } },
       ]);
-      (categoriesRepo.findAllTree as jest.Mock).mockResolvedValue(mockTree);
+      (categoriesRepo.findAllTree as Mock).mockResolvedValue(mockTree);
 
       const result = await service.getBudgetAnalysis({
         month: '2025-01',
@@ -162,15 +161,15 @@ describe('AnalyticsService (Unit)', () => {
     });
 
     it('Should return NO_BUDGET when no rule is defined', async () => {
-      (categoriesRepo.findAllTree as jest.Mock).mockResolvedValue([
+      (categoriesRepo.findAllTree as Mock).mockResolvedValue([
         createMockCategory(),
       ]);
-      (analyticsRepo.getMonthlyIncome as jest.Mock).mockResolvedValue(
+      (analyticsRepo.getMonthlyIncome as Mock).mockResolvedValue(
         mkDecimal(1000),
       );
-      (
-        analyticsRepo.getMonthlyExpensesByCategory as jest.Mock
-      ).mockResolvedValue([]);
+      (analyticsRepo.getMonthlyExpensesByCategory as Mock).mockResolvedValue(
+        [],
+      );
 
       const result = await service.getBudgetAnalysis({
         month: '2025-01',
@@ -181,26 +180,20 @@ describe('AnalyticsService (Unit)', () => {
 
   describe('getSummary', () => {
     it('Should calculate Savings Rate correctly', async () => {
-      (analyticsRepo.getSum as jest.Mock).mockResolvedValue(mkDecimal(1000));
-      (analyticsRepo.getIncomeSum as jest.Mock).mockResolvedValue(
-        mkDecimal(4000),
-      );
-      (analyticsRepo.getExpenseSum as jest.Mock).mockResolvedValue(
-        mkDecimal(-3000),
-      );
-      (transactionsRepo.buildWhereClause as jest.Mock).mockReturnValue({});
+      (analyticsRepo.getSum as Mock).mockResolvedValue(mkDecimal(1000));
+      (analyticsRepo.getIncomeSum as Mock).mockResolvedValue(mkDecimal(4000));
+      (analyticsRepo.getExpenseSum as Mock).mockResolvedValue(mkDecimal(-3000));
+      (transactionsRepo.buildWhereClause as Mock).mockReturnValue({});
 
       const result = await service.getSummary({} as GetTransactionsFilterDto);
       expect(result.savingsRate).toBe(25);
     });
 
     it('should handle zero income', async () => {
-      (analyticsRepo.getSum as jest.Mock).mockResolvedValue(mkDecimal(1000));
-      (analyticsRepo.getIncomeSum as jest.Mock).mockResolvedValue(mkDecimal(0));
-      (analyticsRepo.getExpenseSum as jest.Mock).mockResolvedValue(
-        mkDecimal(0),
-      );
-      (transactionsRepo.buildWhereClause as jest.Mock).mockReturnValue({});
+      (analyticsRepo.getSum as Mock).mockResolvedValue(mkDecimal(1000));
+      (analyticsRepo.getIncomeSum as Mock).mockResolvedValue(mkDecimal(0));
+      (analyticsRepo.getExpenseSum as Mock).mockResolvedValue(mkDecimal(0));
+      (transactionsRepo.buildWhereClause as Mock).mockReturnValue({});
 
       const result = await service.getSummary({} as GetTransactionsFilterDto);
       expect(result.savingsRate).toBe(0);
@@ -215,10 +208,10 @@ describe('AnalyticsService (Unit)', () => {
           category: { name: 'Sub', parent: { name: 'Macro' } },
         },
       ];
-      (
-        analyticsRepo.findForCategoryDistribution as jest.Mock
-      ).mockResolvedValue(mockTx);
-      (transactionsRepo.buildWhereClause as jest.Mock).mockReturnValue({});
+      (analyticsRepo.findForCategoryDistribution as Mock).mockResolvedValue(
+        mockTx,
+      );
+      (transactionsRepo.buildWhereClause as Mock).mockReturnValue({});
 
       const result = await service.getCategoryDistribution({
         groupBy: GroupByOption.SUB_CATEGORY,
@@ -233,10 +226,10 @@ describe('AnalyticsService (Unit)', () => {
           category: { name: 'Sub', parent: { name: 'Macro' } },
         },
       ];
-      (
-        analyticsRepo.findForCategoryDistribution as jest.Mock
-      ).mockResolvedValue(mockTx);
-      (transactionsRepo.buildWhereClause as jest.Mock).mockReturnValue({});
+      (analyticsRepo.findForCategoryDistribution as Mock).mockResolvedValue(
+        mockTx,
+      );
+      (transactionsRepo.buildWhereClause as Mock).mockReturnValue({});
       const result = await service.getCategoryDistribution(
         {} as GetTransactionsFilterDto,
       );
@@ -251,10 +244,8 @@ describe('AnalyticsService (Unit)', () => {
         { date: new Date('2025-01-20'), amount: mkDecimal(-50) },
         { date: new Date('2025-02-10'), amount: mkDecimal(-200) },
       ];
-      (analyticsRepo.findForMonthlyTrends as jest.Mock).mockResolvedValue(
-        mockTx,
-      );
-      (transactionsRepo.buildWhereClause as jest.Mock).mockReturnValue({});
+      (analyticsRepo.findForMonthlyTrends as Mock).mockResolvedValue(mockTx);
+      (transactionsRepo.buildWhereClause as Mock).mockReturnValue({});
 
       const result = await service.getMonthlyTrends(
         {} as GetTransactionsFilterDto,
@@ -267,7 +258,7 @@ describe('AnalyticsService (Unit)', () => {
 
   describe('getForecast', () => {
     it('should return error if no transactions', async () => {
-      (analyticsRepo.findForForecast as jest.Mock).mockResolvedValue([]);
+      (analyticsRepo.findForForecast as Mock).mockResolvedValue([]);
       const result = await service.getForecast();
       expect(result).toEqual({ error: expect.any(String) as string });
     });
@@ -293,8 +284,8 @@ describe('AnalyticsService (Unit)', () => {
           category: { name: 'Macro', parent: null },
         },
       ];
-      (analyticsRepo.findForForecast as jest.Mock).mockResolvedValue(mockTx);
-      (scienceService.getForecast as jest.Mock).mockResolvedValue({
+      (analyticsRepo.findForForecast as Mock).mockResolvedValue(mockTx);
+      (scienceService.getForecast as Mock).mockResolvedValue({
         forecast: [],
       });
 

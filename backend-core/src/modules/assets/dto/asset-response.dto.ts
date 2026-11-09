@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { AssetType } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
-import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
+import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator.js';
 
 /**
  * Response DTO representing an asset profile details.

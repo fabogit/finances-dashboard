@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type, Transform } from 'class-transformer';
-import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
-import { SYSTEM_CATEGORIES } from '../../../common/constants/domain.constants';
+import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator.js';
+import { SYSTEM_CATEGORIES } from '../../../common/constants/domain.constants.js';
 
 interface TransformObj {
   category?:

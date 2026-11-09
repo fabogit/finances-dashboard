@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ExpenseType, BudgetRuleType } from '@prisma/client';
 import { Expose, Type } from 'class-transformer';
-import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
+import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator.js';
 
 /**
  * Response DTO representing a budget rule.

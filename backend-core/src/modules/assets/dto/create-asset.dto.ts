@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { AssetType } from '@prisma/client';
 import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
-import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator';
+import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator.js';
 
 /**
  * Input DTO for creating a new financial asset.

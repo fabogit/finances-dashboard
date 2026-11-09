@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ScienceService } from './science.service';
+import { ScienceService } from './science.service.js';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 

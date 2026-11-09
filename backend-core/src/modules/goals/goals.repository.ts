@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { SavingsGoal, Prisma } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
-import { CreateGoalDto } from './dto/create-goal.dto';
-import { UpdateGoalDto } from './dto/update-goal.dto';
-import { SavingsGoalWithTransactions } from './interfaces/savings-goal-with-transactions.interface';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { CreateGoalDto } from './dto/create-goal.dto.js';
+import { UpdateGoalDto } from './dto/update-goal.dto.js';
+import { SavingsGoalWithTransactions } from './interfaces/savings-goal-with-transactions.interface.js';
 
 @Injectable()
 export class GoalsRepository {

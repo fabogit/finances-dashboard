@@ -9,7 +9,7 @@ import {
 import { PrismaPg } from '@prisma/adapter-pg';
 import * as dotenv from 'dotenv';
 import { createHash } from 'crypto';
-import { SYSTEM_CATEGORIES } from '../src/common/constants/domain.constants';
+import { SYSTEM_CATEGORIES } from '../src/common/constants/domain.constants.js';
 import {
   SEED_ASSET_NAMES,
   SEED_GOAL_NAMES,
@@ -20,7 +20,7 @@ import {
   SEED_OPERATIONS,
   SEED_DETAILS,
   SEED_CATEGORIES,
-} from './seed.constants';
+} from './seed.constants.js';
 
 dotenv.config();
 
@@ -678,11 +678,11 @@ async function main() {
   await seedBudgets();
 }
 
-main()
-  .catch((e: unknown) => {
-    console.error('❌ Seeding failed:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+try {
+  await main();
+} catch (e: unknown) {
+  console.error('❌ Seeding failed:', e);
+  process.exit(1);
+} finally {
+  await prisma.$disconnect();
+}

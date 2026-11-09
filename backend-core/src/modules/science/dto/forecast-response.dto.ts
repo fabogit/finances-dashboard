@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
-import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator';
+import { SerializeDecimal } from '../../../common/decorators/serialize-decimal.decorator.js';
 
 /**
  * Sub-DTO representing forecast components (fixed, variable, total) returned by the Science service.

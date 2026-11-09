@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator';
+import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator.js';
 
 /**
  * Input DTO for creating a new transaction.

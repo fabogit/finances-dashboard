@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AnalyticsRepository } from './analytics.repository';
-import { PrismaService } from '../../prisma/prisma.service';
+import { AnalyticsRepository } from './analytics.repository.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { Prisma } from '@prisma/client';
 
 describe('AnalyticsRepository', () => {
@@ -8,9 +8,9 @@ describe('AnalyticsRepository', () => {
 
   const mockPrisma = {
     enrichedTransaction: {
-      aggregate: jest.fn(),
-      findMany: jest.fn(),
-      groupBy: jest.fn(),
+      aggregate: vi.fn(),
+      findMany: vi.fn(),
+      groupBy: vi.fn(),
     },
   };
 

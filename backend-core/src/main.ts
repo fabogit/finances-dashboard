@@ -1,10 +1,16 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { AppModule } from './app.module';
-import { configureApp } from './app-setup';
-import { version } from '../package.json';
+import { AppModule } from './app.module.js';
+import { configureApp } from './app-setup.js';
+
+// The same relative path from src/ (tests, tsx) and from dist/ (build).
+const { version } = JSON.parse(
+  readFileSync(join(import.meta.dirname, '../package.json'), 'utf8'),
+) as { version: string };
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -32,4 +38,4 @@ async function bootstrap() {
   logger.log(`✅ Application is running on: ${await app.getUrl()}`);
   logger.log(`✅ Swagger documentation: ${await app.getUrl()}/${swaggerPath}`);
 }
-void bootstrap();
+await bootstrap();

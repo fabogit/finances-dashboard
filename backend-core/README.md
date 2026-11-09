@@ -125,9 +125,9 @@ pnpm run test:e2e
 
 The core module is part of the global GitHub Actions workflow. Every push to `backend-core/**` triggers:
 
-1. **Quality Check**: Linting and formatting verification.
+1. **Quality Check**: oxlint, oxfmt `--check` and `tsc`.
 2. **Security**: Prisma Client generation and dependency audit.
-3. **Unit Testing**: Full Jest suite execution.
+3. **Unit Testing**: Full Vitest suite execution.
 4. **Integration**: E2E tests run against a live Postgres service container.
 
 **Intelligent CI**: The pipeline is optimized with path-filtering, meaning `core` jobs only run when relevant files are modified.

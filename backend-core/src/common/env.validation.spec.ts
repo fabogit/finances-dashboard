@@ -1,9 +1,9 @@
 import 'reflect-metadata';
-import { validate } from './env.validation';
+import { validate } from './env.validation.js';
 import {
   DEFAULT_SCIENCE_RETRY_COUNT,
   DEFAULT_SCIENCE_TIMEOUT_MS,
-} from '../modules/science/science.constants';
+} from '../modules/science/science.constants.js';
 
 describe('validate (environment)', () => {
   const base = { DATABASE_URL: 'postgresql://user:pw@localhost:5432/db' };

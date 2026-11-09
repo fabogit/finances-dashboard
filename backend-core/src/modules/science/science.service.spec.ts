@@ -1,3 +1,4 @@
+import type { Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { HttpModule, HttpService } from '@nestjs/axios';
@@ -11,12 +12,12 @@ import { AxiosResponse, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
 import { of } from 'rxjs';
 import { createServer, IncomingMessage, Server, ServerResponse } from 'http';
 import { AddressInfo } from 'net';
-import { ScienceService } from './science.service';
-import { SCIENCE_RETRY_BASE_DELAY_MS } from './science.constants';
+import { ScienceService } from './science.service.js';
+import { SCIENCE_RETRY_BASE_DELAY_MS } from './science.constants.js';
 import { RawTransaction } from '@prisma/client';
-import { ForecastTransactionInputDto } from './dto/forecast-transaction-input.dto';
-import { MonthlyForecastDto } from './dto/forecast-response.dto';
-import { ProcessedTransactionDto } from './dto/processed-transaction.dto';
+import { ForecastTransactionInputDto } from './dto/forecast-transaction-input.dto.js';
+import { MonthlyForecastDto } from './dto/forecast-response.dto.js';
+import { ProcessedTransactionDto } from './dto/processed-transaction.dto.js';
 
 const createAxiosResponse = <T>(data: T): AxiosResponse<T> => ({
   data,
@@ -76,15 +77,15 @@ const mockForecast: MonthlyForecastDto[] = [
 describe('ScienceService', () => {
   describe('with a mocked HttpService (success paths)', () => {
     let service: ScienceService;
-    let httpService: jest.Mocked<HttpService>;
+    let httpService: Mocked<HttpService>;
 
     beforeEach(async () => {
       const mockHttpService = {
-        post: jest.fn(),
+        post: vi.fn(),
       };
 
       const mockConfigService = {
-        get: jest.fn((key: string) => {
+        get: vi.fn((key: string) => {
           if (key === 'SCIENCE_SERVICE_URL') return 'http://mock-science:8000';
           return null;
         }),
@@ -256,9 +257,9 @@ describe('ScienceService', () => {
     };
 
     /**
-     * In jest the first real request that times out pays a one-off cold
-     * start of about 190 ms (391 ms against 207 ms for the next one), which
-     * would eat the timeout margin. One timed-out request up front keeps it
+     * The first real request that times out pays a one-off cold start
+     * (measured on Jest: about 190 ms, 391 ms against 207 ms for the next
+     * one), which would eat the timeout margin. One timed-out request up front keeps it
      * out of the timed tests.
      */
     beforeAll(async () => {

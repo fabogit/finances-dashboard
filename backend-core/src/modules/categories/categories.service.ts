@@ -4,10 +4,10 @@ import {
   ConflictException,
   ForbiddenException,
 } from '@nestjs/common';
-import { CategoriesRepository } from './categories.repository';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
-import { SetBudgetDto } from './dto/set-budget.dto';
+import { CategoriesRepository } from './categories.repository.js';
+import { CreateCategoryDto } from './dto/create-category.dto.js';
+import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { SetBudgetDto } from './dto/set-budget.dto.js';
 import { Prisma } from '@prisma/client';
 
 @Injectable()

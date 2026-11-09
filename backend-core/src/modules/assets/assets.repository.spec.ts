@@ -1,29 +1,29 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AssetsRepository } from './assets.repository';
-import { PrismaService } from '../../prisma/prisma.service';
+import { AssetsRepository } from './assets.repository.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { AssetType, Prisma } from '@prisma/client';
-import { CreateAssetDto } from './dto/create-asset.dto';
+import { CreateAssetDto } from './dto/create-asset.dto.js';
 
 describe('AssetsRepository', () => {
   let repository: AssetsRepository;
 
   const mockPrisma = {
     asset: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      findUniqueOrThrow: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
     assetHistory: {
-      upsert: jest.fn(),
-      findFirst: jest.fn(),
+      upsert: vi.fn(),
+      findFirst: vi.fn(),
     },
     enrichedTransaction: {
-      aggregate: jest.fn(),
+      aggregate: vi.fn(),
     },
-    $transaction: jest.fn(async (cb: (prisma: unknown) => Promise<unknown>) => {
+    $transaction: vi.fn(async (cb: (prisma: unknown) => Promise<unknown>) => {
       if (typeof cb === 'function') {
         const result = await cb(mockPrisma);
         return result;
@@ -33,7 +33,7 @@ describe('AssetsRepository', () => {
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AssetsRepository,

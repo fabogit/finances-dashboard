@@ -7,7 +7,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator';
+import { ParseDecimal } from '../../../common/decorators/parse-decimal.decorator.js';
 
 /**
  * Input DTO for creating a new savings goal.

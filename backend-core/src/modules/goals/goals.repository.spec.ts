@@ -1,24 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GoalsRepository } from './goals.repository';
-import { PrismaService } from '../../prisma/prisma.service';
+import { GoalsRepository } from './goals.repository.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { GoalStatus, Prisma } from '@prisma/client';
-import { CreateGoalDto } from './dto/create-goal.dto';
+import { CreateGoalDto } from './dto/create-goal.dto.js';
 
 describe('GoalsRepository', () => {
   let repository: GoalsRepository;
 
   const mockPrisma = {
     savingsGoal: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GoalsRepository,
@@ -100,7 +100,7 @@ describe('GoalsRepository', () => {
     });
 
     it('should use provided transaction client', async () => {
-      const mockTxUpdate = jest.fn().mockResolvedValue({ id: 'g1' });
+      const mockTxUpdate = vi.fn().mockResolvedValue({ id: 'g1' });
       const mockTx = {
         savingsGoal: {
           update: mockTxUpdate,

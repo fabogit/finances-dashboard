@@ -12,14 +12,14 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { GoalsService } from './goals.service';
-import { CreateGoalDto } from './dto/create-goal.dto';
-import { UpdateGoalDto } from './dto/update-goal.dto';
-import { GetGoalQueryDto } from './dto/get-goal-query.dto';
-import { GoalResponseDto } from './dto/goal-response.dto';
-import { GoalProjectionResponseDto } from '../science/dto/goal-projection-response.dto';
-import { ApiScienceErrors } from '../science/api-science-errors.decorator';
-import { Serialize } from '../../common/interceptors/serialize.interceptor';
+import { GoalsService } from './goals.service.js';
+import { CreateGoalDto } from './dto/create-goal.dto.js';
+import { UpdateGoalDto } from './dto/update-goal.dto.js';
+import { GetGoalQueryDto } from './dto/get-goal-query.dto.js';
+import { GoalResponseDto } from './dto/goal-response.dto.js';
+import { GoalProjectionResponseDto } from '../science/dto/goal-projection-response.dto.js';
+import { ApiScienceErrors } from '../science/api-science-errors.decorator.js';
+import { Serialize } from '../../common/interceptors/serialize.interceptor.js';
 
 @ApiTags('Savings Goals')
 @Controller('goals')

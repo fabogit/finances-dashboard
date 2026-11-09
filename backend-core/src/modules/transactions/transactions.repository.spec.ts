@@ -1,42 +1,42 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { TransactionsRepository } from './transactions.repository';
-import { PrismaService } from '../../prisma/prisma.service';
-import { AssetsRepository } from '../assets/assets.repository';
-import { GoalsRepository } from '../goals/goals.repository';
+import { TransactionsRepository } from './transactions.repository.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { AssetsRepository } from '../assets/assets.repository.js';
+import { GoalsRepository } from '../goals/goals.repository.js';
 import { Prisma } from '@prisma/client';
-import { GetTransactionsFilterDto } from './dto/get-transactions.dto';
-import { EnrichedDataInput } from './interfaces/enriched-data-input.interface';
+import { GetTransactionsFilterDto } from './dto/get-transactions.dto.js';
+import { EnrichedDataInput } from './interfaces/enriched-data-input.interface.js';
 
 describe('TransactionsRepository', () => {
   let repository: TransactionsRepository;
 
   const mockPrisma = {
     category: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      findMany: jest.fn(),
-      createMany: jest.fn(),
-      findUnique: jest.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      createMany: vi.fn(),
+      findUnique: vi.fn(),
     },
     enrichedTransaction: {
-      createMany: jest.fn(),
-      count: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      findUniqueOrThrow: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      createMany: vi.fn(),
+      count: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
-    $transaction: jest.fn((promises) => Promise.all(promises || [])),
+    $transaction: vi.fn((promises) => Promise.all(promises || [])),
   };
 
   const mockAssetsRepo = {
-    updateBalanceWithDelta: jest.fn(),
+    updateBalanceWithDelta: vi.fn(),
   };
 
   const mockGoalsRepo = {
-    updateProgress: jest.fn(),
+    updateProgress: vi.fn(),
   };
 
   beforeEach(async () => {

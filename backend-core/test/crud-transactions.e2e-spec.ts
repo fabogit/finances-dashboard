@@ -2,11 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Server } from 'http';
-import { AppModule } from '../src/app.module';
-import { PrismaService } from '../src/prisma/prisma.service';
+import { AppModule } from '../src/app.module.js';
+import { PrismaService } from '../src/prisma/prisma.service.js';
 import { AssetType, GoalStatus, ExpenseType } from '@prisma/client';
-import { configureApp } from '../src/app-setup';
-import { TransactionDto } from '../src/modules/transactions/dto/transaction.dto';
+import { configureApp } from '../src/app-setup.js';
+import { TransactionDto } from '../src/modules/transactions/dto/transaction.dto.js';
 
 const API_PREFIX = '/api/v1';
 

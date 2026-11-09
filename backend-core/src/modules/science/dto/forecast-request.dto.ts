@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsArray, IsNumber, ValidateNested } from 'class-validator';
-import { ForecastTransactionInputDto } from './forecast-transaction-input.dto';
+import { ForecastTransactionInputDto } from './forecast-transaction-input.dto.js';
 
 /**
  * Payload DTO sent to the Python FastAPI Science service for forecast calculation.

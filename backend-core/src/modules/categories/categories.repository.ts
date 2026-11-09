@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { BudgetRule, Category, Prisma } from '@prisma/client';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
-import { SetBudgetDto } from './dto/set-budget.dto';
-import { CategoryWithChildren } from './interfaces/category-with-children.interface';
-import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants';
+import { CreateCategoryDto } from './dto/create-category.dto.js';
+import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { SetBudgetDto } from './dto/set-budget.dto.js';
+import { CategoryWithChildren } from './interfaces/category-with-children.interface.js';
+import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants.js';
 
 @Injectable()
 export class CategoriesRepository {

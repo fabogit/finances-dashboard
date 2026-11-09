@@ -1,38 +1,38 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CategoriesRepository } from './categories.repository';
-import { PrismaService } from '../../prisma/prisma.service';
+import { CategoriesRepository } from './categories.repository.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 import { ExpenseType, Prisma } from '@prisma/client';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
-import { SetBudgetDto } from './dto/set-budget.dto';
+import { CreateCategoryDto } from './dto/create-category.dto.js';
+import { UpdateCategoryDto } from './dto/update-category.dto.js';
+import { SetBudgetDto } from './dto/set-budget.dto.js';
 import { BudgetRuleType } from '@prisma/client';
-import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants';
+import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants.js';
 
 describe('CategoriesRepository', () => {
   let repository: CategoriesRepository;
 
   const mockPrisma = {
     category: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      delete: jest.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      delete: vi.fn(),
     },
     budgetRule: {
-      upsert: jest.fn(),
-      deleteMany: jest.fn(),
+      upsert: vi.fn(),
+      deleteMany: vi.fn(),
     },
     enrichedTransaction: {
-      updateMany: jest.fn(),
+      updateMany: vi.fn(),
     },
-    $transaction: jest.fn(),
+    $transaction: vi.fn(),
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockPrisma.$transaction.mockImplementation(
       async (cb: (prisma: unknown) => Promise<unknown>) => {
         if (typeof cb === 'function') {

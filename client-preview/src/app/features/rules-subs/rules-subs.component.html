@@ -1,17 +1,31 @@
 <div class="page-header">
   <h2 class="neon-text-primary">Rules & Subscriptions</h2>
-  <p class="subtitle">Define keyword criteria for auto-classification and track recurring fixed contracts</p>
+  <p class="subtitle">
+    Define keyword criteria for auto-classification and track recurring fixed contracts
+  </p>
 </div>
 
 <div class="split-layout">
   <!-- Local Rule Engine Mock -->
   <div class="glass-card rules-card">
     <h3>Local Rule Engine</h3>
-    <p class="section-desc">Create rules to auto-categorize statement lines before AI processing.</p>
+    <p class="section-desc">
+      Create rules to auto-categorize statement lines before AI processing.
+    </p>
 
     <div class="rule-form">
-      <input class="rule-input" type="text" placeholder="If description matches..." [ngModel]="newKeyword()" (ngModelChange)="newKeyword.set($event)">
-      <select class="rule-select" [ngModel]="newCategory()" (ngModelChange)="newCategory.set($event)">
+      <input
+        class="rule-input"
+        type="text"
+        placeholder="If description matches..."
+        [ngModel]="newKeyword()"
+        (ngModelChange)="newKeyword.set($event)"
+      />
+      <select
+        class="rule-select"
+        [ngModel]="newCategory()"
+        (ngModelChange)="newCategory.set($event)"
+      >
         <option value="Food & Groceries">Food & Groceries</option>
         <option value="Leisure">Leisure</option>
         <option value="Transport">Transport</option>
@@ -48,7 +62,7 @@
           <span class="label">Next Billing: {{ sub.nextBillingDate }}</span>
         </div>
         <div class="sub-value">
-          <strong>{{ sub.amount | currency:'EUR' }}</strong>
+          <strong>{{ sub.amount | currency: 'EUR' }}</strong>
           <span class="label">/{{ sub.frequency | lowercase }}</span>
         </div>
       </div>

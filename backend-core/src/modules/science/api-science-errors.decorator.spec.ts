@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { DECORATORS } from '@nestjs/swagger';
-import { AnalyticsController } from '../analytics/analytics.controller';
-import { GoalsController } from '../goals/goals.controller';
+import { AnalyticsController } from '../analytics/analytics.controller.js';
+import { GoalsController } from '../goals/goals.controller.js';
 
 const documentedStatuses = (
   controller: { prototype: object },

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { AssetsRepository } from './assets.repository';
-import { AssetsService } from './assets.service';
-import { AssetsController } from './assets.controller';
+import { AssetsRepository } from './assets.repository.js';
+import { AssetsService } from './assets.service.js';
+import { AssetsController } from './assets.controller.js';
 
 @Module({
   controllers: [AssetsController],

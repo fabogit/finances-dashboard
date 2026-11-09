@@ -2,14 +2,14 @@ import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { ConfigModule } from '@nestjs/config';
-import { validate } from './common/env.validation';
-import { PrismaModule } from './prisma/prisma.module';
-import { AnalyticsModule } from './modules/analytics/analytics.module';
-import { AssetsModule } from './modules/assets/assets.module';
-import { CategoriesModule } from './modules/categories/categories.module';
-import { GoalsModule } from './modules/goals/goals.module';
-import { ScienceModule } from './modules/science/science.module';
-import { TransactionsModule } from './modules/transactions/transactions.module';
+import { validate } from './common/env.validation.js';
+import { PrismaModule } from './prisma/prisma.module.js';
+import { AnalyticsModule } from './modules/analytics/analytics.module.js';
+import { AssetsModule } from './modules/assets/assets.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
+import { GoalsModule } from './modules/goals/goals.module.js';
+import { ScienceModule } from './modules/science/science.module.js';
+import { TransactionsModule } from './modules/transactions/transactions.module.js';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
       validate,
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, 'public'),
+      rootPath: join(import.meta.dirname, 'public'),
       exclude: ['/api/{*path}'],
     }),
     TransactionsModule,
