@@ -21,7 +21,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, 'public'),
-      exclude: ['/api/(.*)'],
+      exclude: ['/api/{*path}'],
     }),
     TransactionsModule,
     PrismaModule,
