@@ -25,7 +25,7 @@ graph TD
 | Container | Service | Port | Notes |
 | --- | --- | --- | --- |
 | `fn-postgres` | PostgreSQL 17 | `${POSTGRES_PORT}` (5432) | Data in the `postgres_data` volume |
-| `fn-core` | backend-core | `${SERVER_PORT}` (3000) | Swagger at `/docs`; on start it runs `prisma generate`, `prisma db push`, the seed and `start:dev` |
+| `fn-core` | backend-core | `${SERVER_PORT}` (3000) | Swagger at `/docs`; on start it runs `prisma generate`, `prisma db push`, the seed and `nest start --watch` (with `nest-cli.docker.json`) |
 | `fn-science` | backend-science | `${SCIENCE_PORT}` (8000) | FastAPI docs at `/docs` |
 
 How to run it: [development/setup.md](../development/setup.md).

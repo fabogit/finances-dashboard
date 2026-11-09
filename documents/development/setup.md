@@ -48,7 +48,7 @@ pnpm run docker:down
 | `fn-core` | `http://localhost:3000/docs` | NestJS, Swagger UI |
 | `fn-science` | `http://localhost:8000/docs` | FastAPI docs |
 
-On start `fn-core` runs `prisma generate`, `prisma db push --accept-data-loss`, the seed and `start:dev`, so the database always matches the schema; `fn-science` runs uvicorn with reload. Logs: `docker logs -f fn-core`.
+On start `fn-core` runs `prisma generate`, `prisma db push --accept-data-loss`, the seed and `nest start --watch` with `nest-cli.docker.json` ([Toolchain](#toolchain)), so the database always matches the schema; `fn-science` runs uvicorn with reload. Logs: `docker logs -f fn-core`.
 
 ## Run locally
 
@@ -99,7 +99,7 @@ The schema is applied with `prisma db push`, not migrations, until the MVP (D-19
 `backend-core` follows what `nest new` generates in NestJS 12 for an ESM project (`@nestjs/schematics` 12.0.13), with oxfmt instead of Prettier (D-53):
 
 - **ESM:** `"type": "module"`, `.js` extensions on relative imports, `import.meta.dirname`, top-level `await bootstrap()`.
-- **Build:** `tsconfig.build.json` compiles `src/` only (`rootDir: ./src`) into `dist/`, which `nest build` empties first (`deleteOutDir`); `pnpm build && pnpm start:prod` runs `node dist/main`. `prisma/` and `prisma.config.ts` are not built: the seed runs through `tsx`.
+- **Build:** `tsconfig.build.json` compiles `src/` only (`rootDir: ./src`) into `dist/`, which `nest build` empties first (`deleteOutDir`); `pnpm build && pnpm start:prod` runs `node dist/main`. In Docker, `fn-core` starts with `nest-cli.docker.json`, the same configuration with `deleteOutDir: false`; keep the two files aligned. `prisma/` and `prisma.config.ts` are not built: the seed runs through `tsx`.
 - **Tests:** Vitest, `vitest.config.ts` (unit, `*.spec.ts`) and `vitest.config.e2e.ts` (`*.e2e-spec.ts`), with globals; decorator metadata works without SWC.
 - **Lint:** `oxlint --type-aware` (`oxlint-tsgolint`), rules in `.oxlintrc.json`.
 - **Format:** oxfmt, options in `.oxfmtrc.json`.
@@ -117,6 +117,8 @@ The schema is applied with `prisma db push`, not migrations, until the MVP (D-19
 | `lint` and `format` cover `src/` and `test/` | Also `prisma/` | The seed is application code |
 | `vitest.config.e2e.ts` | Adds `setupFiles: ['./test/setup-e2e.ts']` (loads `.env.test`) and `fileParallelism: false` | The end-to-end files share one real database |
 | `tsconfig.json` | Adds `noUnusedLocals`, `noUnusedParameters`, `forceConsistentCasingInFileNames`, and `multer` in `types` | Checks already in use; `multer` types the file upload |
+| `nest-cli.json` only | Adds `nest-cli.docker.json` (`deleteOutDir: false`), used by the `fn-core` start command | `dist/` in `fn-core` is the mount point of the `backend_core_dist` volume, which cannot be removed (`EBUSY`) |
+| `tsconfig.build.json` | Adds `tsBuildInfoFile: ./dist/tsconfig.build.tsbuildinfo` | With `rootDir: ./src` the file lands next to the config, outside `dist/`: a stale copy makes tsc emit nothing where `dist/` is not emptied (the container), and the container would write it as root into the bind mount |
 | `@nestjs/mau` and the `deploy` script | Absent | The project does not deploy to Mau |
 | Generated `AGENTS.md` | Not used | The repository has its own |
 | Scaffold scripts only | Adds `format:check`, `test:e2e:docker`, `db:*`, `docker:*`, `prisma:*` | Project tasks |
