@@ -8,9 +8,9 @@ describe('AnalyticsRepository', () => {
 
   const mockPrisma = {
     enrichedTransaction: {
-      aggregate: jest.fn(),
-      findMany: jest.fn(),
-      groupBy: jest.fn(),
+      aggregate: vi.fn(),
+      findMany: vi.fn(),
+      groupBy: vi.fn(),
     },
   };
 

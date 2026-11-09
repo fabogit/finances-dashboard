@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionsService } from './transactions.service';
 import { TransactionsRepository } from './transactions.repository';
@@ -20,24 +21,24 @@ import {
 } from './dto/get-transactions.dto';
 
 type MockRepository<T> = {
-  [P in keyof T]?: jest.Mock;
+  [P in keyof T]?: Mock;
 };
 
 const createTransactionsMock = (): MockRepository<TransactionsRepository> => ({
-  createManyRaw: jest.fn(),
-  createManyEnriched: jest.fn(),
-  findAllRaw: jest.fn(),
-  findAllEnriched: jest.fn(),
-  findById: jest.fn(),
-  create: jest.fn(),
-  update: jest.fn(),
-  delete: jest.fn(),
-  getAssetDeltasByBatchId: jest.fn().mockResolvedValue([]),
-  getGoalDeltasByBatchId: jest.fn().mockResolvedValue([]),
+  createManyRaw: vi.fn(),
+  createManyEnriched: vi.fn(),
+  findAllRaw: vi.fn(),
+  findAllEnriched: vi.fn(),
+  findById: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+  delete: vi.fn(),
+  getAssetDeltasByBatchId: vi.fn().mockResolvedValue([]),
+  getGoalDeltasByBatchId: vi.fn().mockResolvedValue([]),
 });
 
 const createScienceMock = (): MockRepository<ScienceService> => ({
-  processTransactions: jest.fn(),
+  processTransactions: vi.fn(),
 });
 
 const mkDecimal = (val: number): Prisma.Decimal => new Prisma.Decimal(val);
@@ -79,28 +80,28 @@ describe('TransactionsService', () => {
         { provide: ScienceService, useFactory: createScienceMock },
         {
           provide: AssetsService,
-          useValue: { updateBalanceWithDelta: jest.fn() },
+          useValue: { updateBalanceWithDelta: vi.fn() },
         },
-        { provide: GoalsService, useValue: { updateProgress: jest.fn() } },
+        { provide: GoalsService, useValue: { updateProgress: vi.fn() } },
         {
           provide: PrismaService,
           useValue: {
-            $transaction: jest.fn(
+            $transaction: vi.fn(
               (
                 cb: (tx: {
-                  enrichedTransaction: { groupBy: jest.Mock };
+                  enrichedTransaction: { groupBy: Mock };
                 }) => Promise<unknown>,
               ) => {
                 const mockTx = {
                   enrichedTransaction: {
-                    groupBy: jest.fn().mockResolvedValue([]),
+                    groupBy: vi.fn().mockResolvedValue([]),
                   },
                 };
                 return cb(mockTx);
               },
             ),
             enrichedTransaction: {
-              findMany: jest.fn().mockResolvedValue([]),
+              findMany: vi.fn().mockResolvedValue([]),
             },
           },
         },
@@ -192,7 +193,7 @@ describe('TransactionsService', () => {
 
       const prismaMock = service['prisma'] as unknown as {
         enrichedTransaction: {
-          findMany: jest.Mock;
+          findMany: Mock;
         };
       };
 
@@ -263,7 +264,7 @@ describe('TransactionsService', () => {
       scienceService.processTransactions!.mockResolvedValue(scienceResponse);
 
       const prismaService = module.get(PrismaService);
-      jest.spyOn(prismaService, '$transaction').mockImplementation((cb) => {
+      vi.spyOn(prismaService, '$transaction').mockImplementation((cb) => {
         const mockTx = {} as unknown as Prisma.TransactionClient;
         return cb(mockTx);
       });
@@ -318,7 +319,7 @@ describe('TransactionsService', () => {
       scienceService.processTransactions!.mockResolvedValue(scienceResponse);
 
       const prismaService = module.get(PrismaService);
-      const transactionSpy = jest.spyOn(prismaService, '$transaction');
+      const transactionSpy = vi.spyOn(prismaService, '$transaction');
 
       const result = await service.uploadFile(mockFile);
 
@@ -445,7 +446,7 @@ describe('TransactionsService', () => {
           amount: mkDecimal(-25),
         });
 
-        (assetsService.updateBalanceWithDelta as jest.Mock).mockRejectedValue(
+        (assetsService.updateBalanceWithDelta as Mock).mockRejectedValue(
           new Error('Asset balance update failed'),
         );
 

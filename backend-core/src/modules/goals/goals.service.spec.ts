@@ -1,3 +1,4 @@
+import type { Mock, Mocked } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { GoalsService } from './goals.service';
 import { GoalsRepository } from './goals.repository';
@@ -8,8 +9,8 @@ import { CreateGoalDto } from './dto/create-goal.dto';
 
 describe('GoalsService', () => {
   let service: GoalsService;
-  let repo: jest.Mocked<GoalsRepository>;
-  let science: jest.Mocked<ScienceService>;
+  let repo: Mocked<GoalsRepository>;
+  let science: Mocked<ScienceService>;
 
   const mockGoal: SavingsGoal & {
     transactions: {
@@ -42,16 +43,16 @@ describe('GoalsService', () => {
 
   beforeEach(async () => {
     const mockRepo = {
-      create: jest.fn(),
-      findAll: jest.fn(),
-      findById: jest.fn(),
-      update: jest.fn(),
-      updateProgress: jest.fn(),
-      delete: jest.fn(),
+      create: vi.fn(),
+      findAll: vi.fn(),
+      findById: vi.fn(),
+      update: vi.fn(),
+      updateProgress: vi.fn(),
+      delete: vi.fn(),
     };
 
     const mockScience = {
-      getGoalProjection: jest.fn(),
+      getGoalProjection: vi.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -70,7 +71,7 @@ describe('GoalsService', () => {
   describe('create', () => {
     it('should create a goal', async () => {
       const dto: CreateGoalDto = { name: 'Test', targetAmount: 100 };
-      (repo.create as jest.Mock).mockResolvedValue(mockGoal);
+      (repo.create as Mock).mockResolvedValue(mockGoal);
       const result = await service.create(dto);
       expect(result).toEqual(mockGoal);
       expect(repo.create.mock.calls).toEqual([[dto]]);
@@ -79,7 +80,7 @@ describe('GoalsService', () => {
 
   describe('findAll', () => {
     it('should return all goals', async () => {
-      (repo.findAll as jest.Mock).mockResolvedValue([mockGoal]);
+      (repo.findAll as Mock).mockResolvedValue([mockGoal]);
       const result = await service.findAll();
       expect(result).toHaveLength(1);
     });
@@ -87,20 +88,20 @@ describe('GoalsService', () => {
 
   describe('findOne', () => {
     it('should return a goal if found', async () => {
-      (repo.findById as jest.Mock).mockResolvedValue(mockGoal);
+      (repo.findById as Mock).mockResolvedValue(mockGoal);
       const result = await service.findOne('goal-1');
       expect(result).toEqual(mockGoal);
     });
 
     it('should throw NotFoundException if not found', async () => {
-      (repo.findById as jest.Mock).mockResolvedValue(null);
+      (repo.findById as Mock).mockResolvedValue(null);
       await expect(service.findOne('404')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('update', () => {
     it('should update goal', async () => {
-      (repo.update as jest.Mock).mockResolvedValue(mockGoal);
+      (repo.update as Mock).mockResolvedValue(mockGoal);
       const result = await service.update('g1', {
         name: 'New',
       });
@@ -108,20 +109,20 @@ describe('GoalsService', () => {
     });
 
     it('should throw NotFoundException on P2025', async () => {
-      (repo.update as jest.Mock).mockRejectedValue(prismaError);
+      (repo.update as Mock).mockRejectedValue(prismaError);
       await expect(service.update('g1', {})).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('updateProgress', () => {
     it('should update progress', async () => {
-      (repo.updateProgress as jest.Mock).mockResolvedValue(mockGoal);
+      (repo.updateProgress as Mock).mockResolvedValue(mockGoal);
       const result = await service.updateProgress('g1', 100);
       expect(result).toEqual(mockGoal);
     });
 
     it('should throw NotFoundException on P2025', async () => {
-      (repo.updateProgress as jest.Mock).mockRejectedValue(prismaError);
+      (repo.updateProgress as Mock).mockRejectedValue(prismaError);
       await expect(service.updateProgress('g1', 100)).rejects.toThrow(
         NotFoundException,
       );
@@ -130,13 +131,13 @@ describe('GoalsService', () => {
 
   describe('remove', () => {
     it('should delete goal', async () => {
-      (repo.delete as jest.Mock).mockResolvedValue(mockGoal);
+      (repo.delete as Mock).mockResolvedValue(mockGoal);
       const result = await service.remove('g1');
       expect(result).toEqual(mockGoal);
     });
 
     it('should throw NotFoundException on P2025', async () => {
-      (repo.delete as jest.Mock).mockRejectedValue(prismaError);
+      (repo.delete as Mock).mockRejectedValue(prismaError);
       await expect(service.remove('g1')).rejects.toThrow(NotFoundException);
     });
   });
@@ -155,8 +156,8 @@ describe('GoalsService', () => {
           },
         ],
       };
-      (repo.findById as jest.Mock).mockResolvedValue(goalWithTx);
-      (science.getGoalProjection as jest.Mock).mockResolvedValue({
+      (repo.findById as Mock).mockResolvedValue(goalWithTx);
+      (science.getGoalProjection as Mock).mockResolvedValue({
         estimated_date: '2025-10',
         monthly_avg: 150,
         confidence: 'MEDIUM',

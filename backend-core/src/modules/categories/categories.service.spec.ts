@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CategoriesService } from './categories.service';
 import { CategoriesRepository } from './categories.repository';
@@ -13,18 +14,18 @@ import { SetBudgetDto } from './dto/set-budget.dto';
 import { SYSTEM_CATEGORIES } from '../../common/constants/domain.constants';
 
 type MockRepository<T> = {
-  [P in keyof T]?: jest.Mock;
+  [P in keyof T]?: Mock;
 };
 
 const createCategoriesMock = (): MockRepository<CategoriesRepository> => ({
-  findAllTree: jest.fn(),
-  create: jest.fn(),
-  update: jest.fn(),
-  delete: jest.fn(),
-  findById: jest.fn(),
-  upsertBudget: jest.fn(),
-  findFallbackCategory: jest.fn(),
-  deleteWithReRouting: jest.fn(),
+  findAllTree: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+  delete: vi.fn(),
+  findById: vi.fn(),
+  upsertBudget: vi.fn(),
+  findFallbackCategory: vi.fn(),
+  deleteWithReRouting: vi.fn(),
 });
 
 const createPrismaError = (

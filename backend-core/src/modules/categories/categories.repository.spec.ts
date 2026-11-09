@@ -13,26 +13,26 @@ describe('CategoriesRepository', () => {
 
   const mockPrisma = {
     category: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      delete: jest.fn(),
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      updateMany: vi.fn(),
+      delete: vi.fn(),
     },
     budgetRule: {
-      upsert: jest.fn(),
-      deleteMany: jest.fn(),
+      upsert: vi.fn(),
+      deleteMany: vi.fn(),
     },
     enrichedTransaction: {
-      updateMany: jest.fn(),
+      updateMany: vi.fn(),
     },
-    $transaction: jest.fn(),
+    $transaction: vi.fn(),
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockPrisma.$transaction.mockImplementation(
       async (cb: (prisma: unknown) => Promise<unknown>) => {
         if (typeof cb === 'function') {

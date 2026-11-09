@@ -26,6 +26,6 @@
     "strictNullChecks": true,
     "strictPropertyInitialization": false,
     "target": "ES2023",
-    "types": ["jest", "multer", "node"]
+    "types": ["vitest/globals", "multer", "node"]
   }
 }

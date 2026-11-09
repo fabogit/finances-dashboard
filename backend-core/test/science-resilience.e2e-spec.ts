@@ -6,8 +6,6 @@ import { Test } from '@nestjs/testing';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { configureApp } from '../src/app-setup';
 
-type AppModuleExports = typeof import('../src/app.module');
-
 const API_PREFIX = '/api/v1';
 const SCIENCE_TIMEOUT_MS = 300;
 
@@ -73,13 +71,12 @@ describe('Science service resilience (E2E)', () => {
     const { port } = scienceStub.address() as AddressInfo;
 
     // ConfigModule reads the environment when AppModule is first loaded,
-    // so the variables must be set before AppModule is required below.
+    // so the variables must be set before AppModule is imported below.
     process.env.SCIENCE_SERVICE_URL = `http://127.0.0.1:${port}`;
     process.env.SCIENCE_TIMEOUT_MS = String(SCIENCE_TIMEOUT_MS);
     process.env.SCIENCE_RETRY_COUNT = '1';
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { AppModule } = require('../src/app.module') as AppModuleExports;
+    const { AppModule } = await import('../src/app.module.js');
 
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],

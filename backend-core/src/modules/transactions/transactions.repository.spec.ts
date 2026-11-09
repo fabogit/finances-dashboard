@@ -12,31 +12,31 @@ describe('TransactionsRepository', () => {
 
   const mockPrisma = {
     category: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      findMany: jest.fn(),
-      createMany: jest.fn(),
-      findUnique: jest.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      findMany: vi.fn(),
+      createMany: vi.fn(),
+      findUnique: vi.fn(),
     },
     enrichedTransaction: {
-      createMany: jest.fn(),
-      count: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      findUniqueOrThrow: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
+      createMany: vi.fn(),
+      count: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      findUnique: vi.fn(),
+      findUniqueOrThrow: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
     },
-    $transaction: jest.fn((promises) => Promise.all(promises || [])),
+    $transaction: vi.fn((promises) => Promise.all(promises || [])),
   };
 
   const mockAssetsRepo = {
-    updateBalanceWithDelta: jest.fn(),
+    updateBalanceWithDelta: vi.fn(),
   };
 
   const mockGoalsRepo = {
-    updateProgress: jest.fn(),
+    updateProgress: vi.fn(),
   };
 
   beforeEach(async () => {
