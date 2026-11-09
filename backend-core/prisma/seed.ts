@@ -678,11 +678,11 @@ async function main() {
   await seedBudgets();
 }
 
-main()
-  .catch((e: unknown) => {
-    console.error('❌ Seeding failed:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+try {
+  await main();
+} catch (e: unknown) {
+  console.error('❌ Seeding failed:', e);
+  process.exit(1);
+} finally {
+  await prisma.$disconnect();
+}
