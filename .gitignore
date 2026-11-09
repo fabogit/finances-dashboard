@@ -174,14 +174,10 @@ vite.config.ts.timestamp-*
 
 # PYTHON
 backend-science/.direnv
-backend-science/.venv
 backend-science/.venv/
-backend-science/tests/__pycache__
-backend-science/src/__pycache__/
-backend-science/src/modules/__pycache__/
-backend-science/src/modules/util/__pycache__/
+backend-science/**/__pycache__/
 backend-science/.pytest_cache
-backend-science/__pycache__
+backend-science/.ruff_cache
 
 # Temporary/Internal docs
 docs
