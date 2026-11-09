@@ -48,7 +48,7 @@ export class TransactionsComponent {
     this.transferCandidates.set(null); // reject/discard proposal
   }
 
-  onFileDropped(event: any) {
+  onFileDropped(_event: Event) {
     this.uploadProgress.set(10);
     const interval = setInterval(() => {
       if (this.uploadProgress()! >= 100) {
