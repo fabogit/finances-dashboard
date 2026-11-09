@@ -19,7 +19,7 @@ import {
   ForecastErrorDto,
 } from './dto/forecast-response.dto';
 import { GetForecastDto } from './dto/get-forecast.dto';
-import { ForecastResponse } from 'src/modules/science/dto/forecast-response.dto';
+import { ForecastResponse } from '../science/dto/forecast-response.dto';
 import { ApiScienceErrors } from '../science/api-science-errors.decorator';
 import {
   BudgetAnalysisResponseDto,

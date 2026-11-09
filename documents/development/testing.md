@@ -39,7 +39,7 @@ The tests pass without the science service running, as they do in CI.
 
 ## CI
 
-`.github/workflows/ci.yaml` runs on pushes and pull requests to `main` (and to `develop`, a branch name left over from before D-39) that touch `backend-core/`, `backend-science/` or the workflows. A first job detects which side changed; then:
+`.github/workflows/ci.yaml` runs on pushes and pull requests to `main` that touch `backend-core/`, `backend-science/` or the workflows. A first job detects which side changed; then:
 
 | Job | Side | Steps |
 | --- | --- | --- |
@@ -49,7 +49,7 @@ The tests pass without the science service running, as they do in CI.
 | `science-quality` | science | Python 3.14, `pyright .`, `python -m pytest tests/`, `pip install --dry-run` of the requirements |
 | `science-build` | science | Docker build of `backend-science` (no push) |
 
-CI uses Node 24 and pnpm 10. `pnpm run format` rewrites files with Prettier and does not fail on unformatted code.
+CI reads the Node version from `backend-core/.nvmrc` and the pnpm version from `packageManager` in `backend-core/package.json`, the same versions as local development and the core image. `pnpm run format` rewrites files with Prettier and does not fail on unformatted code.
 
 ## Database sync method and CI
 

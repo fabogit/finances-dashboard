@@ -1,16 +1,18 @@
 # Lean Node.js image
-FROM node:24-alpine
+FROM node:24.22.2-alpine
 
 # Set work dir in the container
 WORKDIR /app
-
-# Enable pnpm using Corepack
-RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Install python3, make and g++ needed to compile the native module
 RUN apk add --no-cache python3 make g++
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Enable pnpm through Corepack, at the version pinned by packageManager
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable && corepack install
+
 RUN pnpm install --frozen-lockfile
 COPY . .
 

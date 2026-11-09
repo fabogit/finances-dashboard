@@ -6,7 +6,7 @@ A powerful, automated financial management platform featuring ML-driven projecti
 
 The system is built on a modern, modular architecture:
 
-- **[Backend Core](./backend-core)**: NestJS 11 server running on Node 24. Handles business logic via a strict `src/modules/` architecture. Uses Prisma ORM 7.8.0 for PostgreSQL.
+- **[Backend Core](./backend-core)**: NestJS 12 server running on Node 24. Handles business logic via a strict `src/modules/` architecture. Uses Prisma ORM 7 for PostgreSQL.
 - **[Backend Science](./backend-science)**: Python FastAPI service running from `src/`. Handles data cleaning, ML forecasts, and savings projections using Pandas.
 
 ## 🚀 Quick Start (Docker)

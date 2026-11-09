@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
-    "baseUrl": "./",
     "declaration": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
@@ -19,12 +18,14 @@
     "removeComments": true,
     "resolveJsonModule": true,
     "resolvePackageJsonExports": true,
+    "rootDir": "./",
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
     "strictBindCallApply": true,
     "strictNullChecks": true,
     "strictPropertyInitialization": false,
-    "target": "ES2023"
+    "target": "ES2023",
+    "types": ["jest", "multer", "node"]
   }
 }

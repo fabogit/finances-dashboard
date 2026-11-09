@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
@@ -11,7 +11,8 @@ import { MockDataService } from '../../core/services/mock-data.service';
   standalone: true,
   imports: [CommonModule, MatIconModule, MatTableModule, MatButtonModule, MatDialogModule],
   templateUrl: './transactions.component.html',
-  styleUrls: ['./transactions.component.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./transactions.component.scss'],
 })
 export class TransactionsComponent {
   mockService = inject(MockDataService);
@@ -20,11 +21,16 @@ export class TransactionsComponent {
   displayedColumns: string[] = ['date', 'details', 'amount', 'category', 'asset'];
 
   // Auto-detect transfer candidates state (Strategy C mockup)
-  transferCandidates = signal<{ tx1Id: string; tx2Id: string; amount: number; date: string } | null>({
+  transferCandidates = signal<{
+    tx1Id: string;
+    tx2Id: string;
+    amount: number;
+    date: string;
+  } | null>({
     tx1Id: 'tx-5',
     tx2Id: 'tx-6',
-    amount: 1000.00,
-    date: '2026-05-25'
+    amount: 1000.0,
+    date: '2026-05-25',
   });
 
   // Simulate raw statement file uploading
@@ -52,12 +58,12 @@ export class TransactionsComponent {
         this.mockService.addTransaction({
           date: new Date().toISOString().split('T')[0],
           details: 'Imported Card Payment (Auto-imported)',
-          amount: -34.20,
+          amount: -34.2,
           category: 'Food & Groceries',
-          assetId: '1'
+          assetId: '1',
         });
       } else {
-        this.uploadProgress.update(val => val! + 30);
+        this.uploadProgress.update((val) => val! + 30);
       }
     }, 200);
   }

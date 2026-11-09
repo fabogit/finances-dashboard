@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
 
   push:
-    branches: ["main", "develop"]
+    branches: ["main"]
     paths:
       - "backend-core/**"
       - "backend-science/**"
       - ".github/workflows/**"
   pull_request:
-    branches: ["main", "develop"]
+    branches: ["main"]
     paths:
       - "backend-core/**"
       - "backend-science/**"
@@ -51,15 +51,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup Node.js 24
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version-file: backend-core/.nvmrc
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 10
+          package_json_file: backend-core/package.json
 
       - name: Get pnpm store directory
         id: pnpm-cache
@@ -100,15 +100,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup Node.js 24
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version-file: backend-core/.nvmrc
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 10
+          package_json_file: backend-core/package.json
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -204,15 +204,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Setup Node.js 24
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version-file: backend-core/.nvmrc
 
       - name: Install pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 10
+          package_json_file: backend-core/package.json
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

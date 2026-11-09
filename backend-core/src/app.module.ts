@@ -20,7 +20,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
       validate,
     }),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
+      rootPath: join(__dirname, 'public'),
       exclude: ['/api/(.*)'],
     }),
     TransactionsModule,

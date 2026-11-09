@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
@@ -17,9 +17,10 @@ import { MatButtonModule } from '@angular/material/button';
     MatListModule,
     MatToolbarModule,
     MatIconModule,
-    MatButtonModule
+    MatButtonModule,
   ],
   templateUrl: './layout.component.html',
-  styleUrls: ['./layout.component.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./layout.component.scss'],
 })
 export class LayoutComponent {}

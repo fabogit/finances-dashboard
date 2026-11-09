@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { DECORATORS } from '@nestjs/swagger/dist/constants';
+import { DECORATORS } from '@nestjs/swagger';
 import { AnalyticsController } from '../analytics/analytics.controller';
 import { GoalsController } from '../goals/goals.controller';
 
