@@ -73,13 +73,14 @@ class DataProcessor:
 
         Returns:
             list[CleanedTransaction]: A list of strictly typed dictionaries with
-                standardized values (including Macro and Sub categories), suitable for serialization.
+                standardized values (including Macro and Sub categories), suitable for
+                serialization.
         """
         df = pd.DataFrame(raw_data)
 
         # 1. Date Processing
         def parse_resilient_date(val):
-            if pd.isnull(val):
+            if pd.isna(val):
                 return pd.NaT
             try:
                 numeric_val = float(val)
@@ -93,9 +94,7 @@ class DataProcessor:
                 return pd.NaT
 
         df["clean_date"] = df["date"].apply(parse_resilient_date)
-        df["date"] = df["clean_date"].apply(
-            lambda x: x.strftime("%Y-%m-%d") if pd.notnull(x) else ""
-        )
+        df["date"] = df["clean_date"].apply(lambda x: x.strftime("%Y-%m-%d") if pd.notna(x) else "")
 
         # 2. Amount Processing
         df["amount"] = cast(pd.Series, pd.to_numeric(df["amount"], errors="coerce")).fillna(0.0)
@@ -107,9 +106,9 @@ class DataProcessor:
 
         mapped_cats = df["raw_category"].apply(get_category_details)
 
-        # zip(*mapped_cats) transforms [(A,B), (C,D)] in: (A,C) & (B,D)
+        # zip(*mapped_cats, strict=True) transforms [(A,B), (C,D)] in: (A,C) & (B,D)
         if not mapped_cats.empty:
-            df["macro_cat"], df["sub_cat_en"] = zip(*mapped_cats)
+            df["macro_cat"], df["sub_cat_en"] = zip(*mapped_cats, strict=True)
         else:
             df["macro_cat"] = "UNCATEGORIZED"
             df["sub_cat_en"] = "Unknown"

@@ -57,7 +57,8 @@ CATEGORY_MAP = {
 
 def get_category_details(original_label: str | None) -> tuple[str, str]:
     """
-    Standardizes and translates a raw Italian category label into its Macro and Sub-category components.
+    Standardizes and translates a raw Italian category label into its Macro and Sub-category
+    components.
 
     This function performs a lookup in the CATEGORY_MAP. If the label is found, it returns
     the mapped Macro category and the English translation for the sub-category. If not found,

@@ -68,9 +68,10 @@ class Forecaster:
         5. Combining results into a monthly forecast.
 
         Args:
-            transactions (list[TransactionInput]): A list of past transactions with necessary fields.
-            std_deviation_threshold (float, optional): Threshold ratio (std/mean) to consider an expense 'Fixed'.
-                Default is 0.2 (20%). Higher values make detection looser.
+            transactions (list[TransactionInput]): A list of past transactions with necessary
+                fields.
+            std_deviation_threshold (float, optional): Threshold ratio (std/mean) to consider an
+                expense 'Fixed'. Default is 0.2 (20%). Higher values make detection looser.
 
         Returns:
             Union[list[MonthlyForecast], dict[str, str]]: A list of 3 monthly forecast objects,
@@ -159,7 +160,8 @@ class Forecaster:
            values for the variable portion of the flow.
 
         Args:
-            df (pd.DataFrame): DataFrame containing the transactions for a specific flow (Income/Expense).
+            df (pd.DataFrame): DataFrame containing the transactions for a specific flow
+                (Income/Expense).
             months_to_predict (int): Number of future months to project. Defaults to 3.
             std_threshold_pct (float): Sensitivity threshold for recurring item detection.
 
@@ -199,7 +201,7 @@ class Forecaster:
 
         # Convert date to a linear monthly index (integer)
         # 2024-01 -> X, 2024-02 -> X+1
-        df["month_idx"] = df["date"].values.astype("datetime64[M]").astype(int)
+        df["month_idx"] = df["date"].to_numpy().astype("datetime64[M]").astype(int)
 
         # Group by this numeric index
         monthly_totals = cast(pd.Series, df.groupby("month_idx")["amount"].sum()).reset_index()
@@ -265,7 +267,7 @@ class Forecaster:
         df = df.dropna(subset=["date"])
 
         # Group by month and sum the amounts (savings are positive in current context)
-        df["month_idx"] = df["date"].values.astype("datetime64[M]").astype(int)
+        df["month_idx"] = df["date"].to_numpy().astype("datetime64[M]").astype(int)
         monthly_savings = cast(pd.Series, df.groupby("month_idx")["amount"].sum()).reset_index()
 
         # We need at least 2 months to find a trend

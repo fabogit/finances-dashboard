@@ -14,7 +14,7 @@ Key Components:
 import logging
 import traceback
 from decimal import Decimal
-from typing import Union, cast
+from typing import cast
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
@@ -211,7 +211,7 @@ async def process_transactions(transactions: list[RawTransactionDto]):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/forecast", response_model=Union[list[MonthlyForecastDto], dict[str, str]])
+@app.post("/forecast", response_model=list[MonthlyForecastDto] | dict[str, str])
 def forecast_transactions(payload: ForecastRequest):
     """
     Predicts financial flows for the next 3 months based on transaction history and configuration.
@@ -222,12 +222,13 @@ def forecast_transactions(payload: ForecastRequest):
 
     Args:
         payload (ForecastRequest): Input object containing:
-            - transactions (list[ProcessedTransactionDto]): list of cleaned and enriched transactions.
-            - std_deviation_threshold (float): Configurable threshold (0.0-1.0) for identifying fixed expenses.
-              Higher values make the detection looser/more inclusive.
+            - transactions (list[ProcessedTransactionDto]): list of cleaned and enriched
+              transactions.
+            - std_deviation_threshold (float): Configurable threshold (0.0-1.0) for identifying
+              fixed expenses. Higher values make the detection looser/more inclusive.
 
     Returns:
-        Union[list[MonthlyForecastDto], dict[str, str]]:
+        list[MonthlyForecastDto] | dict[str, str]:
             - A list of 3 monthly forecasts (Income, Expense, Balance) on success.
             - An error dictionary (e.g., {"error": "..."}) if data is insufficient.
     """
