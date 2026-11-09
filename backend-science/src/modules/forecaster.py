@@ -194,7 +194,7 @@ class Forecaster:
             recurrence['std_amount'].fillna(0) < std_threshold) # type: ignore
 
         fixed_items = recurrence[fixed_mask]
-        fixed_total = float(fixed_items['mean_amount'].sum())
+        fixed_total = float(cast(pd.Series, fixed_items['mean_amount']).sum())
 
         # --- B. ANALYZE VARIABLE TREND (Linear Regression) ---
 
@@ -203,13 +203,13 @@ class Forecaster:
         df['month_idx'] = df['date'].values.astype('datetime64[M]').astype(int)
 
         # Group by this numeric index
-        monthly_totals = df.groupby('month_idx')['amount'].sum().reset_index()
+        monthly_totals = cast(pd.Series, df.groupby('month_idx')['amount'].sum()).reset_index()
 
         predictions: list[float] = []
 
         if len(monthly_totals) < 2:
             # Not enough data for regression: Use simple mean for all future months
-            avg_val = float(monthly_totals['amount'].mean())
+            avg_val = float(cast(pd.Series, monthly_totals['amount']).mean())
             predictions = [avg_val] * months_to_predict
         else:
             # Linear Regression Preparation
@@ -271,11 +271,11 @@ class Forecaster:
 
         # Group by month and sum the amounts (savings are positive in current context)
         df['month_idx'] = df['date'].values.astype('datetime64[M]').astype(int)
-        monthly_savings = df.groupby('month_idx')['amount'].sum().reset_index()
+        monthly_savings = cast(pd.Series, df.groupby('month_idx')['amount'].sum()).reset_index()
 
         # We need at least 2 months to find a trend
         if len(monthly_savings) < 2:
-            avg_savings = float(monthly_savings['amount'].mean())
+            avg_savings = float(cast(pd.Series, monthly_savings['amount']).mean())
             if avg_savings <= 0:
                 return {"error": "Average savings is zero or negative"}
             months_remaining = (target_amount - current_amount) / avg_savings
