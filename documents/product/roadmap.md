@@ -2,7 +2,7 @@
 
 The v2 plan: milestones, the steps inside them and their order, how releases are tagged, how every milestone is closed, and the risks being watched. **Status is not tracked here**: see the [milestones](https://github.com/fabogit/finances-dashboard/milestones) and the project "Finance Dashboard Roadmap" on GitHub.
 
-The plan rewrites the schema once, then rebuilds the modules flow by flow in dependency order (D-37), test-first from the examples in the specs (D-38, D-46). The code reuses what still fits (configuration, CI, Docker, validation, Decimal serialisation, module structure).
+The plan rewrites the schema once, then rebuilds the modules flow by flow in dependency order (D-37), test-first from the examples in the specs (D-38, D-46). The code reuses what still fits (configuration, CI, Docker, validation, module structure).
 
 ## Milestones
 
@@ -106,7 +106,7 @@ Every milestone M1–M6 ends with an `M<N> · Review & consolidation` issue (#98
 
 1. **Analysis**, read-only, on `main`: one agent per dimension, and an adversarial check of each finding. The dimensions:
    - documentation conformance: code against `documents/`, flows, ADRs, and the specs against the code (D-46);
-   - bugs and edge cases, especially `Decimal` precision, calendar dates and per-user scoping;
+   - bugs and edge cases, especially money precision (cents), calendar dates and per-user scoping;
    - duplication and dead code across the milestone's pull requests;
    - test gaps, especially across the core ↔ science boundary;
    - security and input validation;

@@ -2,7 +2,7 @@
 
 The words this project uses for its domain. Actual Budget is the reference model ([ADR-0002](adr/0002-actual-budget-reference-model.md)), so a term takes Actual's name and meaning wherever they match; differences are stated.
 
-The **v1 code** column gives the name used in the code at `v1.0.0`, where one exists. The v2 model names are fixed by [`domain/data-model.md`](domain/data-model.md) once #104 rewrites it.
+The **v1 code** column gives the name used in the code at `v1.0.0`, where one exists. The v2 models take the names in the Term column, which are Actual Budget's (D-60); their fields are in [`domain/data-model.md`](domain/data-model.md).
 
 | Term | Meaning | Actual Budget | v1 code |
 | --- | --- | --- | --- |

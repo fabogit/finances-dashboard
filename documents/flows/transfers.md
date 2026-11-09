@@ -2,18 +2,19 @@
 
 Money moved between two of the user's own accounts: a linked pair of transactions with opposite amounts. When one side is created, the other is generated; when the other account is imported later, the generated side is recognised instead of duplicated. Models and fields are defined in the [data model](../domain/data-model.md).
 
-**Decisions:** D-24 (linked pair, generated counterpart, manual transfers through `POST /transfers`), D-25 (kind `TRANSFER`; only transfers that cross the on/off-budget boundary count as income or spending, [ADR-0008](../adr/0008-transaction-kind.md)), D-28 (transfers between on-budget accounts are uncategorised), D-16 (approximate matching recognises the generated side, [ADR-0007](../adr/0007-layered-deduplication.md)), D-11 (balances derived, so both balances are right at once).
+**Decisions:** D-24 (linked pair, generated counterpart, manual transfers through `POST /transfers`), D-25 (kind `TRANSFER`; only transfers that cross the on/off-budget boundary count as income or spending, [ADR-0008](../adr/0008-transaction-kind.md)), D-28 (transfers between on-budget accounts are uncategorised), D-16 (approximate matching recognises the generated side, [ADR-0007](../adr/0007-layered-deduplication.md)), D-11 (balances derived, so both balances are right at once), D-70 (each side points to the other), D-71 (the category on the on-budget side only), D-72 (no payee on transfers), D-73 (what stays in sync, and linking existing transactions).
 
 ## Behaviour
 
 ### The pair
 
-A transfer is two transactions with `Transaction.kind` = `TRANSFER`, one on each account, with opposite `Transaction.amount`, each pointing to the other through `Transaction.transferId`. Both are written in one database transaction. The two accounts belong to the same user and are different.
+A transfer is two transactions with `Transaction.kind` = `TRANSFER`, one on each account, with opposite `Transaction.amount`, each pointing to the other through `Transaction.transferId`, as in Actual Budget (D-70). Both are written in one database transaction. The two accounts belong to the same user and are different.
 
 ### Creating a transfer
 
 - **By hand:** `POST /transfers` with the source account, the destination account, the amount and the date (D-24). Both sides are created with that date: the source with the negative amount, the destination with the positive one.
 - **From an existing transaction:** the user, a rule or the import preview marks a transaction as a transfer to another account (D-23, D-24). It becomes the first side and keeps its date and amount; the counterpart is generated on the other account with the same date and the opposite amount.
+- **By linking two existing transactions:** two transactions on different accounts of the user, with exactly opposite amounts, can be linked into a transfer (D-73). Both become `TRANSFER`, point to each other and keep their dates; the category follows the [Category](#category) rules. Merging an imported row with a generated side is this same operation.
 - **In the import preview** a transfer is only ever a suggestion, confirmed by the user (D-24): from a rule, or from the heuristic "opposite amount on another of the user's accounts, date within a few days". The details are in the import flow.
 
 ### When the other side is imported later
@@ -29,15 +30,18 @@ The generated counterpart already moves the destination account's balance. When 
 | on-budget | off-budget | on the on-budget side | spending (D-25) |
 | off-budget | on-budget | on the on-budget side | income (D-25) |
 
-[NEEDS CLARIFICATION: In a transfer that crosses the boundary, does only the on-budget side carry the category, as in Actual Budget (used in the table above)? The off-budget side would always stay uncategorised.]
+In a transfer that crosses the boundary only the on-budget side carries the category, as in Actual Budget; the off-budget side has none, so the movement counts once (D-71).
 
 ### Payee
 
-[NEEDS CLARIFICATION: What is the payee of a transfer? In Actual Budget the payee *is* the other account (one transfer payee per account), which is how a transfer is created and how rules target it. Proposal: no payee (`Transaction.payeeId` is `null`), the other account being reached through `Transaction.transferId`; rules mark a transfer with their own "transfer to account" action (D-23).]
+A transfer has no payee: `Transaction.payeeId` is `null` on both sides, and the other account is reached through `Transaction.transferId` (D-72). Rules mark a transaction as a transfer with their own "transfer to account" action (D-23). When a transaction with a payee becomes a transfer, its payee is cleared.
 
 ### Editing a transfer
 
-[NEEDS CLARIFICATION: What changes on the other side when one side is edited, and can two existing transactions be linked into a transfer? Proposal, as in Actual Budget: amount and notes stay in sync (changing one side's amount changes the other's to the opposite); the date and the category are independent, because banks book the two sides on different days; two existing transactions on different accounts with exactly opposite amounts can be linked into a transfer, and that is also what a merge at import does.]
+As in Actual Budget (D-73):
+
+- **In sync:** the amount and the notes. Changing one side's amount changes the other's to the opposite; changing one side's notes changes the other's.
+- **Independent:** the date, because banks book the two sides on different days, and the category, which only the on-budget side can carry.
 
 ### Deleting a transfer
 
@@ -47,6 +51,8 @@ Deleting either side deletes both, in one database transaction (D-24, as in Actu
 
 - The two sides are on different accounts of the same user, have opposite amounts and kind `TRANSFER`, and point to each other (TRF-1, TRF-3, TRF-8).
 - Neither side exists without the other (TRF-5).
+- The two sides always have opposite amounts and the same notes; their dates may differ (TRF-9).
+- A transfer has no payee on either side (TRF-1).
 - A transfer that does not cross the on/off-budget boundary has no category on either side and never counts as income or spending (TRF-1, TRF-7).
 - A transfer that crosses the boundary counts once: as spending when money leaves the budget, as income when it enters (TRF-2, TRF-6).
 
@@ -61,7 +67,7 @@ Deleting either side deletes both, in one database transaction (D-24, as in Actu
 ## Divergences from Actual Budget
 
 1. **Transaction kind.** Actual Budget recognises a transfer by its transfer payee; here a transfer has its own kind, `TRANSFER`, which the analytics rule reads directly (D-25, [ADR-0008](../adr/0008-transaction-kind.md)).
-2. **Payee**, if the clarification above confirms the proposal: no transfer payees; the link is the other transaction, and rules use a "transfer to account" action (D-23).
+2. **No transfer payees.** In Actual Budget the payee of a transfer *is* the other account, through one transfer payee per account. Here a transfer has no payee: the link is the other transaction, and rules use a "transfer to account" action (D-23, D-72).
 
 ## Examples
 
@@ -71,7 +77,7 @@ Deleting either side deletes both, in one database transaction (D-24, as in Actu
 - **When** a transfer of 500.00 from "Checking" to "Deposit" dated 2026-10-10 is created with `POST /transfers`
 - **Then** "Checking" has a `TRANSFER` of −500.00 and "Deposit" a `TRANSFER` of +500.00, both dated 2026-10-10
 - **And** each points to the other
-- **And** neither has a category
+- **And** neither has a category nor a payee
 - **And** October's spending and income do not include them
 
 ### TRF-2 · A transfer to an off-budget account is spending
@@ -131,7 +137,10 @@ Deleting either side deletes both, in one database transaction (D-24, as in Actu
 - **Given** the transfer of TRF-1
 - **When** the −500.00 on "Checking" is changed to −450.00
 - **Then** the side on "Deposit" becomes +450.00
-- **And** changing the date of one side leaves the other side's date unchanged
+- **When** the notes of the side on "Checking" are set to "Emergency fund"
+- **Then** the side on "Deposit" has the notes "Emergency fund" too
+- **When** the date of the side on "Deposit" is changed to 2026-10-11
+- **Then** the side on "Checking" stays dated 2026-10-10
 
 ### TRF-10 · Linking two existing transactions
 
