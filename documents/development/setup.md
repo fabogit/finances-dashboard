@@ -4,8 +4,8 @@ How to get the stack running, with Docker or locally. Verification commands are 
 
 ## Prerequisites
 
-- **Node.js** ≥ 24.12 (`engines` in `backend-core/package.json`), managed with [fnm](https://github.com/Schniz/fnm). On the maintainer's machine fnm is configured in the fish shell, so Node tooling (`node`, `pnpm`, `pnpm exec …`) runs from fish or from a shell where fnm is loaded (`eval "$(fnm env --use-on-cd)"`). Other commands work in any shell.
-- **pnpm** 10 through corepack (`corepack enable pnpm`); the exact version is `packageManager` in `backend-core/package.json`. Never install with npm or yarn.
+- **Node.js** 24, at the patch pinned in `backend-core/.nvmrc` (also the minimum in `engines` in `backend-core/package.json`; CI and the core image use the same version), managed with [fnm](https://github.com/Schniz/fnm), which picks it up from `.nvmrc`. On the maintainer's machine fnm is configured in the fish shell, so Node tooling (`node`, `pnpm`, `pnpm exec …`) runs from fish or from a shell where fnm is loaded (`eval "$(fnm env --use-on-cd)"`). Other commands work in any shell.
+- **pnpm** 12 through corepack (`corepack enable pnpm`); the exact version is `packageManager` in `backend-core/package.json` and `client-preview/package.json`, and CI and the core image read it from there. Packages allowed to run install scripts are listed under `allowBuilds` in each `pnpm-workspace.yaml`. Never install with npm or yarn.
 - **Docker** with Compose, for PostgreSQL, the full stack and the end-to-end tests.
 - **Python** 3.14, the version CI uses, for `backend-science`.
 
@@ -113,5 +113,6 @@ The schema is applied with `prisma db push`, not migrations, until the MVP (D-19
 | `fn-science` does not start | Missing Python dependency | `docker logs fn-science`; check `requirements.txt` |
 | `fn-postgres` never becomes healthy | Port 5432 taken or a corrupted volume | Free the port; `pnpm run docker:down`, then `docker volume rm` the `postgres_data` volume (erases local data) |
 | `node` or `pnpm` not found, or the wrong version | Shell without fnm loaded | Run from fish, or `eval "$(fnm env --use-on-cd)"` |
+| `fn-core` runs old dependencies after a dependency update | The `backend_core_modules` volume keeps the `node_modules` of the first build: Docker fills a named volume from the image only when it is empty | `pnpm run docker:down`, then `docker volume rm` the `backend_core_modules` and `backend_core_dist` volumes, then `pnpm run docker:up` |
 | direnv does not activate the environment | `.envrc` not approved | `direnv allow` in `backend-science/` |
 | `ModuleNotFoundError` in Python | `src` not on `PYTHONPATH` | Use direnv, or prefix the command with `env PYTHONPATH=src` |

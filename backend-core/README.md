@@ -14,8 +14,8 @@ Backend Core engine for the Finance Dashboard project. Built with **NestJS**, **
 
 ## 🛠️ Prerequisites
 
-- **Node.js**: >= 24.12.0
-- **pnpm**: >= 10.25.0
+- **Node.js**: 24, the patch in `.nvmrc` (>= 24.22.2)
+- **pnpm**: 12, the version in `packageManager` (>= 12.18.0)
 - **Docker**: For PostgreSQL and Science Service containers.
 
 ---
@@ -68,8 +68,6 @@ docker compose --env-file .env.compose up -d db-postgres backend-science
 pnpm run prisma:push
 pnpm run start:dev     # watch mode
 ```
-
-`pnpm run build` followed by `pnpm run start:prod` is currently broken: the build writes `dist/src/main.js`, while `start:prod` runs `dist/main`. Fixed in #87.
 
 Full setup: [`documents/development/setup.md`](../documents/development/setup.md).
 
