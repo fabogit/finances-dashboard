@@ -60,9 +60,12 @@ services:
       - .env.compose
     ports:
       - "${SCIENCE_PORT}:8000"
+    environment:
+      # The container runs as root: bytecode written into the bind mount would
+      # leave root-owned __pycache__ directories in the working tree.
+      - PYTHONDONTWRITEBYTECODE=1
     volumes:
       - ./backend-science:/app
-      - backend-science-cache:/app/__pycache__
     networks:
       - fn-network
 
@@ -75,4 +78,3 @@ volumes:
   postgres_data:
   backend_core_modules:
   backend_core_dist:
-  backend-science-cache:
