@@ -43,7 +43,13 @@ API contracts and UX details are not specified up front: they are written at the
 ### Domain
 
 - [CONTEXT.md](CONTEXT.md): glossary of domain terms, with the Actual Budget term where it matches and the v1 code name.
-- [domain/data-model.md](domain/data-model.md): the **v1** data model as implemented at `v1.0.0`; replaced by the v2 model in #104.
+- [domain/data-model.md](domain/data-model.md): the v2 data model: models, fields, constraints and invariants.
+
+### Flows
+
+- [flows/balances.md](flows/balances.md): opening an account, derived balance and history, reconciliation, value adjustments, closing an account.
+- [flows/transfers.md](flows/transfers.md): transfers as linked pairs, the generated counterpart, category across the on/off-budget boundary.
+- [flows/categories.md](flows/categories.md): category groups and categories, uncategorised, deletion that moves everything to a chosen category.
 
 ### ADRs
 
