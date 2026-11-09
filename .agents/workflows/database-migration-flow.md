@@ -20,7 +20,7 @@ All commands run from `backend-core/`, from fish or a shell with fnm loaded. The
 3. **Apply** to the local database: `pnpm run prisma:push`. If the change cannot be applied over the existing data, reset:
 
    ```bash
-   pnpm exec dotenv -e .env.local -- prisma db push --force-reset
+   pnpm exec dotenv-cli -e .env.local -- prisma db push --force-reset
    pnpm run prisma:seed
    ```
 

@@ -5,3 +5,5 @@ allowBuilds:
   esbuild: true
   prisma: true
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - dotenv@18.0.10
