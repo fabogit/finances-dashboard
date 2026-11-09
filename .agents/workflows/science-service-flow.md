@@ -20,8 +20,10 @@ backend-science/
 │       ├── rules.py       # v1 static category dictionary, retired in v2
 │       └── util/
 ├── tests/                 # pytest
-├── requirements.txt
-└── .envrc                 # direnv: virtual environment and PYTHONPATH
+├── pyproject.toml         # dependencies and the pytest, pyright and ruff settings
+├── uv.lock                # exact versions, committed
+├── .python-version        # Python 3.15, read by uv, CI and Docker
+└── .envrc                 # direnv: activates .venv and puts src on PYTHONPATH
 ```
 
 ## Change or add an endpoint
@@ -43,14 +45,17 @@ The core reaches Python through `SCIENCE_SERVICE_URL`. Today that is the `Scienc
 
 ## Dependencies
 
-With the environment active, from `backend-science/`:
+Dependencies are managed with uv, from `backend-science/`; never edit `uv.lock` by hand, and commit it with `pyproject.toml`.
 
 ```bash
-pip install <package>
-pip freeze > requirements.txt
+uv add <package>                  # runtime dependency
+uv add --dev <package>            # dev group: test and quality tools
+uv lock --upgrade-package <name>  # update one package within its bounds
+uv lock --upgrade                 # update everything
+uv tree --outdated                # what has a newer version
 ```
 
-Check that `requirements.txt` has no platform-specific or path entries.
+`pyproject.toml` keeps lower bounds only; `uv.lock` pins the exact versions. A hold is an upper bound with a comment explaining why. After an update, run the verification below and `docker compose --env-file .env.compose up --build` from the repository root: the image installs with `uv sync --frozen --no-dev`.
 
 ## Verify
 
@@ -62,8 +67,9 @@ With the stack running, the FastAPI docs are on `http://localhost:8000/docs`.
 
 | Problem | Likely cause | Fix |
 | --- | --- | --- |
-| `ModuleNotFoundError` | `src` not on `PYTHONPATH` | `direnv allow`, or `env PYTHONPATH=src …`, or `python -m pytest tests/` from `backend-science/` |
+| `ModuleNotFoundError` | Environment missing or stale, or `src` not on the path | `uv sync`; run tools with `uv run` from `backend-science/`; uvicorn needs `--app-dir src` |
 | The core cannot reach Python | Container down or wrong URL | `docker ps`; check `SCIENCE_SERVICE_URL` (`http://backend-science:8000` in Compose, `http://localhost:8000` locally) |
 | Pydantic validation error from the core | DTOs out of sync | Compare the Pydantic models with the TypeScript DTOs in `src/modules/science/` |
-| `pip freeze` lists system packages | Environment not active | Activate it before freezing |
+| `uv lock --check` fails in CI | `pyproject.toml` changed without `uv lock` | `uv lock` and commit `uv.lock` |
+| `ruff format --check` fails in CI | Unformatted code | `uv run ruff format`, then commit |
 | pandas `SettingWithCopyWarning` | Writing to a slice | Use `.loc[]` or `.copy()` |

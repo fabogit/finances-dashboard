@@ -110,7 +110,7 @@ Every milestone M1–M6 ends with an `M<N> · Review & consolidation` issue (#98
    - duplication and dead code across the milestone's pull requests;
    - test gaps, especially across the core ↔ science boundary;
    - security and input validation;
-   - dependencies (`pnpm outdated`, `pip list --outdated`);
+   - dependencies (`pnpm outdated`, `uv tree --outdated` in `backend-science/`);
    - the `demo` seed profile exercises what the milestone added;
    - the agent workflows in `.agents/workflows/` still match the code and the commands;
    - an end-to-end check with `docker compose`.

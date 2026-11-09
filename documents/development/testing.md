@@ -10,8 +10,11 @@ The verification commands, how the end-to-end tests get their database, and what
 | Lint | `pnpm run lint` | `backend-core/` |
 | Unit tests | `pnpm test` | `backend-core/` |
 | End-to-end tests | `pnpm run test:e2e:docker` (needs Docker and `.env.test`) | `backend-core/` |
-| Python tests | `python -m pytest tests/` (with the Python environment, see [setup.md](setup.md#python-environment)) | `backend-science/` |
-| Python types | `pyright .` (installed as in [setup.md](setup.md#python-environment)) | `backend-science/` |
+| Python environment | `uv sync --frozen` (see [setup.md](setup.md#python-environment)) | `backend-science/` |
+| Python lint | `uv run ruff check` | `backend-science/` |
+| Python format | `uv run ruff format --check` (`uv run ruff format` rewrites the files) | `backend-science/` |
+| Python types | `uv run pyright` | `backend-science/` |
+| Python tests | `uv run pytest` | `backend-science/` |
 
 `pnpm run lint` runs ESLint with `--fix`: it rewrites files. Check `git status` afterwards and commit or discard the changes deliberately.
 
@@ -46,7 +49,7 @@ The tests pass without the science service running, as they do in CI.
 | `core-quality` | core | `pnpm install --frozen-lockfile`, `prisma generate`, `pnpm run lint`, `pnpm run format` |
 | `core-unit-tests` | core | `pnpm test` |
 | `core-e2e-tests` | core | PostgreSQL 17 as a service, `prisma db push`, `pnpm run test:e2e` |
-| `science-quality` | science | Python 3.14, `pyright .`, `python -m pytest tests/`, `pip install --dry-run` of the requirements |
+| `science-quality` | science | uv and Python 3.15, `uv lock --check`, `uv sync --frozen`, `ruff check`, `ruff format --check`, `pyright`, `pytest` |
 | `science-build` | science | Docker build of `backend-science` (no push) |
 
 CI reads the Node version from `backend-core/.nvmrc` and the pnpm version from `packageManager` in `backend-core/package.json`, the same versions as local development and the core image. `pnpm run format` rewrites files with Prettier and does not fail on unformatted code.
@@ -64,4 +67,4 @@ Until the MVP the end-to-end script and the `core-e2e-tests` job apply the schem
 | `ECONNREFUSED` in end-to-end tests | Test database not ready, or `.env.test` missing | Run the full `test:e2e:docker` script; check `backend-core/.env.test` |
 | `Cannot find module` in Jest | Stale Jest cache | `pnpm test -- --clearCache`, then run again |
 | Unit tests fail after a schema change | Repository mocks no longer match | Update the mocks in the `*.spec.ts` files; run `pnpm prisma generate` |
-| Python `ModuleNotFoundError` | `src` not on `PYTHONPATH` | Run from `backend-science/` with `python -m pytest tests/`, or use direnv |
+| Python `ModuleNotFoundError` | Environment missing or not up to date | `uv sync` in `backend-science/`, then `uv run pytest` from there |
