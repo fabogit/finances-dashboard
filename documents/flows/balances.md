@@ -2,7 +2,7 @@
 
 How an account opens, how its balance and its history are computed, how it is reconciled with the bank, how the value of an investment changes, and how an account is closed. The balance is never stored: it is always the sum of the account's transactions. Models and fields are defined in the [data model](../domain/data-model.md).
 
-**Decisions:** D-07 (investments as off-budget accounts with value adjustments; EUR only), D-11 (balances derived from transactions, starting balance as a transaction, [ADR-0003](../adr/0003-derived-balances.md)), D-12 (starting balance and reconcile in the MVP), D-25 (transaction kinds, [ADR-0008](../adr/0008-transaction-kind.md)), D-30 (calendar dates; the user's time zone decides "today"), D-48 (every query scoped to the user), D-59 (amounts in cents), D-61 (account types), D-63 (closing and deleting an account), D-64 (on-budget fixed at creation), D-65 (starting balance rules), D-66 (current balance stops at today), D-67 (reconciliation and revaluation as one operation), D-68 (no cleared state in the MVP), D-69 (no category on starting balances and adjustments; an adjustment can become a regular transaction).
+**Decisions:** D-07 (investments as off-budget accounts with value adjustments; EUR only), D-11 (balances derived from transactions, starting balance as a transaction, [ADR-0003](../adr/0003-derived-balances.md)), D-12 (starting balance and reconcile in the MVP), D-25 (transaction kinds, [ADR-0008](../adr/0008-transaction-kind.md)), D-30 (calendar dates; the user's time zone decides "today"), D-48 (every query scoped to the user), D-59 (amounts in cents), D-61 (account types), D-63, D-80 and D-81 (closing, deleting and reopening an account), D-64 (on-budget fixed at creation), D-65 (starting balance rules), D-66 (current balance stops at today), D-67 (reconciliation and revaluation as one operation), D-68 (no cleared state in the MVP), D-69 (no category on starting balances and adjustments; an adjustment can become a regular transaction).
 
 ## Behaviour
 
@@ -48,11 +48,12 @@ A mortgage or a loan is an off-budget account of type `LOAN` with a negative bal
 
 ### Closing and deleting an account
 
-As in Actual Budget (D-63):
+As in Actual Budget (D-63, D-80, D-81):
 
 - **An account without transactions** other than its starting balance is deleted.
-- **An account with transactions is closed.** If its balance is not zero, the user chooses another account and the remaining balance is moved there with a transfer dated on the closing date. `Account.closedAt` is set, no new transactions are accepted on the account, and its history stays in the balances and in the Net Worth.
-- **A forced deletion** removes the account and all its transactions, in one database transaction. The counterparts of its transfers, on other accounts, become `REGULAR` transactions with no `transferId`, so the other balances do not change. The past Net Worth changes, so the user confirms it explicitly.
+- **An account with transactions is closed.** If its balance is not zero, the user chooses another account and the remaining balance is moved there with a transfer dated today, with the notes "Closing account". If that transfer crosses the on/off-budget boundary, the user can give its on-budget side a category, and it counts as spending or income like any such transfer ([transfers flow](transfers.md#category)). `Account.closedAt` is set, no new transactions are accepted on the account, and its history stays in the balances and in the Net Worth.
+- **A closed account can be reopened:** `Account.closedAt` goes back to `null`, its history is untouched, and it accepts transactions again.
+- **A forced deletion** is a separate action, shown with a warning that the account and all its transactions are deleted and that the past Net Worth changes. It removes the account and all its transactions, in one database transaction. The counterparts of its transfers, on other accounts, become `REGULAR` transactions with no `transferId`, so the other balances do not change.
 
 ### On-budget and off-budget
 
@@ -66,6 +67,7 @@ As in Actual Budget (D-63):
 - The current balance includes no transaction dated after today (BAL-10).
 - Setting the balance at a date that matches the derived balance writes nothing (BAL-4).
 - Closing an account never changes its past balances or the past Net Worth (BAL-9).
+- A closed account accepts no new transactions until it is reopened (BAL-9, BAL-14).
 - Only the user's own accounts and transactions are read or written (D-48).
 
 ## Edge cases
@@ -153,10 +155,11 @@ As in Actual Budget (D-63):
 
 ### BAL-9 · Closing an account with a balance
 
-- **Given** account "Old savings", on-budget, with a balance of 300.00 at 2026-11-01
+- **Given** today is 2026-11-01 in the user's time zone
+- **And** account "Old savings", on-budget, with a balance of 300.00
 - **And** account "Checking", on-budget
-- **When** the user closes "Old savings" on 2026-11-01 and moves its balance to "Checking"
-- **Then** a transfer of 300.00 from "Old savings" to "Checking" dated 2026-11-01 is recorded
+- **When** the user closes "Old savings" and moves its balance to "Checking"
+- **Then** a transfer of 300.00 from "Old savings" to "Checking" dated 2026-11-01, with the notes "Closing account", is recorded, with no category
 - **And** the balance of "Old savings" is 0.00 and the account is closed
 - **And** its earlier balances, and the Net Worth history before 2026-11-01, are unchanged
 - **When** a transaction dated 2026-11-05 is added to "Old savings"
@@ -186,7 +189,7 @@ As in Actual Budget (D-63):
 - **When** the user deletes it
 - **Then** it is deleted with its starting balance
 - **Given** account "Old card", with a transfer of 100.00 from "Checking" dated 2026-06-01
-- **When** the user forces the deletion of "Old card" and confirms it
+- **When** the user chooses the forced deletion of "Old card", shown with its warning
 - **Then** "Old card" and all its transactions are deleted
 - **And** the −100.00 on "Checking" becomes a `REGULAR` transaction with no `transferId`, and the balance of "Checking" does not change
 
@@ -195,3 +198,19 @@ As in Actual Budget (D-63):
 - **Given** account "Deposit", on-budget
 - **When** the user tries to make it off-budget
 - **Then** it is rejected; to track it off-budget, the user closes it and opens a new off-budget account
+
+### BAL-14 · Reopening a closed account
+
+- **Given** account "Old savings", closed as in BAL-9
+- **When** the user reopens it
+- **Then** it is no longer closed and its history is unchanged
+- **When** a transfer of 200.00 from "Checking" to "Old savings" dated 2026-12-01 is added
+- **Then** it is accepted, and the balance of "Old savings" at 2026-12-01 is 200.00
+
+### BAL-15 · Closing an account into an off-budget account
+
+- **Given** today is 2026-11-01 in the user's time zone
+- **And** account "Old checking", on-budget, with a balance of 300.00, and account "Brokerage", off-budget
+- **When** the user closes "Old checking", moves its balance to "Brokerage" and gives the transfer the category "Savings › Investments"
+- **Then** the −300.00 on "Old checking" has that category and the +300.00 on "Brokerage" has none
+- **And** November's spending includes 300.00 in "Savings › Investments"

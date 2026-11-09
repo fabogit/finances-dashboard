@@ -14,6 +14,7 @@ The ledger models (user, account, transaction, category group, category) are com
 - **Audit.** Every model has `createdAt` and, where rows change, `updatedAt` (`timestamptz`). They record when a row was written, not when the money moved.
 - **No stored derived values.** Balances and goal progress are computed from transactions, never stored or updated by deltas ([ADR-0003](../adr/0003-derived-balances.md), D-11, D-26).
 - **Names.** The models take the names of the [glossary](../CONTEXT.md), which are Actual Budget's: `Account`, `Transaction`, `MonthlyBudget`, not the v1 `Asset` and `EnrichedTransaction` (D-60).
+- **User-visible names.** A name the user sees (an account, a category group, a category) is stored without leading and trailing spaces, and is unique within its scope ignoring case: "Home", "home" and "Home " collide (D-79). The scope is the user for accounts and groups, the group for categories (D-75); payees and import templates follow the same rule, defined in their flows.
 
 ## Models
 
@@ -51,17 +52,17 @@ Anything that holds money or value: a checking or savings account, a card, cash,
 | --- | --- | --- | --- |
 | `id` | UUID | yes | |
 | `userId` | UUID | yes | |
-| `name` | text | yes | Unique per user. |
+| `name` | text | yes | Unique per user, ignoring case (D-79). |
 | `type` | `AccountType` | yes | What the account is; see [Enumerations](#enumerations). |
 | `isOnBudget` | boolean | yes | `true`: its transactions count as income and spending and feed the budget. `false`: tracked only for Net Worth, such as investments or a mortgage (D-07, D-25). Set at creation and never changed (D-64). |
 | `currency` | text | yes | `EUR`, the only currency in the MVP (D-07, D-59). |
 | `institution` | text | no | Bank or broker, for display. |
 | `defaultImportTemplateId` | UUID → `ImportTemplate` | no | The template used when an upload names none (D-15, D-43). Deleting the template sets it to `null`. |
-| `closedAt` | date | no | Set when the account is closed (D-63); see the [balances flow](../flows/balances.md#closing-and-deleting-an-account). |
+| `closedAt` | date | no | Set when the account is closed (D-63), back to `null` when it is reopened (D-81); see the [balances flow](../flows/balances.md#closing-and-deleting-an-account). |
 | `createdAt`, `updatedAt` | timestamptz | yes | |
 
-- Unique: `(userId, name)`.
-- An account with transactions is closed, not deleted; an account without transactions is deleted. A forced deletion deletes its transactions and turns their transfer counterparts into `REGULAR` transactions (D-63).
+- Unique: `(userId, lower(name))` (D-79).
+- An account with transactions other than its starting balance is closed, not deleted; an account without them is deleted. A forced deletion deletes its transactions and turns their transfer counterparts into `REGULAR` transactions (D-63, D-80). A closed account can be reopened (D-81).
 - `isOnBudget` cannot change: it decides how past transfers and analytics count, so to change it the account is closed and a new one opened (D-64).
 
 ### Transaction
@@ -101,11 +102,11 @@ A container of categories, such as "Home". It holds no transactions and no budge
 | --- | --- | --- | --- |
 | `id` | UUID | yes | |
 | `userId` | UUID | yes | |
-| `name` | text | yes | Unique per user. |
+| `name` | text | yes | Unique per user, ignoring case (D-79). |
 | `isIncome` | boolean | yes | `true` for a group of income categories. Income, for the budget and the analytics, is the transactions in the categories of income groups, not the positive amounts (D-74). |
 | `createdAt`, `updatedAt` | timestamptz | yes | |
 
-- Unique: `(userId, name)`. Groups have no parent, so a `NULL` parent can no longer let duplicate top-level names through.
+- Unique: `(userId, lower(name))` (D-79). Groups have no parent, so a `NULL` parent can no longer let duplicate top-level names through.
 - A user can have several income groups, and any of them can be deleted. A category never moves between an income group and a spending group, and a deletion never moves its contents across that line (D-74).
 
 ### Category
@@ -117,7 +118,7 @@ Where a transaction or a budget amount is classified, such as "Home › Utilitie
 | `id` | UUID | yes | |
 | `userId` | UUID | yes | |
 | `groupId` | UUID → `CategoryGroup` | yes | |
-| `name` | text | yes | Unique per group, case-insensitive (D-75). Shown as "Group › Category". |
+| `name` | text | yes | Unique per group, ignoring case (D-75, D-79). Shown as "Group › Category". |
 | `expenseType` | `ExpenseType` | no | The 50/30/20 classification: `NEEDS`, `WANTS` or `SAVINGS`; `null` means not classified (D-62). |
 | `systemKey` | text | no | Stable key of a category created by the bootstrap, used to recognise it (translations, default rules). It does not protect the category: every category can be renamed and deleted (D-28). |
 | `createdAt`, `updatedAt` | timestamptz | yes | |
@@ -245,7 +246,7 @@ The states of a savings goal that are set by hand (D-26).
 8. A transfer between two on-budget accounts, or between two off-budget accounts, has no category on either side (D-25, D-28). **Exercised by:** TRF-1, TRF-7.
 9. A transaction's category, when present, is a category, never a group; `null` means uncategorised. **Exercised by:** CAT-1, CAT-3.
 10. Categories have exactly two levels: a group contains categories, a category contains nothing. **Exercised by:** CAT-2.
-11. Group names are unique per user; category names are unique per group, case-insensitive. **Exercised by:** CAT-9, CAT-12, DM-2.
+11. Names ignore case and surrounding spaces when compared: account and group names are unique per user, category names per group. **Exercised by:** CAT-9, CAT-12, DM-2.
 12. A bank ID or an import hash appears at most once per account. **Exercised by:** DM-4.
 13. Only a `REGULAR` transaction, or the on-budget side of a `TRANSFER` that crosses the on/off-budget boundary, has a category. **Exercised by:** BAL-5, BAL-11, TRF-2, TRF-6.
 14. Every account has exactly one `STARTING_BALANCE` transaction, and no transaction is dated before it. **Exercised by:** BAL-5, BAL-6.

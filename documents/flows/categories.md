@@ -2,7 +2,7 @@
 
 How transactions and budget amounts are classified: category groups that contain categories, exactly two levels, and "uncategorised" as the absence of a category. Deleting a category moves everything that pointed to it. Models and fields are defined in the [data model](../domain/data-model.md).
 
-**Decisions:** D-27 (groups and categories as two models; transactions and budgets only on categories; exactly two levels), D-28 (uncategorised is `null`; `systemKey` only to recognise bootstrap categories; no protected categories), D-29 (deletion moves transactions, payee defaults and rule actions to a chosen category or to `null`, deletes monthly budgets with a warning, and previews the counts first), D-48 (every query scoped to the user), D-62 (optional 50/30/20 classification), D-74 (income groups), D-75 (category names unique per group, case-insensitive), D-76 (a rule action with no target is removed), D-77 (deleting a group).
+**Decisions:** D-27 (groups and categories as two models; transactions and budgets only on categories; exactly two levels), D-28 (uncategorised is `null`; `systemKey` only to recognise bootstrap categories; no protected categories), D-29 (deletion moves transactions, payee defaults and rule actions to a chosen category or to `null`, deletes monthly budgets with a warning, and previews the counts first), D-48 (every query scoped to the user), D-62 (optional 50/30/20 classification), D-74 (income groups), D-75 (category names unique per group, case-insensitive), D-76 (a rule action with no target is removed), D-77 (deleting a group), D-79 (names ignore case and surrounding spaces).
 
 ## Behaviour
 
@@ -31,7 +31,7 @@ A group is either an income group or a spending group (`CategoryGroup.isIncome`)
 
 ### Names
 
-Group names are unique per user (D-27, D-48). Category names are unique within their group, ignoring case: "Other" can exist in "Home" and in "Car", but "Home" cannot hold both "Other" and "other" (D-75). Because a name alone can be ambiguous, categories are shown as "Group › Category", and mappings refer to them by ID.
+Names are stored without leading and trailing spaces and compared ignoring case (D-79). Group names are unique per user (D-27, D-48): "Home" and "home" cannot both be groups. Category names are unique within their group: "Other" can exist in "Home" and in "Car", but "Home" cannot hold both "Other" and "other" (D-75). Because a name alone can be ambiguous, categories are shown as "Group › Category", and mappings refer to them by ID.
 
 ### Deleting a category
 
@@ -55,7 +55,7 @@ As in Actual Budget (D-77): an empty group is deleted directly. A group with cat
 
 - A transaction's category is a category or `null`, never a group (CAT-1, CAT-3).
 - Categories have exactly two levels (CAT-2).
-- Group names are unique per user (CAT-9).
+- Group names are unique per user, ignoring case and surrounding spaces (CAT-9).
 - Deleting a category never leaves a transaction, payee or rule pointing to it (CAT-5, CAT-6).
 - Nothing changes before the user confirms the deletion preview (CAT-4).
 - A category deletion never touches another user's data (CAT-7).
@@ -149,6 +149,8 @@ As in Actual Budget (D-77): an empty group is deleted directly. A group with cat
 - **Given** user A has group "Home"
 - **When** user A creates another group "Home"
 - **Then** it is rejected
+- **When** user A creates a group "home " (lowercase, with a trailing space)
+- **Then** it is rejected too
 
 ### CAT-10 · Moving a category to another group
 
