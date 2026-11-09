@@ -10,14 +10,17 @@ Key Components:
     - Input/Output DTOs: Pydantic models for strict data validation.
     - Endpoints: REST interfaces for health checks, data processing, and forecasting.
 """
+
 import logging
 import traceback
 from decimal import Decimal
-from typing import Optional, Union, cast
+from typing import cast
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from modules.processor import DataProcessor, RawTransactionInput
+
 from modules.forecaster import Forecaster, TransactionInput
+from modules.processor import DataProcessor, RawTransactionInput
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,14 +46,15 @@ class ProcessedTransactionDto(BaseModel):
         category (str): Assigned macro-category label.
         subCategory (str): Assigned sub-category label (English).
     """
+
     id: str
-    date: str          # e.g., "2025-12-29" (ISO Format)
+    date: str  # e.g., "2025-12-29" (ISO Format)
     operation: str
     details: str
     account: str
-    amount: Decimal      # e.g., -747.6
+    amount: Decimal  # e.g., -747.6
     category: str
-    subCategory: Optional[str] = None
+    subCategory: str | None = None
 
 
 class ForecastFlowDto(BaseModel):
@@ -62,6 +66,7 @@ class ForecastFlowDto(BaseModel):
         fixed (float): The portion of the total attributed to recurring/fixed costs.
         variable (float): The portion of the total attributed to variable/trend-based costs.
     """
+
     total: Decimal
     fixed: Decimal
     variable: Decimal
@@ -77,10 +82,12 @@ class MonthlyForecastDto(BaseModel):
         expense (ForecastFlowDto): Predicted details for expenses.
         balance (float): The predicted net balance (Income + Expense).
     """
+
     date: str
     income: ForecastFlowDto
     expense: ForecastFlowDto
     balance: Decimal
+
 
 # --- INPUT DTOs ---
 
@@ -102,16 +109,17 @@ class RawTransactionDto(BaseModel):
         amount (str): The transaction amount as a string (e.g., "-747.6").
         category (Optional[str]): Optional category label for the transaction.
     """
+
     # id: str
     importBatchId: str
     originalLine: int
-    date: str          # e.g., "46020"
+    date: str  # e.g., "46020"
     operation: str
     details: str
     account: str
-    amount: str        # e.g., "-747.6"
-    category: Optional[str] = None
-    model_config = ConfigDict(extra='ignore')
+    amount: str  # e.g., "-747.6"
+    category: str | None = None
+    model_config = ConfigDict(extra="ignore")
 
 
 class ForecastRequest(BaseModel):
@@ -119,12 +127,13 @@ class ForecastRequest(BaseModel):
     Input payload for the forecast endpoint.
     Contains the transaction history and configuration parameters.
     """
+
     transactions: list[ProcessedTransactionDto]
     std_deviation_threshold: Decimal = Field(
-        default=Decimal('0.2'),
-        ge=Decimal('0.0'),
-        le=Decimal('1.0'),
-        description="Threshold (0.0-1.0) to identify fixed expenses. Higher = looser detection."
+        default=Decimal("0.2"),
+        ge=Decimal("0.0"),
+        le=Decimal("1.0"),
+        description="Threshold (0.0-1.0) to identify fixed expenses. Higher = looser detection.",
     )
 
 
@@ -132,6 +141,7 @@ class GoalProjectionRequest(BaseModel):
     """
     Input payload for the goal projection endpoint.
     """
+
     transactions: list[ProcessedTransactionDto]
     target_amount: Decimal
     current_amount: Decimal
@@ -141,11 +151,13 @@ class GoalProjectionResponse(BaseModel):
     """
     Response structure for goal completion projections.
     """
-    estimated_date: Optional[str] = None
-    monthly_avg: Optional[Decimal] = None
-    months_remaining: Optional[Decimal] = None
-    confidence: Optional[str] = None
-    error: Optional[str] = None
+
+    estimated_date: str | None = None
+    monthly_avg: Decimal | None = None
+    months_remaining: Decimal | None = None
+    confidence: str | None = None
+    error: str | None = None
+
 
 # --- ENDPOINTS ---
 
@@ -188,9 +200,7 @@ async def process_transactions(transactions: list[RawTransactionDto]):
         # We use cast because we know the structure is compatible.
         raw_list = [t.model_dump() for t in transactions]
 
-        cleaned_data = DataProcessor.clean_transactions(
-            cast(list[RawTransactionInput], raw_list)
-        )
+        cleaned_data = DataProcessor.clean_transactions(cast(list[RawTransactionInput], raw_list))
 
         logger.info("Processing completed successfully")
         return cleaned_data
@@ -201,7 +211,7 @@ async def process_transactions(transactions: list[RawTransactionDto]):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/forecast", response_model=Union[list[MonthlyForecastDto], dict[str, str]])
+@app.post("/forecast", response_model=list[MonthlyForecastDto] | dict[str, str])
 def forecast_transactions(payload: ForecastRequest):
     """
     Predicts financial flows for the next 3 months based on transaction history and configuration.
@@ -212,12 +222,13 @@ def forecast_transactions(payload: ForecastRequest):
 
     Args:
         payload (ForecastRequest): Input object containing:
-            - transactions (list[ProcessedTransactionDto]): list of cleaned and enriched transactions.
-            - std_deviation_threshold (float): Configurable threshold (0.0-1.0) for identifying fixed expenses.
-              Higher values make the detection looser/more inclusive.
+            - transactions (list[ProcessedTransactionDto]): list of cleaned and enriched
+              transactions.
+            - std_deviation_threshold (float): Configurable threshold (0.0-1.0) for identifying
+              fixed expenses. Higher values make the detection looser/more inclusive.
 
     Returns:
-        Union[list[MonthlyForecastDto], dict[str, str]]:
+        list[MonthlyForecastDto] | dict[str, str]:
             - A list of 3 monthly forecasts (Income, Expense, Balance) on success.
             - An error dictionary (e.g., {"error": "..."}) if data is insufficient.
     """
@@ -232,8 +243,7 @@ def forecast_transactions(payload: ForecastRequest):
     try:
         # 4. Pass BOTH data AND the threshold to the Forecaster
         result = Forecaster.predict_next_3_months(
-            typed_data,
-            std_deviation_threshold=float(payload.std_deviation_threshold)
+            typed_data, std_deviation_threshold=float(payload.std_deviation_threshold)
         )
         return result
     except Exception as e:
@@ -267,7 +277,7 @@ def project_goal(payload: GoalProjectionRequest):
         result = Forecaster.predict_goal_eta(
             typed_data,
             target_amount=float(payload.target_amount),
-            current_amount=float(payload.current_amount)
+            current_amount=float(payload.current_amount),
         )
 
         return cast(dict, result)

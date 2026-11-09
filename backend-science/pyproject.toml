@@ -1,0 +1,60 @@
+[project]
+name = "finances-science"
+description = "Computation service of the finance dashboard: forecasts and goal projections."
+# The repository version (D-42): a release commit aligns it with __version__ in src/main.py.
+version = "1.0.0"
+requires-python = ">=3.15,<3.16"
+dependencies = [
+    "fastapi>=0.162.2",
+    "numpy>=2.5.4",
+    "openpyxl>=3.1.5",
+    "pandas>=3.1.1",
+    "pydantic>=2.14.3",
+    "scikit-learn>=1.9.1",
+    "uvicorn>=0.54.0",
+]
+
+# Lower bounds only: uv.lock pins the exact versions. A hold is an upper bound with a comment
+# saying why.
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.414",
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
+
+[tool.uv]
+# An application, not a library: uv installs the dependencies only, it does not build a package.
+package = false
+
+[tool.pytest]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.pyright]
+pythonVersion = "3.15"
+typeCheckingMode = "basic"
+include = ["src", "tests"]
+exclude = ["**/__pycache__", "**/.venv", "**/.direnv"]
+extraPaths = ["src"]
+venvPath = "."
+venv = ".venv"
+
+[tool.ruff]
+line-length = 100
+# target-version comes from requires-python.
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # import order
+    "UP",  # modern syntax for the target Python
+    "B",   # bugbear: likely bugs
+    "SIM", # simplifications
+    "RUF", # ruff's own rules
+    "PD",  # pandas-vet
+    "NPY", # numpy
+]

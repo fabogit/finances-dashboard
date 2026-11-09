@@ -1,77 +1,36 @@
-# Finance Science Service 🧬
+# Finance Science Service
 
-This module provides financial forecasting and data processing capabilities using Pandas and Scikit-learn.
+The computation service of the finance dashboard: forecasts and goal projections with pandas and scikit-learn, behind a FastAPI app. What it does and how the core calls it: [science contract](../documents/architecture/science-contract.md); how to change it: [science-service-flow.md](../.agents/workflows/science-service-flow.md).
 
-## Environment Setup 🛠️
+## Environment
 
-To ensure the IDE correctly recognizes libraries (like `pandas` and `fastapi`) and to avoid runtime errors, follow these steps:
-
-### 1. Standard Virtual Environment (Recommended)
-
-Create and use a dedicated virtual environment:
+A [uv](https://docs.astral.sh/uv/) project: dependencies in `pyproject.toml`, exact versions in `uv.lock`, Python 3.15 from `.python-version`. From this directory:
 
 ```bash
-# Create the environment
-python3 -m venv .venv
-
-# Activate it (Fish shell)
-source .venv/bin/activate.fish
-
-# Activate it (Bash/Zsh shell)
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+uv sync                                                    # create .venv with every dependency
+uv run uvicorn main:app --app-dir src --reload --port 8000 # run the service
 ```
 
-### 2. Direnv Integration
+Details, including direnv: [setup.md § Python environment](../documents/development/setup.md#python-environment).
 
-If you use `direnv`, the project is configured to automatically manage a Python environment via the `.envrc` file. 
+**IDE:** select `backend-science/.venv/bin/python` as the interpreter. pyright reads its settings from `[tool.pyright]` in `pyproject.toml`.
 
-To synchronize the `direnv` environment with the latest dependencies:
-1. Enter the `backend-science` directory.
-2. Run: `pip install -r requirements.txt` (direnv will use its internal environment).
+## Layout
 
-## IDE Configuration (VS Code / Pyright) 💻
+- `src/main.py`: FastAPI app, Pydantic models, routes.
+- `src/modules/forecaster.py`: forecast and goal projection.
+- `src/modules/processor.py`, `src/modules/rules.py`: v1 import cleaning and static categories, retired in v2.
+- `tests/`: pytest.
 
-The project includes a `pyrightconfig.json` file. This tells the Python Language Server where to find the installed packages.
+With the service running, the Swagger UI is at <http://localhost:8000/docs>.
 
-### Troubleshooting Import Errors
-If your IDE still shows "Import could not be resolved":
-1. **Select the correct Interpreter**: 
-   - Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`).
-   - Type **"Python: Select Interpreter"**.
-   - Choose the one located in `./.venv/bin/python` or `./.direnv/python-3.14/bin/python`.
-2. **Restart the Language Server**:
-   - Sometimes the IDE needs a nudge to reload the environment after a `pip install`.
-
-## Project Structure
-- `main.py`: FastAPI entry point and DTO definitions.
-- `processor.py`: Data cleaning and transformation logic.
-- `forecaster.py`: Statistical analysis and ML forecasting models.
-- `rules.py`: Categorization rules for transactions.
-- `tests/`: Unit test suite using `pytest`.
-
-## 📚 API Documentation
-
-Once the service is running, you can access the interactive Swagger UI at:
-**[http://localhost:8000/docs](http://localhost:8000/docs)** (default)
-
-## Testing 🧪
-
-The module includes a comprehensive unit test suite covering categorization, data cleaning, and forecasting logic.
+## Verify
 
 ```bash
-# Run all tests
-python -m pytest tests/
-
-# Run with coverage (requires pytest-cov)
-python -m pytest --cov=. tests/
+uv run ruff check
+uv run ruff format --check
+uv run pyright
+uv run pytest
 ```
 
-## CI/CD 🤖
-
-This module is integrated into the global GitHub Actions workflow. Every push to `backend-science/**` triggers:
-1. **Type Checking**: Static analysis via `pyright`.
-2. **Unit Tests**: Full execution of the `pytest` suite.
-3. **Build Verification**: Automatic Docker build check to ensure container health.
+The same commands run in CI (`science-quality` job), followed by a Docker build: [testing.md](../documents/development/testing.md).

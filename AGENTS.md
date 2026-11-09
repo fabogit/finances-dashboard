@@ -89,7 +89,7 @@ Issues, milestones and the project follow one style (D-44):
 
 ## Releases
 
-One version for the whole repository (D-42). A release commit aligns it in `backend-core/package.json`, `client-preview/package.json` and `__version__` in `backend-science/src/main.py`; then an annotated tag on the merge commit on `main`. Scheme: [roadmap § Versioning](documents/product/roadmap.md#versioning).
+One version for the whole repository (D-42). A release commit aligns it in `backend-core/package.json`, `client-preview/package.json`, `version` in `backend-science/pyproject.toml` and `__version__` in `backend-science/src/main.py`; then an annotated tag on the merge commit on `main`. Scheme: [roadmap § Versioning](documents/product/roadmap.md#versioning).
 
 ## Commands
 
@@ -103,7 +103,7 @@ Each set of commands has one home:
 
 - **Node.js is managed by fnm, configured in the maintainer's fish shell.** Run Node tooling (`node`, `pnpm`, `pnpm exec …`) from fish, for example `fish -c 'cd backend-core; and pnpm test'`, or from a shell where fnm is loaded (`eval "$(fnm env --use-on-cd)"`). Any other command can run in bash.
 - **pnpm** through corepack; never install with npm or yarn.
-- **Python** in a virtual environment: with direnv (`backend-science/.envrc`) or one outside the repository ([setup](documents/development/setup.md#python-environment)).
+- **Python** through **uv**: `uv sync` in `backend-science/`, then `uv run …` (or direnv, `backend-science/.envrc`); never install with pip ([setup](documents/development/setup.md#python-environment)).
 - Skills and MCP configuration under `.agents/` are local and not versioned; only `.agents/workflows/` is.
 
 ## Workflows

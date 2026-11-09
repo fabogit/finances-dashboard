@@ -7,7 +7,7 @@ How to get the stack running, with Docker or locally. Verification commands are 
 - **Node.js** 24, at the patch pinned in `backend-core/.nvmrc` (also the minimum in `engines` in `backend-core/package.json`; CI and the core image use the same version), managed with [fnm](https://github.com/Schniz/fnm), which picks it up from `.nvmrc`. On the maintainer's machine fnm is configured in the fish shell, so Node tooling (`node`, `pnpm`, `pnpm exec …`) runs from fish or from a shell where fnm is loaded (`eval "$(fnm env --use-on-cd)"`). Other commands work in any shell.
 - **pnpm** 12 through corepack (`corepack enable pnpm`); the exact version is `packageManager` in `backend-core/package.json` and `client-preview/package.json`, and CI and the core image read it from there. Packages allowed to run install scripts are listed under `allowBuilds` in each `pnpm-workspace.yaml`. Never install with npm or yarn.
 - **Docker** with Compose, for PostgreSQL, the full stack and the end-to-end tests.
-- **Python** 3.14, the version CI uses, for `backend-science`.
+- **[uv](https://docs.astral.sh/uv/)** for `backend-science`: it installs Python 3.15 (the version in `backend-science/.python-version`, used by CI and Docker too) and the locked dependencies.
 
 ## Environment files
 
@@ -62,39 +62,29 @@ pnpm run prisma:seed
 pnpm run start:dev
 ```
 
-**Science.** From `backend-science/`, with the Python environment active:
+**Science.** From `backend-science/`, after `uv sync` ([Python environment](#python-environment)):
 
 ```bash
-env PYTHONPATH=src uvicorn src.main:app --reload --port 8000
+uv run uvicorn main:app --app-dir src --reload --port 8000
 ```
 
 Set `SCIENCE_SERVICE_URL=http://localhost:8000` in `backend-core/.env.local` (the example already does).
 
 ## Python environment
 
-Any virtual environment with `backend-science/requirements.txt` installed works. Two ways:
-
-- **With direnv:** `backend-science/.envrc` creates and activates a virtual environment (`layout python`, kept in the ignored `.direnv/`) and adds `src` to `PYTHONPATH`. Run `direnv allow` once in `backend-science/`, then `pip install -r requirements.txt`.
-- **Without direnv** (CI, agents, worktrees): one environment outside the repository, shared by every worktree.
-
-  ```bash
-  python3 -m venv ~/.venvs/finances-science
-  ~/.venvs/finances-science/bin/pip install -r backend-science/requirements.txt
-  ```
-
-  Recreate it when `requirements.txt` changes.
-
-In either environment, install **pyright** for the type check, as CI does: it is not in `requirements.txt`.
+`backend-science` is a [uv](https://docs.astral.sh/uv/) project: dependencies in `pyproject.toml` (runtime, and the `dev` group with pytest, pyright and ruff), exact versions in `uv.lock`. From `backend-science/`:
 
 ```bash
-pip install pyright
+uv sync
 ```
 
-pyright resolves imports through the active Python interpreter. With direnv the environment is already active; with the external environment, activate it or point pyright at it, otherwise every third-party import is reported as missing:
+It installs Python 3.15 if missing and creates `backend-science/.venv` with every dependency, dev group included. Each worktree gets its own `.venv`; uv's cache makes that fast. Run it again after pulling a change to `uv.lock`; `uv sync --frozen` installs exactly the lockfile, as CI and Docker do.
 
-```bash
-~/.venvs/finances-science/bin/pyright --pythonpath ~/.venvs/finances-science/bin/python .
-```
+Then run any tool through uv, with no activation and no extra arguments: `uv run pytest`, `uv run pyright`, `uv run ruff check` ([verification commands](testing.md#verification-commands)). pytest and pyright find `src` and the environment through their settings in `pyproject.toml`.
+
+**With direnv** (optional): `backend-science/.envrc` activates `.venv` and puts `src` on `PYTHONPATH`, so `pytest`, `pyright` and `uvicorn` work without `uv run`. Run `uv sync` first, then `direnv allow` once in `backend-science/`.
+
+To add or update a dependency, see [science-service-flow.md § Dependencies](../../.agents/workflows/science-service-flow.md#dependencies).
 
 ## Seed
 
@@ -110,9 +100,10 @@ The schema is applied with `prisma db push`, not migrations, until the MVP (D-19
 | --- | --- | --- |
 | Port 3000 or 8000 already in use | Another core or uvicorn process | `lsof -i :3000` (or `:8000`), then stop that process |
 | `fn-core` restarts in a loop | Database unreachable or invalid `.env.compose` | `docker logs fn-core`; check `.env.compose` against `.env.compose_example` |
-| `fn-science` does not start | Missing Python dependency | `docker logs fn-science`; check `requirements.txt` |
+| `fn-science` does not start | Missing Python dependency | `docker logs fn-science`; check that the dependency is in `pyproject.toml` and `uv.lock`, then `docker compose --env-file .env.compose up --build` from the repository root |
 | `fn-postgres` never becomes healthy | Port 5432 taken or a corrupted volume | Free the port; `pnpm run docker:down`, then `docker volume rm` the `postgres_data` volume (erases local data) |
 | `node` or `pnpm` not found, or the wrong version | Shell without fnm loaded | Run from fish, or `eval "$(fnm env --use-on-cd)"` |
 | `fn-core` runs old dependencies after a dependency update | The `backend_core_modules` volume keeps the `node_modules` of the first build: Docker fills a named volume from the image only when it is empty | `pnpm run docker:down`, then `docker volume rm` the `backend_core_modules` and `backend_core_dist` volumes, then `pnpm run docker:up` |
-| direnv does not activate the environment | `.envrc` not approved | `direnv allow` in `backend-science/` |
-| `ModuleNotFoundError` in Python | `src` not on `PYTHONPATH` | Use direnv, or prefix the command with `env PYTHONPATH=src` |
+| direnv does not activate the environment | `.envrc` not approved, or no `.venv` yet | `uv sync`, then `direnv allow` in `backend-science/` |
+| `uv sync --frozen` fails, or `uv lock --check` fails in CI | `uv.lock` out of date with `pyproject.toml` | `uv lock` in `backend-science/` and commit `uv.lock` |
+| `ModuleNotFoundError` in Python | `src` not on the path | pytest and pyright add it through `pyproject.toml`; for uvicorn pass `--app-dir src`, or use direnv |
