@@ -8,14 +8,14 @@ The plan rewrites the schema once, then rebuilds the modules flow by flow in dep
 
 Six MVP milestones grouped by theme, plus two after the MVP (D-45). Each MVP milestone ends with its own Review & consolidation issue ([below](#review--consolidation)).
 
-- **M1 · Groundwork** — fixes that survive the redesign, documentation restructured with agent entry files, dependencies refreshed (NestJS 12), the core and science toolchains modernised, the native HTTP adapter, and the v2 specs. Step 1.
+- **M1 · Groundwork** — fixes that survive the redesign, documentation restructured with agent entry files, dependencies refreshed (NestJS 12), the core toolchain on the NestJS 12 project defaults, the science toolchain, the native HTTP adapter, the validation choice, and the v2 specs. Step 1.
 - **M2 · Ledger** — Schema v2 and the profile-based seed, accounts with derived balances, category groups, transactions with `kind` and transfers. Steps 2, 3, 4, 6.
 - **M3 · Import** — payees and rules, then the guided import: templates, column mapper, stateless preview, layered deduplication, transfer detection. Steps 5, 7.
 - **M4 · Planning** — monthly budget per category and savings goals on a dedicated account. Steps 8, 9.
 - **M5 · Insights** — analytics aggregated in the database with the `kind` rules, Net Worth history, a robust `ScienceClient` with the adapted forecast. Steps 10, 11.
 - **M6 · Client** — the minimal Angular client, one screen per closed API. Step 12. Closing M6 is the MVP, `v2.0.0`.
 - **Post-MVP · Auth & multi-tenancy** — users, authentication, roles and the demo sandbox (#62–#65). Designed after the MVP; questions in [open-questions.md](open-questions.md).
-- **Post-MVP · Backlog** — accepted ideas outside the MVP: subscriptions (#78), forecast split (#77), multiple currencies (#81), the HTTP `QUERY` method (#80).
+- **Post-MVP · Backlog** — accepted ideas outside the MVP: subscriptions (#78), forecast split (#77), multiple currencies (#81), the HTTP `QUERY` method (#80), observability with `@nestjs/observe` (#114).
 
 ## Steps
 
@@ -23,9 +23,11 @@ Six MVP milestones grouped by theme, plus two after the MVP (D-45). Each MVP mil
    - Science client: timeouts, retries and real HTTP errors (#85).
    - Documentation restructured, ADRs, roadmap, `AGENTS.md` (#86).
    - Dependency refresh and NestJS 12 (#87), after #85 and #86.
-   - Core toolchain: Vite+ (oxlint, oxfmt, Vitest) and ESM (#109), after #87 and before the v2 tests are written (D-50).
+   - Static fallback fix (#111) and client scaffold spec fix (#112), after #87.
+   - Core toolchain on the NestJS 12 project defaults: ESM, Vitest, oxlint, with oxfmt instead of Prettier (#109), after #87 and #111, before the v2 tests are written (D-53).
    - Science toolchain: uv, `pyproject.toml` and ruff (#110), after #86; a different perimeter from #87, so the two can run in parallel (D-51).
-   - Native HTTP adapter, `@nestjs/platform-node` (#88), after #87 and #109, and not before 2026-11-17 (D-52).
+   - Native HTTP adapter, `@nestjs/platform-node` (#88), after #87, #109 and #111, and not before 2026-11-17 (D-52).
+   - Validation: Standard Schema (Zod) or class-validator (#113), after #109 and before Schema v2, so the v2 DTOs are written once (D-54).
    - **v2 specs: data model and flow documents (#104)**, after #86 and **before Schema v2**: the data model and one flow document per MVP area, with numbered Given / When / Then examples (D-46, D-47).
 2. **Schema v2** (#89) and the **profile-based seed** (#90) (M2). Done alone, with no other session touching the code.
 3. **Accounts with derived balances** (#91): starting balance, reconciliation, adjustments (M2).
@@ -48,7 +50,10 @@ flowchart TD
     S1a["#85 Science client"]
     S1c["#86 Documentation"]
     S1d["#87 Dependencies + NestJS 12"]
+    S1f["#111 Static fallback"]
+    S1b["#112 Client spec"]
     S1t["#109 Core toolchain"]
+    S1v["#113 Validation"]
     S1p["#110 Science toolchain"]
     S1h["#88 HTTP adapter"]
     S1s["#104 v2 specs"]
@@ -64,7 +69,9 @@ flowchart TD
     S11["11 · ScienceClient + forecast"]
     S12["12 · Angular client"]
 
-    S1a & S1c --> S1d --> S1t --> S1h --> S2
+    S1a & S1c --> S1d --> S1f --> S1t --> S1h --> S2
+    S1d --> S1b --> S2
+    S1t --> S1v --> S2
     S1c --> S1p --> S2
     S1c --> S1s --> S2
     S2 --> S3 & S4
