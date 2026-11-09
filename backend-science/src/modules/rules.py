@@ -11,7 +11,6 @@ CATEGORY_MAP = {
     "Entrate varie": ("INCOME", "Other Income"),
     "Rimborsi spese e storni": ("INCOME", "Refunds"),
     "Disinvestimenti, BDR e Salvadanaio": ("INCOME", "Investments Returns"),
-
     # --- HOME & UTILITIES ---
     "Pagamento affitti": ("HOME", "Rent"),
     "Gas & energia elettrica": ("HOME", "Utilities"),
@@ -20,28 +19,23 @@ CATEGORY_MAP = {
     "Cellulare": ("HOME", "Mobile Phone"),
     "Casa varie": ("HOME", "Home Misc"),
     "Elettrodomestici, arredamento e giardino": ("HOME", "Furniture & Garden"),
-
     # --- FOOD & DINING ---
     "Generi alimentari e supermercato": ("FOOD", "Groceries"),
     "Ristoranti e bar": ("FOOD", "Dining Out"),
-
     # --- SHOPPING ---
     "Abbigliamento e accessori": ("SHOPPING", "Clothing"),
     "Hi-tech e informatica": ("SHOPPING", "Electronics"),
     "Libri, film e musica": ("SHOPPING", "Media"),
-
     # --- TRANSPORT ---
     "Benzina": ("TRANSPORT", "Fuel"),
     "Trasporti, noleggi, taxi e parcheggi": ("TRANSPORT", "Public Transport & Taxi"),
     "Treno, aereo, nave": ("TRANSPORT", "Travel Tickets"),
     "Trasporti varie": ("TRANSPORT", "Transport Misc"),
-
     # --- HEALTH ---
     "Cliniche": ("HEALTH", "Medical Visits"),
     "Farmacia": ("HEALTH", "Pharmacy"),
     "Cura della persona": ("HEALTH", "Personal Care"),
     "Salute e benessere varie": ("HEALTH", "Health Misc"),
-
     # --- LEISURE & LIFESTYLE ---
     "Viaggi e vacanze": ("LEISURE", "Travel & Holidays"),
     "Divertimenti e locali": ("LEISURE", "Entertainment"),
@@ -49,7 +43,6 @@ CATEGORY_MAP = {
     "Corsi e sport": ("LEISURE", "Sports & Courses"),
     "Tempo libero varie": ("LEISURE", "Leisure Misc"),
     "Associazioni": ("LEISURE", "Memberships"),
-
     # --- FINANCIAL ---
     "Bonifici in uscita": ("FINANCIAL", "Transfers Out"),
     "Prelievi": ("FINANCIAL", "Cash Withdrawal"),
@@ -57,15 +50,12 @@ CATEGORY_MAP = {
     "Addebiti vari": ("FINANCIAL", "Bank Charges"),
     "Investimenti, BDR e Salvadanaio": ("FINANCIAL", "Investments"),
     "Donazioni": ("FINANCIAL", "Donations"),
-
     # --- OTHER / UNCATEGORIZED ---
     "Altre uscite": ("OTHER", "Misc Expenses"),
 }
 
 
-from typing import Optional
-
-def get_category_details(original_label: Optional[str]) -> tuple[str, str]:
+def get_category_details(original_label: str | None) -> tuple[str, str]:
     """
     Standardizes and translates a raw Italian category label into its Macro and Sub-category components.
 

@@ -5,9 +5,12 @@ This module encapsulates the logic for cleaning, transforming, and validating
 raw financial transaction data. It leverages Pandas to handle common data
 inconsistencies found in exports and applies categorization rules.
 """
-from typing import TypedDict, cast, Optional
+
 from decimal import Decimal
+from typing import TypedDict, cast
+
 import pandas as pd
+
 from .rules import get_category_details
 
 
@@ -15,13 +18,14 @@ class RawTransactionInput(TypedDict, total=False):
     """
     Schema for the raw input data received from the Node.js/Prisma service.
     """
+
     id: str
     date: str | float | int
     operation: str
     details: str
     account: str
     amount: str | float | int
-    category: Optional[str]
+    category: str | None
     originalLine: str | int
 
 
@@ -30,13 +34,14 @@ class CleanedTransaction(TypedDict):
     Defines the strict schema for a processed transaction dictionary.
     Matches the 'ProcessedTransaction' interface in Node.js.
     """
+
     id: str
-    date: str          # ISO 8601 YYYY-MM-DD
+    date: str  # ISO 8601 YYYY-MM-DD
     operation: str
     details: str
     account: str
-    amount: Decimal    # Strictly Decimal for precision
-    category: str      # MACRO Category (e.g. "HOME")
+    amount: Decimal  # Strictly Decimal for precision
+    category: str  # MACRO Category (e.g. "HOME")
     subCategory: str
 
 
@@ -79,57 +84,57 @@ class DataProcessor:
             try:
                 numeric_val = float(val)
                 if numeric_val > 10000:
-                    return pd.to_datetime(numeric_val, unit='D', origin='1899-12-30')
-            except (ValueError, TypeError):
+                    return pd.to_datetime(numeric_val, unit="D", origin="1899-12-30")
+            except ValueError, TypeError:
                 pass
             try:
                 return pd.to_datetime(val)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 return pd.NaT
 
-        df['clean_date'] = df['date'].apply(parse_resilient_date)
-        df['date'] = df['clean_date'].apply(
-            lambda x: x.strftime('%Y-%m-%d') if pd.notnull(x) else ''
+        df["clean_date"] = df["date"].apply(parse_resilient_date)
+        df["date"] = df["clean_date"].apply(
+            lambda x: x.strftime("%Y-%m-%d") if pd.notnull(x) else ""
         )
 
         # 2. Amount Processing
-        df['amount'] = cast(pd.Series, pd.to_numeric(df['amount'], errors='coerce')).fillna(0.0)
+        df["amount"] = cast(pd.Series, pd.to_numeric(df["amount"], errors="coerce")).fillna(0.0)
 
         # --- 3. Category Processing ---
-        if 'category' not in df.columns:
-            df['category'] = ""
-        df['raw_category'] = df['category'].fillna("").astype(str)
+        if "category" not in df.columns:
+            df["category"] = ""
+        df["raw_category"] = df["category"].fillna("").astype(str)
 
-        mapped_cats = df['raw_category'].apply(get_category_details)
+        mapped_cats = df["raw_category"].apply(get_category_details)
 
         # zip(*mapped_cats) transforms [(A,B), (C,D)] in: (A,C) & (B,D)
         if not mapped_cats.empty:
-            df['macro_cat'], df['sub_cat_en'] = zip(*mapped_cats)
+            df["macro_cat"], df["sub_cat_en"] = zip(*mapped_cats)
         else:
-            df['macro_cat'] = "UNCATEGORIZED"
-            df['sub_cat_en'] = "Unknown"
+            df["macro_cat"] = "UNCATEGORIZED"
+            df["sub_cat_en"] = "Unknown"
 
         # 4. ID Generation
-        if 'originalLine' in df.columns:
-            df['id'] = df['originalLine'].astype(str)
+        if "originalLine" in df.columns:
+            df["id"] = df["originalLine"].astype(str)
         else:
-            df['id'] = df.index.astype(str)
+            df["id"] = df.index.astype(str)
 
         # Select and order columns matching CleanedTransaction
         final_df = pd.DataFrame()
-        final_df['id'] = df['id']
-        final_df['date'] = df['date']
-        final_df['operation'] = df['operation']
-        final_df['details'] = df['details']
-        final_df['account'] = df['account']
-        final_df['amount'] = df['amount']
-        final_df['category'] = df['macro_cat']
-        final_df['subCategory'] = df['sub_cat_en']
+        final_df["id"] = df["id"]
+        final_df["date"] = df["date"]
+        final_df["operation"] = df["operation"]
+        final_df["details"] = df["details"]
+        final_df["account"] = df["account"]
+        final_df["amount"] = df["amount"]
+        final_df["category"] = df["macro_cat"]
+        final_df["subCategory"] = df["sub_cat_en"]
 
         # Convert to list of dicts and fix amount type
-        result = final_df.to_dict(orient='records')
+        result = final_df.to_dict(orient="records")
         for item in result:
             # Ensure amount is Decimal for precision preservation
-            item['amount'] = Decimal(str(item['amount']))
+            item["amount"] = Decimal(str(item["amount"]))
 
         return cast(list[CleanedTransaction], result)

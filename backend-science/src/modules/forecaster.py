@@ -5,11 +5,13 @@ This module utilizes historical transaction data to predict future financial flo
 (income and expenses) using statistical analysis for recurring items and
 Linear Regression for variable trends.
 """
-from typing import TypedDict, Union, cast
+
 import re
 from decimal import Decimal
-import pandas as pd
+from typing import TypedDict, cast
+
 import numpy as np
+import pandas as pd
 from sklearn.linear_model import LinearRegression
 
 # --- Internal DTOs ---
@@ -17,6 +19,7 @@ from sklearn.linear_model import LinearRegression
 
 class ForecastFlowResult(TypedDict):
     """Represents the breakdown of a financial flow (Income or Expense)."""
+
     total: Decimal
     fixed: Decimal
     variable: Decimal
@@ -24,6 +27,7 @@ class ForecastFlowResult(TypedDict):
 
 class MonthlyForecast(TypedDict):
     """Represents the financial forecast for a specific single month."""
+
     date: str
     income: ForecastFlowResult
     expense: ForecastFlowResult
@@ -32,6 +36,7 @@ class MonthlyForecast(TypedDict):
 
 class TransactionInput(TypedDict):
     """Input structure for a single transaction to be analyzed."""
+
     id: str
     date: str
     amount: Decimal
@@ -50,8 +55,7 @@ class Forecaster:
 
     @staticmethod
     def predict_next_3_months(
-        transactions: list[TransactionInput],
-        std_deviation_threshold: float = 0.2
+        transactions: list[TransactionInput], std_deviation_threshold: float = 0.2
     ) -> list[MonthlyForecast] | dict[str, str]:
         """
         Analyzes past transactions to forecast the balance for the next 3 months.
@@ -79,37 +83,33 @@ class Forecaster:
         df = pd.DataFrame(transactions)
 
         # 1. Type Conversion
-        df['date'] = pd.to_datetime(df['date'], errors='coerce')
-        df['amount'] = pd.to_numeric(df['amount'], errors='coerce').fillna(0.0) # type: ignore
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0.0)  # type: ignore
 
         # Drop invalid rows
-        df = df.dropna(subset=['date'])
+        df = df.dropna(subset=["date"])
 
         if df.empty:
             return {"error": "No valid dates in data"}
 
         # 2. Date Filtering (Last 12 Months Strategy)
-        last_date = df['date'].max()
+        last_date = df["date"].max()
         start_date = last_date - pd.Timedelta(days=365)
-        df = df[df['date'] >= start_date].copy()
+        df = df[df["date"] >= start_date].copy()
 
         if df.empty:
             return {"error": "Not enough data in the selected period"}
 
         # 3. Split Income vs Expense
-        income_df = cast(pd.DataFrame, df[df['amount'] > 0].copy())
-        expense_df = cast(pd.DataFrame, df[df['amount'] < 0].copy())
+        income_df = cast(pd.DataFrame, df[df["amount"] > 0].copy())
+        expense_df = cast(pd.DataFrame, df[df["amount"] < 0].copy())
 
         # 4. Analyze flows (Get 3 future points for each)
         inc_preds, fixed_inc = Forecaster._analyze_flow(
-            income_df,
-            months_to_predict=3,
-            std_threshold_pct=std_deviation_threshold
+            income_df, months_to_predict=3, std_threshold_pct=std_deviation_threshold
         )
         exp_preds, fixed_exp = Forecaster._analyze_flow(
-            expense_df,
-            months_to_predict=3,
-            std_threshold_pct=std_deviation_threshold
+            expense_df, months_to_predict=3, std_threshold_pct=std_deviation_threshold
         )
 
         # 5. Build Result List
@@ -117,7 +117,7 @@ class Forecaster:
 
         for i in range(3):
             future_date = last_date + pd.DateOffset(months=i + 1)
-            date_str = future_date.strftime('%Y-%m')
+            date_str = future_date.strftime("%Y-%m")
 
             curr_inc_total = inc_preds[i]
             curr_exp_total = exp_preds[i]
@@ -125,28 +125,28 @@ class Forecaster:
             var_inc = curr_inc_total - fixed_inc
             var_exp = curr_exp_total - fixed_exp
 
-            results.append({
-                "date": date_str,
-                "income": {
-                    "total": Decimal(str(np.round(curr_inc_total, 2))),
-                    "fixed": Decimal(str(np.round(fixed_inc, 2))),
-                    "variable": Decimal(str(np.round(var_inc, 2)))
-                },
-                "expense": {
-                    "total": Decimal(str(np.round(curr_exp_total, 2))),
-                    "fixed": Decimal(str(np.round(fixed_exp, 2))),
-                    "variable": Decimal(str(np.round(var_exp, 2)))
-                },
-                "balance": Decimal(str(np.round(curr_inc_total + curr_exp_total, 2)))
-            })
+            results.append(
+                {
+                    "date": date_str,
+                    "income": {
+                        "total": Decimal(str(np.round(curr_inc_total, 2))),
+                        "fixed": Decimal(str(np.round(fixed_inc, 2))),
+                        "variable": Decimal(str(np.round(var_inc, 2))),
+                    },
+                    "expense": {
+                        "total": Decimal(str(np.round(curr_exp_total, 2))),
+                        "fixed": Decimal(str(np.round(fixed_exp, 2))),
+                        "variable": Decimal(str(np.round(var_exp, 2))),
+                    },
+                    "balance": Decimal(str(np.round(curr_inc_total + curr_exp_total, 2))),
+                }
+            )
 
         return results
 
     @staticmethod
     def _analyze_flow(
-        df: pd.DataFrame,
-        months_to_predict: int = 3,
-        std_threshold_pct: float = 0.2
+        df: pd.DataFrame, months_to_predict: int = 3, std_threshold_pct: float = 0.2
     ) -> tuple[list[float], float]:
         """
         Helper method to calculate Fixed vs Variable trend and project future totals.
@@ -175,57 +175,54 @@ class Forecaster:
         def clean_details(text):
             if not isinstance(text, str):
                 return "Unknown"
-            return re.sub(r'\d+', '', text).strip().upper()
+            return re.sub(r"\d+", "", text).strip().upper()
 
-        df['group_key'] = cast(pd.Series, df['subCategory']).fillna(
-            df['details'].apply(clean_details)
+        df["group_key"] = cast(pd.Series, df["subCategory"]).fillna(
+            df["details"].apply(clean_details)
         )
 
-        recurrence = df.groupby('group_key').agg(
-            count=('amount', 'count'),
-            mean_amount=('amount', 'mean'),
-            std_amount=('amount', 'std')
+        recurrence = df.groupby("group_key").agg(
+            count=("amount", "count"), mean_amount=("amount", "mean"), std_amount=("amount", "std")
         )
 
         # Rule: At least 3 occurrences AND Standard Deviation < threshold % of mean
-        std_threshold = recurrence['mean_amount'].abs() * std_threshold_pct # type: ignore
+        std_threshold = recurrence["mean_amount"].abs() * std_threshold_pct  # type: ignore
 
-        fixed_mask = (recurrence['count'] >= 3) & (
-            recurrence['std_amount'].fillna(0) < std_threshold) # type: ignore
+        fixed_mask = (recurrence["count"] >= 3) & (
+            recurrence["std_amount"].fillna(0) < std_threshold
+        )  # type: ignore
 
         fixed_items = recurrence[fixed_mask]
-        fixed_total = float(cast(pd.Series, fixed_items['mean_amount']).sum())
+        fixed_total = float(cast(pd.Series, fixed_items["mean_amount"]).sum())
 
         # --- B. ANALYZE VARIABLE TREND (Linear Regression) ---
 
         # Convert date to a linear monthly index (integer)
         # 2024-01 -> X, 2024-02 -> X+1
-        df['month_idx'] = df['date'].values.astype('datetime64[M]').astype(int)
+        df["month_idx"] = df["date"].values.astype("datetime64[M]").astype(int)
 
         # Group by this numeric index
-        monthly_totals = cast(pd.Series, df.groupby('month_idx')['amount'].sum()).reset_index()
+        monthly_totals = cast(pd.Series, df.groupby("month_idx")["amount"].sum()).reset_index()
 
         predictions: list[float] = []
 
         if len(monthly_totals) < 2:
             # Not enough data for regression: Use simple mean for all future months
-            avg_val = float(cast(pd.Series, monthly_totals['amount']).mean())
+            avg_val = float(cast(pd.Series, monthly_totals["amount"]).mean())
             predictions = [avg_val] * months_to_predict
         else:
             # Linear Regression Preparation
-            x = np.array(monthly_totals['month_idx'].values).reshape(-1, 1)
-            y = np.array(monthly_totals['amount'].values)
+            x = np.array(monthly_totals["month_idx"].values).reshape(-1, 1)
+            y = np.array(monthly_totals["amount"].values)
 
             model = LinearRegression()
             model.fit(x, y)
 
             # Predict Next N Months
-            last_idx = monthly_totals['month_idx'].max()
+            last_idx = monthly_totals["month_idx"].max()
 
             # Create input array for prediction: [[idx+1], [idx+2], [idx+3]]
-            future_indices = np.array(
-                [[last_idx + i] for i in range(1, months_to_predict + 1)]
-            )
+            future_indices = np.array([[last_idx + i] for i in range(1, months_to_predict + 1)])
 
             raw_predictions = model.predict(future_indices)
             predictions = [float(val) for val in raw_predictions]
@@ -234,10 +231,8 @@ class Forecaster:
 
     @staticmethod
     def predict_goal_eta(
-        transactions: list[TransactionInput],
-        target_amount: float,
-        current_amount: float
-    ) -> dict[str, Union[str, float, Decimal, None]]:
+        transactions: list[TransactionInput], target_amount: float, current_amount: float
+    ) -> dict[str, str | float | Decimal | None]:
         """
         Predicts when a savings goal will be completed based on savings history.
 
@@ -265,17 +260,17 @@ class Forecaster:
             return {"error": "No data for projection"}
 
         df = pd.DataFrame(transactions)
-        df['date'] = pd.to_datetime(df['date'], errors='coerce')
-        df['amount'] = cast(pd.Series, pd.to_numeric(df['amount'], errors='coerce')).fillna(0.0)
-        df = df.dropna(subset=['date'])
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        df["amount"] = cast(pd.Series, pd.to_numeric(df["amount"], errors="coerce")).fillna(0.0)
+        df = df.dropna(subset=["date"])
 
         # Group by month and sum the amounts (savings are positive in current context)
-        df['month_idx'] = df['date'].values.astype('datetime64[M]').astype(int)
-        monthly_savings = cast(pd.Series, df.groupby('month_idx')['amount'].sum()).reset_index()
+        df["month_idx"] = df["date"].values.astype("datetime64[M]").astype(int)
+        monthly_savings = cast(pd.Series, df.groupby("month_idx")["amount"].sum()).reset_index()
 
         # We need at least 2 months to find a trend
         if len(monthly_savings) < 2:
-            avg_savings = float(cast(pd.Series, monthly_savings['amount']).mean())
+            avg_savings = float(cast(pd.Series, monthly_savings["amount"]).mean())
             if avg_savings <= 0:
                 return {"error": "Average savings is zero or negative"}
             months_remaining = (target_amount - current_amount) / avg_savings
@@ -284,25 +279,25 @@ class Forecaster:
                     "estimated_date": "NEVER (Too slow or negative)",
                     "monthly_avg": float(np.round(avg_savings, 2)),
                     "months_remaining": 9999.0,
-                    "confidence": "LOW (Extremely slow progress)"
+                    "confidence": "LOW (Extremely slow progress)",
                 }
             eta_date = pd.Timestamp.now() + pd.DateOffset(months=int(months_remaining))
             return {
-                "estimated_date": eta_date.strftime('%Y-%m'),
+                "estimated_date": eta_date.strftime("%Y-%m"),
                 "monthly_avg": float(np.round(avg_savings, 2)),
                 "months_remaining": float(np.round(months_remaining, 1)),
-                "confidence": "LOW (Incomplete history)"
+                "confidence": "LOW (Incomplete history)",
             }
 
         # Linear Regression for trend
-        x = np.array(monthly_savings['month_idx'].values).reshape(-1, 1)
-        y = np.array(monthly_savings['amount'].values)
+        x = np.array(monthly_savings["month_idx"].values).reshape(-1, 1)
+        y = np.array(monthly_savings["amount"].values)
 
         model = LinearRegression()
         model.fit(x, y)
 
         # Current monthly velocity (slope)
-        last_idx = monthly_savings['month_idx'].max()
+        last_idx = monthly_savings["month_idx"].max()
         # predict the next few months to get an average velocity including trend
         future_indices = np.array([[last_idx + i] for i in range(1, 4)])
         future_savings = model.predict(future_indices)
@@ -321,14 +316,14 @@ class Forecaster:
                 "estimated_date": "NEVER (Too slow or negative)",
                 "monthly_avg": Decimal(str(np.round(avg_future_velocity, 2))),
                 "months_remaining": Decimal("9999.0"),
-                "confidence": "LOW (Extremely slow progress)"
+                "confidence": "LOW (Extremely slow progress)",
             }
 
         eta_date = pd.Timestamp.now() + pd.DateOffset(months=int(months_remaining))
 
         return {
-            "estimated_date": eta_date.strftime('%Y-%m'),
+            "estimated_date": eta_date.strftime("%Y-%m"),
             "monthly_avg": Decimal(str(np.round(avg_future_velocity, 2))),
             "months_remaining": Decimal(str(np.round(months_remaining, 1))),
-            "confidence": "HIGH (Linear trend)" if len(monthly_savings) >= 4 else "MEDIUM"
+            "confidence": "HIGH (Linear trend)" if len(monthly_savings) >= 4 else "MEDIUM",
         }
