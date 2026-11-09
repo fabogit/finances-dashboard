@@ -92,6 +92,7 @@ wheels = [
 
 [[package]]
 name = "finances-science"
+version = "1.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi" },

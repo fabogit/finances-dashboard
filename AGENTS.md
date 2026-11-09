@@ -89,7 +89,7 @@ Issues, milestones and the project follow one style (D-44):
 
 ## Releases
 
-One version for the whole repository (D-42). A release commit aligns it in `backend-core/package.json`, `client-preview/package.json` and `__version__` in `backend-science/src/main.py`; then an annotated tag on the merge commit on `main`. Scheme: [roadmap § Versioning](documents/product/roadmap.md#versioning).
+One version for the whole repository (D-42). A release commit aligns it in `backend-core/package.json`, `client-preview/package.json`, `version` in `backend-science/pyproject.toml` and `__version__` in `backend-science/src/main.py`; then an annotated tag on the merge commit on `main`. Scheme: [roadmap § Versioning](documents/product/roadmap.md#versioning).
 
 ## Commands
 

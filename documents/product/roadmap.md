@@ -97,7 +97,7 @@ One version for the whole repository (D-42):
 
 - `v1.0.0` is the first generation, the system before the redesign.
 - Each step closes with a pre-release on `main`: `v2.0.0-alpha.1`, `v2.0.0-alpha.2`, …; then `v2.0.0-beta.N` once the client is in; the MVP is `v2.0.0`. Tags go per step, not per milestone.
-- Tags are annotated, on the merge commit on `main`, after a release commit that aligns the version in `backend-core/package.json`, `client-preview/package.json` and `__version__` in `backend-science/src/main.py`.
+- Tags are annotated, on the merge commit on `main`, after a release commit that aligns the version in `backend-core/package.json`, `client-preview/package.json`, `version` in `backend-science/pyproject.toml` and `__version__` in `backend-science/src/main.py`.
 - The changelog comes from the Conventional Commits; release-please is evaluated after `v2.0.0-alpha.2`.
 
 ## Review & consolidation

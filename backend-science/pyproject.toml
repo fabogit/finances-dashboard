@@ -1,8 +1,8 @@
 [project]
 name = "finances-science"
 description = "Computation service of the finance dashboard: forecasts and goal projections."
-# The release version lives in `__version__` in src/main.py (D-42); uv does not need one here.
-dynamic = ["version"]
+# The repository version (D-42): a release commit aligns it with __version__ in src/main.py.
+version = "1.0.0"
 requires-python = ">=3.15,<3.16"
 dependencies = [
     "fastapi>=0.162.2",
