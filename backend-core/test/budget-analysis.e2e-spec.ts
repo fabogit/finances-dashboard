@@ -11,7 +11,7 @@ import {
 } from '@prisma/client';
 import { CategoryResponseDto } from '../src/modules/categories/dto/category-response.dto';
 import { BudgetAnalysisResponseDto } from '../src/modules/analytics/dto/budget-analysis.dto';
-import { CreateCategoryDto } from 'src/modules/categories/dto/create-category.dto';
+import { CreateCategoryDto } from '../src/modules/categories/dto/create-category.dto';
 import { configureApp } from '../src/app-setup';
 
 const API_PREFIX = '/api/v1';

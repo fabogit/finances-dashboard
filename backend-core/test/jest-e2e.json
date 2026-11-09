@@ -4,9 +4,6 @@
     "json",
     "ts"
   ],
-  "moduleNameMapper": {
-    "^src/(.*)$": "<rootDir>/../src/$1"
-  },
   "rootDir": ".",
   "setupFiles": [
     "<rootDir>/jest-setup.ts"
