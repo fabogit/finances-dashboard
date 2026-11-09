@@ -1,16 +1,21 @@
 FROM python:3.15-slim
 
+COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /bin/uv
+
+# The environment lives outside /app: Compose bind-mounts the source on /app,
+# which would hide a .venv created there.
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PATH="/opt/venv/bin:$PATH" \
+    PYTHONPATH=/app/src
+
 WORKDIR /app
 
-ENV PYTHONPATH=/app/src
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
+# Every dependency ships a wheel, so no compiler is needed.
+COPY pyproject.toml uv.lock .python-version ./
+RUN uv sync --frozen --no-dev
 
 COPY . .
 
