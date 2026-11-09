@@ -1,0 +1,38 @@
+[project]
+name = "finances-science"
+description = "Computation service of the finance dashboard: forecasts and goal projections."
+# The release version lives in `__version__` in src/main.py (D-42); uv does not need one here.
+dynamic = ["version"]
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "fastapi==0.128.0",
+    "numpy==2.4.6",
+    "openpyxl==3.1.5",
+    "pandas==2.3.3",
+    "pydantic==2.12.5",
+    "scikit-learn==1.8.0",
+    "uvicorn==0.40.0",
+]
+
+[dependency-groups]
+dev = [
+    "pyright==1.1.414",
+    "pytest==8.3.4",
+]
+
+[tool.uv]
+# An application, not a library: uv installs the dependencies only, it does not build a package.
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.pyright]
+pythonVersion = "3.14"
+typeCheckingMode = "basic"
+include = ["src", "tests"]
+exclude = ["**/__pycache__", "**/.venv", "**/.direnv"]
+extraPaths = ["src"]
+venvPath = "."
+venv = ".venv"
