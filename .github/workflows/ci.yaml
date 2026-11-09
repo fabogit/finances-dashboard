@@ -3,18 +3,13 @@ name: Backend CI
 on:
   workflow_dispatch:
 
+  # No `paths` filter: the workflow must run on every pull request so that the
+  # required checks are always reported. The `changes` job decides what runs;
+  # a job skipped by its `if:` counts as passed for a required check.
   push:
     branches: ["main"]
-    paths:
-      - "backend-core/**"
-      - "backend-science/**"
-      - ".github/workflows/**"
   pull_request:
     branches: ["main"]
-    paths:
-      - "backend-core/**"
-      - "backend-science/**"
-      - ".github/workflows/**"
 
 env:
   # Force all GitHub Actions to run on Node.js 24 runtime
@@ -35,8 +30,10 @@ jobs:
           filters: |
             core:
               - 'backend-core/**'
+              - '.github/workflows/ci.yaml'
             science:
               - 'backend-science/**'
+              - '.github/workflows/ci.yaml'
 
   # --- JOB 1: CORE QUALITY CHECK (Linting & Formatting) ---
   core-quality:

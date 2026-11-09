@@ -42,7 +42,7 @@ The tests pass without the science service running, as they do in CI.
 
 ## CI
 
-`.github/workflows/ci.yaml` runs on pushes and pull requests to `main` that touch `backend-core/`, `backend-science/` or the workflows. A first job detects which side changed; then:
+`.github/workflows/ci.yaml` runs on every push and pull request to `main`, with no `paths` filter on the triggers, so the checks required by the `main` ruleset are always reported. A first job, `changes`, detects which side changed (`backend-core/`, `backend-science/`, or `ci.yaml` itself, which counts for both) and the other jobs run only for their side. A job skipped this way counts as passed, so a pull request that touches neither side (client or documents only) can merge. The jobs:
 
 | Job | Side | Steps |
 | --- | --- | --- |
