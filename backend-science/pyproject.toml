@@ -21,6 +21,7 @@ dependencies = [
 dev = [
     "pyright>=1.1.414",
     "pytest>=9.2.0",
+    "ruff>=0.17.4",
 ]
 
 [tool.uv]
@@ -39,3 +40,21 @@ exclude = ["**/__pycache__", "**/.venv", "**/.direnv"]
 extraPaths = ["src"]
 venvPath = "."
 venv = ".venv"
+
+[tool.ruff]
+line-length = 100
+# target-version comes from requires-python.
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # import order
+    "UP",  # modern syntax for the target Python
+    "B",   # bugbear: likely bugs
+    "SIM", # simplifications
+    "RUF", # ruff's own rules
+    "PD",  # pandas-vet
+    "NPY", # numpy
+]
