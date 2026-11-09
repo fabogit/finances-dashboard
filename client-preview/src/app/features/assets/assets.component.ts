@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MockDataService } from '../../core/services/mock-data.service';
@@ -8,7 +8,8 @@ import { MockDataService } from '../../core/services/mock-data.service';
   standalone: true,
   imports: [CommonModule, MatIconModule],
   templateUrl: './assets.component.html',
-  styleUrls: ['./assets.component.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./assets.component.scss'],
 })
 export class AssetsComponent {
   mockService = inject(MockDataService);

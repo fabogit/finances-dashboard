@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -9,7 +9,8 @@ import { MockDataService } from '../../core/services/mock-data.service';
   standalone: true,
   imports: [CommonModule, MatIconModule, MatProgressBarModule],
   templateUrl: './budgets-goals.component.html',
-  styleUrls: ['./budgets-goals.component.scss']
+  changeDetection: ChangeDetectionStrategy.Eager,
+  styleUrls: ['./budgets-goals.component.scss'],
 })
 export class BudgetsGoalsComponent {
   mockService = inject(MockDataService);
@@ -17,7 +18,7 @@ export class BudgetsGoalsComponent {
   // Calculate actual spending per category dynamically
   categorySpend = computed(() => {
     const spendMap: Record<string, number> = {};
-    this.mockService.transactions().forEach(t => {
+    this.mockService.transactions().forEach((t) => {
       if (t.amount < 0 && !t.isTransfer) {
         spendMap[t.category] = (spendMap[t.category] || 0) + Math.abs(t.amount);
       }
