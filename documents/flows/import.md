@@ -2,7 +2,7 @@
 
 How a bank file becomes transactions: the user uploads an xlsx or csv file for one account, a template maps its columns, every row is validated, given a payee and a category, checked for duplicates and for transfers, and shown in a preview. Nothing is saved until the user confirms, and the server checks everything again on confirm. Models and fields are defined in the [data model](../domain/data-model.md); payees and rules in the [rules and payees flow](rules-payees.md).
 
-**Decisions:** D-05 (dynamic mapper for xlsx and csv), D-06 (stateless preview, re-validated on confirm, [ADR-0004](../adr/0004-stateless-import-staging.md)), D-13 (category sources in order: rules, payee default, bank category mapping), D-14 (parsing, mapping, rules, deduplication and preview in the core, [ADR-0005](../adr/0005-python-science-service-rest.md)), D-15 and D-43 (named templates, a default template per account, account chosen at upload), D-16 (layered deduplication, nothing dropped silently, [ADR-0007](../adr/0007-layered-deduplication.md)), D-22 (payee from a column or from cleanup and rules; proposals, never silent), D-23 (rules applied in every preview), D-24 (transfer suggestions confirmed by the user), D-30 (calendar date and optional time), D-48 (every query scoped to the user), D-59 (amounts in cents), D-65 (no transaction before the starting balance), D-79 (names ignore case).
+**Decisions:** D-05 (dynamic mapper for xlsx and csv), D-06 (stateless preview, re-validated on confirm, [ADR-0004](../adr/0004-stateless-import-staging.md)), D-13 (category sources in order: rules, payee default, bank category mapping), D-14 (parsing, mapping, rules, deduplication and preview in the core, [ADR-0005](../adr/0005-python-science-service-rest.md)), D-15 and D-43 (named templates, a default template per account, account chosen at upload), D-16 (layered deduplication, nothing dropped silently, [ADR-0007](../adr/0007-layered-deduplication.md)), D-22 (payee from a column or from cleanup and rules; proposals, never silent), D-23 (rules applied in every preview), D-24 (transfer suggestions confirmed by the user), D-30 (calendar date and optional time), D-48 (every query scoped to the user), D-59 (amounts in cents), D-65 (no transaction before the starting balance), D-79 (names ignore case), D-83 (template proposal by exact header), D-84 (notes column), D-85 (rows not booked yet), D-86 (composition of the exact hash), D-87 (choices on duplicates), D-88 (window of the approximate match), D-89 (fields of a merge), D-90 (confirm with differences), D-95 (category mappings as rows with a foreign key).
 
 ## Behaviour
 
@@ -15,20 +15,21 @@ The user uploads one file for one account, chosen at upload: the account is neve
 3. otherwise, a template proposed by the system;
 4. otherwise, the user maps the columns by hand in the preview, and can save the mapping as a new template.
 
-[NEEDS CLARIFICATION: Does the system's proposal (step 3) exist in the MVP, and how does it work? D-15 makes automatic recognition the last resort. Proposal: in the MVP, the system compares the file's header row with the header saved on each of the user's templates (`ImportTemplate.headerSignature`) and proposes the template whose header matches exactly; it never applies it without showing it. Alternatives: no proposal in the MVP (the user picks or maps by hand), or a fuzzy match on similar headers.]
+The system's proposal (step 3) compares the file's header row with the header saved on each of the user's templates (`ImportTemplate.headerSignature`) and proposes the template whose header matches exactly. The preview says the template was proposed; the user can keep it or pick another. There is no approximate comparison of headers in the MVP (D-83, IMP-16).
 
 ### Import templates
 
 A template is a named mapping of one bank's file, reusable across accounts (D-15, D-43). It records:
 
 - where the rows start (`ImportTemplate.startRow`), and the csv delimiter;
-- which column holds each field (`ImportTemplate.columns`): the date (required), the time, the amount (required, as one signed column or as two columns for money in and money out), the description (required), the payee, the bank's category, the bank's transaction ID;
+- which column holds each field (`ImportTemplate.columns`): the date (required), the time, the amount (required, as one signed column or as two columns for money in and money out), the description (required), the payee, the notes, the bank's category, the bank's transaction ID, the booking status;
 - how dates and amounts are written (`ImportTemplate.dateFormat`, `ImportTemplate.decimalSeparator`), and the sign convention (`ImportTemplate.signConvention`): a signed amount, a signed amount to flip, or separate in and out columns;
-- the mapping from the bank's category values to the user's categories (`ImportTemplate.categoryMappings`), such as "Spesa supermercato" → "Food › Groceries".
+- the mapping from the bank's category values to the user's categories (`ImportTemplateCategoryMapping`), such as "Spesa supermercato" → "Food › Groceries". Each mapping is a row with a foreign key to the category, so deleting a category moves or removes it ([categories flow](categories.md#deleting-a-category), D-95);
+- the window of the approximate match (`ImportTemplate.matchWindowDays`, [Duplicates](#duplicates)).
 
 Template names follow the rule for names the user sees: unique per user, ignoring case and surrounding spaces (D-79). Deleting a template sets the default template of the accounts that used it to `null`.
 
-[NEEDS CLARIFICATION: Can a template map a notes column? Actual Budget can import notes from a file. Proposal: yes, an optional notes column that fills `Transaction.notes`, which a rule can still set (D-23, D-78).]
+The notes column is optional, as in Actual Budget: it fills `Transaction.notes`, and a rule can still set the notes of a row whose column is empty (D-23, D-78, D-84, IMP-17).
 
 ### Reading and validating the rows
 
@@ -36,7 +37,7 @@ Each row is read with the template and turned into a candidate transaction: cale
 
 A row dated before the account's starting balance is flagged and cannot be confirmed as it is ([balances flow](balances.md#opening-an-account), D-65): the user discards it, or first moves the starting balance back.
 
-[NEEDS CLARIFICATION: What happens to rows the bank marks as not booked yet (Fineco's "Contabilizzazione" column)? v1 imports them. Their date and description can change when the bank books them, so importing them now risks a duplicate later. Proposal: a template can map a booking status column and the value that means "not booked"; such rows are shown in the preview, deselected, with the label "not booked yet"; the user can still select them. Alternatives: imported like any row, or never shown.]
+Some banks list payments they have not booked yet, such as the rows of Fineco's "Contabilizzazione" column. Their date and description can change when the bank books them, so importing them now would give a duplicate later, and a reconciliation against the bank's balance would see a difference that is not there (D-67). A template can map the booking status column and the value that means "not booked" (`ImportTemplate.notBookedValue`). Such rows are shown in the preview, deselected, with the label "not booked yet"; the user can still select them (D-85, IMP-18).
 
 ### Payee and category of each row
 
@@ -65,24 +66,50 @@ Every valid row is checked against the account's existing transactions, in layer
 
 Uniqueness is per account, never global: the same row on another account or for another user is not a duplicate (D-16). Every duplicate is shown in the preview with its layer and the transaction it matches; nothing is discarded silently (D-16).
 
-[NEEDS CLARIFICATION: How is the exact hash composed, and how do two legitimate identical rows in one file (two coffees of 1.20 on the same day) stay apart? Proposal: a SHA-256 of the date, the time when the template maps one, the amount in cents, the description as read, and the row's occurrence number among the identical rows of the same file (1 for the first coffee, 2 for the second). The hash is computed on the row as read, before the user edits it, so a re-import still recognises it. A re-import of an overlapping file gives the same numbers, so both coffees are recognised again.]
+#### The exact hash
 
-[NEEDS CLARIFICATION: What can the user do with each kind of duplicate? Proposal: a bank ID or exact hash match is "already imported", deselected, and cannot be imported again (the unique constraints would reject it); the user can only leave it out. A possible duplicate offers three choices: merge it with the existing transaction (the default), import it as a new transaction, or discard it.]
+The hash (`Transaction.importHash`) is a SHA-256 of (D-86):
 
-[NEEDS CLARIFICATION: How wide is the window of the approximate match, and which candidate is chosen when several match? ADR-0007 leaves N to this document; Actual Budget uses 7 days before and after, prefers a candidate with the same payee, then the nearest date, and matches each existing transaction at most once. Proposal: the same as Actual Budget, 7 days, with the same preferences. The same window serves the transfer suggestion below. A narrower window (3 days) misses more manual entries; a wider one flags more recurring payments.]
+- the date;
+- the time, when the template maps one;
+- the amount in cents;
+- the description, as read;
+- the row's **occurrence number** among the identical rows of the same file: the first of two rows "BAR CENTRALE", −1.20, on the same day is 1, the second is 2.
+
+It is computed on the row as read, before the user or a rule changes anything, so the same row always gives the same hash. The occurrence number keeps two legitimate identical rows apart, and it survives an overlapping file: in a file with October and November, the two coffees of October are still the first and the second of their kind, so both are recognised (IMP-9). The row's position in the file would not: it changes from one file to the next.
+
+#### What the user can do
+
+- **Already imported** (bank ID or exact hash): the row is shown deselected, linked to the transaction it matches, so the user can check it. It cannot be imported again; the unique constraints would reject it (D-87, IMP-19).
+- **Possible duplicate:** three choices, merge it with the transaction it matches (the default), import it as a new transaction, or discard it (D-87, IMP-20).
+
+#### The window of the approximate match
+
+The window is set on the template (`ImportTemplate.matchWindowDays`): from 1 to 90 days before and after the row's date, 7 by default, as in Actual Budget (D-88). A bank that books card payments late can have a wider one; most banks need 3 to 10 days. When several transactions match a row, as in Actual Budget, the one with the same payee comes first, then the nearest date, and each existing transaction matches at most one row.
+
+Only transactions with no bank ID and no hash are candidates: those entered by hand and the generated sides of transfers, which are what the approximate match is for. A transaction that came from an import already has its own row in some file, so with a wide window a monthly payment of the same amount is not taken for a duplicate of last month's (D-88, IMP-21, IMP-22).
 
 ### Merging a row with an existing transaction
 
 When the user merges a row with the transaction it matches, one transaction remains: the existing one, completed with the bank's data. A merged generated transfer side stays linked to its pair (D-24).
 
-[NEEDS CLARIFICATION: Which fields does the merge take from the bank, and which stay as the user set them? Actual Budget keeps the existing payee, category and notes when they are set, takes them from the row only when they are empty, always takes the bank's ID and imported payee, and keeps the existing date unless an option says otherwise. Proposal: the same for payee, category and notes; `bankId`, `importHash`, `description` and `importedPayee` always from the bank; the date and the time from the bank too, because the bank's date is what reconciliation compares against (D-67, D-68); for a transfer side, the date changes only on that side (D-73).]
+The fields of the merged transaction (D-89, IMP-23):
+
+| Field | Value |
+| --- | --- |
+| payee, category, notes | the existing transaction's, when set; otherwise the row's, as in Actual Budget |
+| `bankId`, `importHash`, `description`, `importedPayee` | the row's, so a later re-import recognises it |
+| `date`, `time` | the row's |
+| `amount` | the same on both, by definition of the match |
+
+The date comes from the bank, unlike Actual Budget, which keeps the existing date: every imported transaction of the account then has the bank's date, and the account follows the bank's list when it is reconciled (D-67, D-68). A purchase entered on 31 October and booked by the bank on 2 November moves to November; the user can still change its date. For a side of a transfer, only that side changes; the other side keeps its own date (D-73).
 
 ### Transfer suggestions
 
 The preview suggests that a row is one side of a transfer when (D-24):
 
 - a rule marks it as a transfer to an account (D-23); or
-- another of the user's accounts has a transaction with the opposite amount within the window, which is not already a transfer.
+- another of the user's accounts has a transaction with the opposite amount within the template's window (D-88), which is not already a transfer. Here imported transactions are candidates too: the other side of a transfer usually comes from another bank file.
 
 A suggestion is never applied without the user's confirmation. When confirmed, the row is saved as a `TRANSFER`: either the counterpart is generated on the other account, or, when the counterpart already exists there, the two are linked ([transfers flow](transfers.md#creating-a-transfer)). A transfer to a closed account is not suggested.
 
@@ -101,7 +128,7 @@ The user edits the rows, chooses for each duplicate and suggestion, accepts or d
 
 The client sends the rows the user wants to import, with every choice. The server trusts nothing it receives: it reads the account, the rules, the payees and the existing transactions again and recomputes every check (D-06). If everything still holds, it writes in one database transaction: the new transactions, the merges, the transfer counterparts and links, and the accepted payees, payee defaults and rules.
 
-[NEEDS CLARIFICATION: What happens when the re-validation on confirm differs from the preview (another import added a duplicate meanwhile, a category in the rows was deleted, the account was closed)? Proposal: nothing is saved; the confirm answers 409 Conflict with a new preview of the same rows, so the user reviews the differences. Saving only the rows that still hold would import part of a file silently.]
+When the re-validation differs from what the user saw (another import added a duplicate meanwhile, a category in the rows was deleted, the account was closed), nothing is saved: the confirm answers 409 Conflict with a new preview of the same rows, and the user reviews the differences. Saving only the rows that still hold would import part of a file silently (D-90, IMP-24).
 
 ### Without the computation service
 
@@ -116,6 +143,8 @@ The import does not call the computation service in the MVP: parsing, mapping, r
 - Every category in the preview shows its source (IMP-2).
 - No payee, payee default or rule is created without the user's acceptance (IMP-2, RUL-4).
 - The import works with the computation service down (IMP-11).
+- An already imported row cannot be imported again (IMP-19).
+- A transaction that came from an import is never a candidate for the approximate match (IMP-22).
 
 ## Edge cases
 
@@ -126,6 +155,9 @@ The import does not call the computation service in the MVP: parsing, mapping, r
 - **A row that matches a generated transfer side:** a possible duplicate, merged by default ([TRF-4](transfers.md#trf-4--importing-the-other-side-later-merges-it-with-the-generated-one)).
 - **A possible duplicate the user imports as new:** both transactions stay; the user takes responsibility for it.
 - **An empty file, or one with only a header:** an empty preview, nothing to confirm.
+- **A row not booked yet, imported anyway:** when the bank books it, its date or description may differ, so the booked row is usually a new row; with no bank ID, the approximate match does not see the first one either, since it came from an import. The label in the preview warns of this (IMP-18).
+- **A wide window** (30 or 90 days) on an account with manual entries flags more possible duplicates; the user chooses for each one (D-88).
+- **Two possible duplicates for one existing transaction:** only the first row in the order of preference matches it; the other is new (D-88).
 
 ## Divergences from Actual Budget
 
@@ -133,6 +165,9 @@ The import does not call the computation service in the MVP: parsing, mapping, r
 2. **Layered deduplication.** Actual Budget matches by imported ID and then approximately; here the exact hash adds a certain layer for re-imports of files without IDs (D-16, [ADR-0007](../adr/0007-layered-deduplication.md)).
 3. **Category sources in a fixed order, shown per row** (D-13).
 4. **The server re-validates on confirm.** Actual Budget's preview and import run in the same local application; here the client is not trusted (D-06, [ADR-0004](../adr/0004-stateless-import-staging.md)).
+5. **The window of the approximate match is set per template,** from 1 to 90 days; Actual Budget uses 7 days. Imported transactions are never candidates; Actual Budget leaves them out only when the row has a bank ID too (D-88).
+6. **A merge takes the bank's date.** Actual Budget keeps the date of the existing transaction (D-89).
+7. **Rows not booked yet are deselected** when the template maps the booking status (D-85).
 
 ## Examples
 
@@ -251,3 +286,72 @@ The import does not call the computation service in the MVP: parsing, mapping, r
 - **Then** the row is a suggested transfer to "Deposit", matching the +500.00
 - **When** the user confirms the suggestion
 - **Then** the −500.00 and the +500.00 are linked as a transfer, each keeping its date, and nothing is generated
+
+### IMP-16 · The system proposes a template by its header
+
+- **Given** template "Fineco account", whose saved header is the row "Data, Operazione, Dettagli, Conto o carta, Contabilizzazione, Categoria, Valuta, Importo"
+- **And** account "New account" with no default template
+- **When** the user uploads a file for "New account" with that header, choosing no template
+- **Then** the preview proposes "Fineco account" and says it was proposed
+- **When** the file's header has one more column
+- **Then** no template is proposed, and the user maps the columns by hand
+
+### IMP-17 · A notes column
+
+- **Given** a template that maps a notes column
+- **When** a row with notes "Dinner with Marco" is previewed and confirmed
+- **Then** the transaction's notes are "Dinner with Marco"
+
+### IMP-18 · A row not booked yet
+
+- **Given** template "Fineco account", which maps the column "Contabilizzazione" with the value "Non contabilizzato" meaning not booked
+- **When** a file with 30 booked rows and 1 row "Non contabilizzato" is previewed
+- **Then** the 30 rows are selected and the other is deselected, labelled "not booked yet"
+- **When** the user confirms without selecting it
+- **Then** 30 transactions are saved
+
+### IMP-19 · An already imported row is shown, not importable
+
+- **Given** the row "PAGAMENTO POS ENI 1234", −50.00, of 2026-10-04 already imported on "Checking"
+- **When** a file with the same row is previewed for "Checking"
+- **Then** the row is deselected, already imported, and linked to the existing transaction
+- **And** the user cannot select it for import
+
+### IMP-20 · A possible duplicate imported as new
+
+- **Given** the situation of IMP-6
+- **When** the user chooses to import the row as a new transaction and confirms
+- **Then** "Checking" has two transactions of −50.00: "Fuel" and the bank's row
+
+### IMP-21 · The template's window
+
+- **Given** a transaction of −30.00 on "Card", dated 2026-10-01, entered by hand
+- **And** template "Fineco card" with a window of 3 days
+- **When** a "Card" file with a row of −30.00 dated 2026-10-06 is previewed with "Fineco card"
+- **Then** the row is new
+- **When** the window of "Fineco card" is 7 days and the file is previewed again
+- **Then** the row is a possible duplicate of the manual transaction
+
+### IMP-22 · Imported transactions are not candidates
+
+- **Given** template "Fineco account" with a window of 90 days
+- **And** the row "ADDEBITO SDD NETFLIX.COM", −12.99, of 2026-09-15, already imported on "Checking"
+- **When** the October statement with "ADDEBITO SDD NETFLIX.COM", −12.99, of 2026-10-15 is previewed
+- **Then** the October row is new, not a possible duplicate of September's
+
+### IMP-23 · The fields of a merge
+
+- **Given** a transaction on "Checking" entered by hand: 2026-10-31, −52.30, payee "Esselunga", category "Food › Groceries", notes "Dinner with Marco"
+- **When** the row "PAGAMENTO POS ESSELUNGA MILANO 1234", −52.30, of 2026-11-02 is previewed and the user confirms the merge
+- **Then** one transaction remains, with payee "Esselunga", category "Food › Groceries" and notes "Dinner with Marco"
+- **And** its date is 2026-11-02, its description and imported payee are the bank's, and it has the row's hash
+- **When** the same file is previewed again
+- **Then** the row is already imported
+
+### IMP-24 · The confirm finds a difference
+
+- **Given** a preview of 20 new rows for "Checking"
+- **When** another import confirms one of those rows on "Checking" before the user confirms
+- **And** the user confirms
+- **Then** nothing is saved
+- **And** the answer is 409 Conflict with a new preview, where that row is already imported

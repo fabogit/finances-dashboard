@@ -2,7 +2,7 @@
 
 How a bank's text becomes a clean payee, and how the user's rules set the payee, the category, the notes or a transfer. Payees and rules are what makes the import better with use: each correction in the preview can become a payee default or a rule. Models and fields are defined in the [data model](../domain/data-model.md); where rules run during an import is in the [import flow](import.md).
 
-**Decisions:** D-12 (payees and rules in the MVP), D-13 (category sources: rules, payee default, bank mapping), D-22 (payee from a template column or from cleanup and rename rules; proposals, never silent), D-23 (ordered rules, the first that sets a field wins; applied in every preview and, on request with a preview, to existing transactions; never automatically to history), D-29 and D-76 (category deletion moves or removes rule actions and payee defaults), D-48 (every query scoped to the user), D-72 (transfers have no payee; rules mark transfers with their own action), D-79 (names ignore case and surrounding spaces).
+**Decisions:** D-12 (payees and rules in the MVP), D-13 (category sources: rules, payee default, bank mapping), D-22 (payee from a template column or from cleanup and rename rules; proposals, never silent), D-23 (ordered rules, the first that sets a field wins; applied in every preview and, on request with a preview, to existing transactions; never automatically to history), D-29 and D-76 (category deletion moves or removes rule actions and payee defaults), D-48 (every query scoped to the user), D-72 (transfers have no payee; rules mark transfers with their own action), D-79 (names ignore case and surrounding spaces), D-91 (merging and deleting payees; rules that reference a deleted payee or account), D-92 (cleanup patterns), D-93 (operators), D-94 (rules on transactions entered by hand), D-95 (conditions and actions as rows with foreign keys).
 
 ## Behaviour
 
@@ -12,7 +12,10 @@ A payee is the clean name of who was paid or who paid, such as "Esselunga" (D-12
 
 A payee is created by the user, or from the import preview when the user accepts a proposed new payee (D-22). Renaming a payee renames it on all its transactions, since they reference it.
 
-[NEEDS CLARIFICATION: What happens when a payee is deleted, or merged into another? Actual Budget lets the user merge payees. Proposal: two operations, each with a preview of the counts, like category deletion (D-29). **Merge** into another payee: its transactions, its rule conditions and rule actions move to the target, and the target keeps its own default category. **Delete** without a target: its transactions keep their imported payee and get no payee; rule actions "set payee" that pointed to it are removed, as for categories (D-76); a rule with a condition on that payee could never match as written, so it is deleted, and the preview lists those rules.]
+A payee can be merged into another, or deleted. Both show a preview of the counts first, like category deletion (D-29), and change nothing until the user confirms (D-91).
+
+- **Merge** into a target payee, such as "ESSELUNGA SPA", created by mistake, into "Esselunga": its transactions, the rule conditions and the rule actions that reference it move to the target. A list "one of" that already holds the target keeps it once. The target keeps its own default category, and takes the merged payee's only when it has none (RUL-11).
+- **Delete**, such as "Bar Centrale" after the bar closed: its transactions get no payee and keep their imported payee, so the bank's name is still visible. The preview suggests merging it instead. What the rules do is in [What rules reference](#what-rules-reference) (RUL-12).
 
 ### Imported payee
 
@@ -24,7 +27,7 @@ The imported payee (`Transaction.importedPayee`) is the bank's text for who was 
 
 "PAGAMENTO POS ESSELUNGA MILANO 1234 CARTA *5678 03/10" becomes "ESSELUNGA MILANO".
 
-[NEEDS CLARIFICATION: Where do the cleanup patterns live? D-22 says they can be tied to the template. Options: (a) one fixed list in the code, with bank-specific cases handled by rename rules; (b) patterns configured on each template; (c) both. Proposal: (a) in the MVP, because rename rules already cover what the fixed list misses, and per-template patterns can be added later without changing the data.]
+In the MVP the patterns are one fixed list in the code, the same for every bank (D-92). A prefix the list does not know stays in the imported payee: "PAGAMENTO TRAMITE POS ESSELUNGA MILANO" keeps its prefix, and a rename rule such as "imported payee contains ESSELUNGA → payee Esselunga" still gives the right payee. After the MVP, a template can add its own patterns, and the system can suggest them from the user's data: words that recur in most descriptions, and the parts the user removes when renaming a payee. Suggestions are proposals the user accepts, never applied on their own (D-22, #125, [roadmap](../product/roadmap.md#milestones)).
 
 ### Rules
 
@@ -33,7 +36,16 @@ A rule has conditions and actions (D-23):
 - **Conditions:** all must hold, or at least one (`Rule.conditionsOp`). Each condition is a field, an operator and a value. The fields: the description, the imported payee, the payee, the amount, the account, the bank's category, the date.
 - **Actions:** set the payee, set the category, set the notes, mark as a transfer to an account. A rule has at least one action when it is created.
 
-[NEEDS CLARIFICATION: Which operators exist, and are text comparisons case-sensitive? Actual Budget compares all text ignoring case and offers, for text: is, is not, contains, does not contain, one of, not one of, matches (a regular expression); for amounts: is, is approximately, is between, greater than, less than, with a choice of money in or money out; for dates: is, is approximately, before, after. Proposal: the same operators and the same case rule, without "is approximately", and with "starts with" for text, since bank descriptions usually start with the operation type.]
+The operators are Actual Budget's, without "is approximately" and with "starts with", since bank descriptions usually start with the operation type (D-93, `RuleOperator`):
+
+| Field | Operators |
+| --- | --- |
+| description, imported payee, bank's category | is, is not, contains, does not contain, starts with, one of, not one of, matches (a regular expression) |
+| payee, account | is, is not, one of, not one of |
+| amount | is, is between (both ends included), greater than, less than; on the signed amount, or on money in or money out only, as a positive number |
+| date | is, before, after |
+
+Text is compared ignoring case, as in Actual Budget: "contains esselunga" matches "PAGAMENTO POS ESSELUNGA". A regular expression that is not valid is rejected when the rule is saved (RUL-9).
 
 ### Evaluation: the first rule wins, field by field
 
@@ -53,8 +65,7 @@ The preview shows, for each field, which rule set it (D-13).
 
 - **In every import preview**, on every row (D-23, [import flow](import.md#payee-and-category-of-each-row)).
 - **On existing transactions, on request**: the user selects a rule (or all) and a set of transactions; the system shows what would change, field by field, and changes nothing until the user confirms (D-23). Rules never run by themselves on history.
-
-[NEEDS CLARIFICATION: Do rules run when the user creates or edits a transaction by hand? Actual Budget runs them in the register as a transaction is entered or edited, without overwriting the field the user has just changed. Proposal: they run when a transaction is created by hand and fill only the fields the user left empty; editing a transaction does not run them.]
+- **When the user creates a transaction by hand:** rules run and fill only the fields the user left empty. Editing a transaction does not run them (D-94, RUL-10).
 
 ### Proposals in the preview
 
@@ -71,12 +82,14 @@ Accepted proposals are saved with the confirm of the import, in the same databas
 A rule's conditions and actions can reference a payee, a category or an account. When one of these is deleted:
 
 - **a category:** "set category" actions move to the target category, or are removed with no target; a rule left without actions is kept and shown as having none (D-29, D-76);
-- **a payee:** see the clarification in [Payees](#payees);
-- **an account:** a forced deletion ([balances flow](balances.md#closing-and-deleting-an-account)) treats rules that reference it like a payee deletion without a target. A closed account keeps its rules, but its transfer action is not suggested while it is closed.
+- **a payee or an account** (D-91):
+  - an **action** that sets it ("set payee", "transfer to") is removed; a rule left without actions is kept and shown as having none, as for categories (D-76);
+  - a **condition** on it stays, shown as "deleted payee" or "deleted account", so the rule is not lost and the user decides what to do with it. It is evaluated as a payee or account that no transaction has: "is" and "one of" never hold, "is not" and "not one of" always hold. Removing the condition instead would leave a rule that matches everything;
+  - from a list "one of" or "not one of", only that value is removed; the condition is shown as deleted only when its list is empty.
 
-[NEEDS CLARIFICATION: How are conditions and actions stored? Actual Budget keeps them as JSON in two columns of the rule. Options: (a) JSON columns (`Rule.conditions`, `Rule.actions`), validated by the API; (b) child tables, one row per condition and per action, with a foreign key column for each kind of reference (payee, category, account); (c) conditions as JSON, actions as child rows. With JSON, a category or payee deletion must search the JSON for its ID and nothing in the database stops a dangling reference; with child tables, the foreign keys find and protect every reference. Proposal: (b). The same question applies to the template's category mappings ([import flow](import.md#import-templates)): proposal, a child table with a foreign key to the category.]
+  An account is deleted when it has no transactions, or by a forced deletion ([balances flow](balances.md#closing-and-deleting-an-account)). A closed account keeps its rules, but a transfer to it is not suggested while it is closed; reopened, its rules work again (RUL-13).
 
-[NEEDS CLARIFICATION: Does deleting a category also move the template category mappings that point to it? D-29 lists transactions, payee defaults and rule actions. Proposal: yes, they move to the target like payee defaults, or are removed with no target, and the deletion preview counts them.]
+Every reference is a foreign key (D-95): conditions (`RuleCondition`, with `RuleConditionReference` for payees and accounts) and actions (`RuleAction`) are rows of their own, so a deletion finds every rule that points to what is deleted, and the database rejects a reference to a row that does not exist.
 
 ## Invariants
 
@@ -85,6 +98,9 @@ A rule's conditions and actions can reference a payee, a category or an account.
 - Rules change existing transactions only on request, after a preview (RUL-6).
 - No payee, payee default or rule is created without the user's acceptance (RUL-4).
 - No rule or payee points to a deleted category (CAT-5, CAT-6).
+- No rule action points to a deleted payee or account; a condition on one is kept and never matches it (RUL-12, RUL-13).
+- Merging or deleting a payee changes nothing before the user confirms the preview (RUL-11, RUL-12).
+- Rules never change a field the user set by hand (RUL-10).
 
 ## Edge cases
 
@@ -93,12 +109,19 @@ A rule's conditions and actions can reference a payee, a category or an account.
 - **A rule with an invalid regular expression:** rejected when it is saved, never at import.
 - **Moving a rule** changes `Rule.position` of the rules between the old and the new place; positions stay unique per user.
 - **The imported payee is empty after cleanup** (a description made only of a prefix and numbers): the row has no imported payee, and only rules on the description can set its payee.
+- **A payee merged into itself:** rejected; the target is another payee of the same user.
+- **A rule whose only condition is on a deleted payee:** it stays and never matches with "is"; the user fixes or deletes it (RUL-12).
+- **A rule run on a transaction entered by hand that marks a transfer:** the transfer is a suggestion the user confirms, as in the preview (D-24).
 
 ## Divergences from Actual Budget
 
 1. **The first rule wins, field by field, in the user's order.** Actual Budget runs every matching rule in three stages (pre, default, post) ranked automatically from the most general to the most specific, and a later action overwrites an earlier one. Here the order is the one the user sees, and the first rule that sets a field wins (D-23).
 2. **Payee defaults instead of learned category rules.** Actual Budget creates category rules automatically when the user categorises a payee; here the preview proposes a payee default or a rule, and saves nothing silently (D-22).
 3. **No transfer payees.** Rules mark a transfer with an action, not with a payee (D-72).
+4. **Rules run only when a transaction is created by hand,** filling the empty fields. Actual Budget also runs them when a transaction is edited (D-94).
+5. **Operators:** "starts with" is added, "is approximately" is not offered (D-93).
+6. **Conditions and actions are rows with foreign keys.** Actual Budget stores them as JSON on the rule (D-95).
+7. **Merging and deleting payees update the rules.** Actual Budget redirects a merged payee to its target and leaves rules untouched on deletion; here the references move, actions to a deleted payee are removed, and conditions on it are shown as deleted (D-91).
 
 ## Examples
 
@@ -161,3 +184,53 @@ A rule's conditions and actions can reference a payee, a category or an account.
 - **When** the "Checking" row "GIROCONTO VERSO DEPOSITO", −500.00, is previewed
 - **Then** it is a suggested transfer to "Deposit", with no payee
 - **And** it becomes a transfer only if the user confirms it
+
+### RUL-9 · Operators
+
+- **Given** the rule "description starts with pagamento pos → category Food › Groceries"
+- **When** a row with description "PAGAMENTO POS ESSELUNGA MILANO" is previewed
+- **Then** its category is "Food › Groceries"
+- **When** the user saves a rule with the condition "description matches `ESSELUNGA(`"
+- **Then** it is rejected, because the regular expression is not valid
+
+### RUL-10 · Rules on a transaction entered by hand
+
+- **Given** the rules "payee is Esselunga → category Food › Groceries" and "payee is Esselunga → notes Weekly shopping"
+- **When** the user creates by hand a transaction with payee "Esselunga", category "Home", and no notes
+- **Then** its category is "Home" and its notes are "Weekly shopping"
+- **When** the user then changes its payee to "Bar Centrale"
+- **Then** its category and notes do not change
+
+### RUL-11 · Merging a payee
+
+- **Given** payee "Esselunga" with default category "Food › Groceries", and payee "ESSELUNGA SPA" with default category "Home" and 12 transactions
+- **And** the rules "imported payee contains ESSELUNGA SPA → payee ESSELUNGA SPA" and "payee is ESSELUNGA SPA and amount less than −150.00 → category Food › Big shopping"
+- **When** the user asks to merge "ESSELUNGA SPA" into "Esselunga"
+- **Then** the preview shows 12 transactions and 2 rules, and nothing has changed
+- **When** the user confirms
+- **Then** the 12 transactions have payee "Esselunga"
+- **And** the rules set payee "Esselunga" and test "payee is Esselunga"
+- **And** "Esselunga" keeps default category "Food › Groceries"
+- **And** "ESSELUNGA SPA" no longer exists
+
+### RUL-12 · Deleting a payee
+
+- **Given** payee "Bar Centrale" with 8 transactions
+- **And** the rules "imported payee contains BAR CENT → payee Bar Centrale", "payee is Bar Centrale → category Food › Bar" and "payee is one of Bar Centrale, Caffè Roma → notes Breakfast"
+- **When** the user deletes "Bar Centrale" and confirms the preview
+- **Then** the 8 transactions have no payee and keep the imported payee "BAR CENTRALE"
+- **And** the first rule has no actions and is shown as such
+- **And** the second rule shows its condition as "deleted payee", and never sets "Food › Bar"
+- **And** the third rule tests "payee is one of Caffè Roma"
+- **When** a row with the imported payee "BAR CENTRALE" is previewed
+- **Then** no rule sets its payee, and the preview proposes a new payee "BAR CENTRALE"
+
+### RUL-13 · Rules that reference an account
+
+- **Given** account "Deposit", and the rules "description contains GIROCONTO → transfer to Deposit" and "account is Deposit → category Savings › Interest"
+- **When** "Deposit" is closed
+- **Then** both rules are unchanged, and a "GIROCONTO" row on "Checking" is not suggested as a transfer
+- **When** "Deposit" is reopened
+- **Then** the "GIROCONTO" row is suggested as a transfer to "Deposit" again
+- **When** "Deposit" is deleted with a forced deletion
+- **Then** the first rule has no actions, and the second shows its condition as "deleted account"
