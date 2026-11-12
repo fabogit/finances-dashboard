@@ -2,7 +2,7 @@
 
 How an account opens, how its balance and its history are computed, how it is reconciled with the bank, how the value of an investment changes, and how an account is closed. The balance is never stored: it is always the sum of the account's transactions. Models and fields are defined in the [data model](../domain/data-model.md).
 
-**Decisions:** D-07 (investments as off-budget accounts with value adjustments; EUR only), D-11 (balances derived from transactions, starting balance as a transaction, [ADR-0003](../adr/0003-derived-balances.md)), D-12 (starting balance and reconcile in the MVP), D-25 (transaction kinds, [ADR-0008](../adr/0008-transaction-kind.md)), D-30 (calendar dates; the user's time zone decides "today"), D-48 (every query scoped to the user), D-59 (amounts in cents), D-61 (account types), D-63, D-80 and D-81 (closing, deleting and reopening an account), D-64 (on-budget fixed at creation), D-65 (starting balance rules), D-66 (current balance stops at today), D-67 (reconciliation and revaluation as one operation), D-68 (no cleared state in the MVP), D-69 (no category on starting balances and adjustments; an adjustment can become a regular transaction), D-91 (rules that reference a deleted account).
+**Decisions:** D-07 (investments as off-budget accounts with value adjustments; EUR only), D-11 (balances derived from transactions, starting balance as a transaction, [ADR-0003](../adr/0003-derived-balances.md)), D-12 (starting balance and reconcile in the MVP), D-25 (transaction kinds, [ADR-0008](../adr/0008-transaction-kind.md)), D-30 (calendar dates; the user's time zone decides "today"), D-48 (every query scoped to the user), D-59 (amounts in cents), D-61 (account types), D-63, D-80 and D-81 (closing, deleting and reopening an account), D-64 (on-budget fixed at creation), D-65 (starting balance rules), D-66 (current balance stops at today), D-67 (reconciliation and revaluation as one operation), D-68 (no cleared state in the MVP), D-69 (no category on starting balances and adjustments; an adjustment can become a regular transaction), D-91 (rules that reference a deleted account), D-96 (off-budget transactions have no category and stay out of income and spending), D-106 (an account with a savings goal cannot be deleted).
 
 ## Behaviour
 
@@ -38,7 +38,7 @@ The two uses:
 - **Reconciling with the bank.** The user enters the balance on the bank statement at the statement's date. A reconciliation done late, such as at 10 November for the end of October, still dates the adjustment at the end of October, so October's balance is right.
 - **Changing the value of an investment.** An off-budget account that holds an investment, a property or a vehicle has no transaction for every price change; the user enters its current value (D-07, D-11).
 
-Adjustments move the balance and the Net Worth, never income or spending, and have no category (D-25, D-69). If the user finds out what an adjustment was, such as forgotten bank fees, they can convert it into a `REGULAR` transaction with a category; from then on it counts as spending (D-69).
+Adjustments move the balance and the Net Worth, never income or spending, and have no category (D-25, D-69). If the user finds out what an adjustment was, such as forgotten bank fees, they can convert it into a `REGULAR` transaction with a category; from then on it counts as spending (D-69). On an off-budget account the converted transaction has no category and stays out of income and spending, like every transaction of an off-budget account (D-96, [analytics](analytics.md#what-counts)).
 
 Transactions have no cleared or reconciled state in the MVP: reconciliation compares the derived balance at a date, and nothing is locked (D-68). A movement the user recorded by hand that the bank has not booked yet by the reconciliation date makes the difference wrong. The preview shows the difference before anything is written, so the user can fix that transaction's date first.
 
@@ -56,6 +56,8 @@ As in Actual Budget (D-63, D-80, D-81):
 - **A forced deletion** is a separate action, shown with a warning that the account and all its transactions are deleted and that the past Net Worth changes. It removes the account and all its transactions, in one database transaction. The counterparts of its transfers, on other accounts, become `REGULAR` transactions with no `transferId`, so the other balances do not change.
 
 When an account is deleted, with or without a forced deletion, the rules that reference it change as for a deleted payee: a "transfer to" action is removed, and a condition on the account is kept and shown as "deleted account" (D-91, [rules and payees flow](rules-payees.md#what-rules-reference)). A closed account keeps its rules.
+
+An account that a savings goal uses, archived or not, cannot be deleted, with or without force, until the goal is moved to another account or deleted (D-106, [goals flow](goals.md#when-the-account-closes)). Closing it is allowed.
 
 ### On-budget and off-budget
 

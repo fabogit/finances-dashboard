@@ -2,7 +2,7 @@
 
 How a bank file becomes transactions: the user uploads an xlsx or csv file for one account, a template maps its columns, every row is validated, given a payee and a category, checked for duplicates and for transfers, and shown in a preview. Nothing is saved until the user confirms, and the server checks everything again on confirm. Models and fields are defined in the [data model](../domain/data-model.md); payees and rules in the [rules and payees flow](rules-payees.md).
 
-**Decisions:** D-05 (dynamic mapper for xlsx and csv), D-06 (stateless preview, re-validated on confirm, [ADR-0004](../adr/0004-stateless-import-staging.md)), D-13 (category sources in order: rules, payee default, bank category mapping), D-14 (parsing, mapping, rules, deduplication and preview in the core, [ADR-0005](../adr/0005-python-science-service-rest.md)), D-15 and D-43 (named templates, a default template per account, account chosen at upload), D-16 (layered deduplication, nothing dropped silently, [ADR-0007](../adr/0007-layered-deduplication.md)), D-22 (payee from a column or from cleanup and rules; proposals, never silent), D-23 (rules applied in every preview), D-24 (transfer suggestions confirmed by the user), D-30 (calendar date and optional time), D-48 (every query scoped to the user), D-59 (amounts in cents), D-65 (no transaction before the starting balance), D-79 (names ignore case), D-83 (template proposal by exact header), D-84 (notes column), D-85 (rows not booked yet), D-86 (composition of the exact hash), D-87 (choices on duplicates), D-88 (window of the approximate match), D-89 (fields of a merge), D-90 (confirm with differences), D-95 (category mappings as rows with a foreign key).
+**Decisions:** D-05 (dynamic mapper for xlsx and csv), D-06 (stateless preview, re-validated on confirm, [ADR-0004](../adr/0004-stateless-import-staging.md)), D-13 (category sources in order: rules, payee default, bank category mapping), D-14 (parsing, mapping, rules, deduplication and preview in the core, [ADR-0005](../adr/0005-python-science-service-rest.md)), D-15 and D-43 (named templates, a default template per account, account chosen at upload), D-16 (layered deduplication, nothing dropped silently, [ADR-0007](../adr/0007-layered-deduplication.md)), D-22 (payee from a column or from cleanup and rules; proposals, never silent), D-23 (rules applied in every preview), D-24 (transfer suggestions confirmed by the user), D-30 (calendar date and optional time), D-48 (every query scoped to the user), D-59 (amounts in cents), D-65 (no transaction before the starting balance), D-79 (names ignore case), D-83 (template proposal by exact header), D-84 (notes column), D-85 (rows not booked yet), D-86 (composition of the exact hash), D-87 (choices on duplicates), D-88 (window of the approximate match), D-89 (fields of a merge), D-90 (confirm with differences), D-95 (category mappings as rows with a foreign key), D-96 (no category on an off-budget account).
 
 ## Behaviour
 
@@ -51,6 +51,8 @@ For every valid row, in this order:
    2. the payee's default category (`Payee.defaultCategoryId`);
    3. the template's mapping of the bank's category value;
    4. none: the row is uncategorised.
+
+   On an off-budget account no row gets a category, from any source: its transactions stay out of income and spending (D-96, [analytics](analytics.md#what-counts)).
 
    The category suggested by the computation service is post-MVP. The preview shows the source of each row's category: the rule, the payee default, the bank mapping, or none (D-13).
 

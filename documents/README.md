@@ -52,6 +52,9 @@ API contracts and UX details are not specified up front: they are written at the
 - [flows/categories.md](flows/categories.md): category groups and categories, uncategorised, deletion that moves everything to a chosen category.
 - [flows/import.md](flows/import.md): templates, validation, payee and category of each row, layered duplicates, transfer suggestions, the stateless preview and its confirm.
 - [flows/rules-payees.md](flows/rules-payees.md): payees, the imported payee and its cleanup, rules evaluated in order with the first winning per field, proposals in the preview.
+- [flows/budget.md](flows/budget.md): the monthly tracking budget per category, fixed amounts and percentages of the previous month's income, convenience commands, the budget analysis.
+- [flows/goals.md](flows/goals.md): savings goals on a dedicated account, progress and "reached" computed, paused and archived, the projection and its outcomes.
+- [flows/analytics.md](flows/analytics.md): what counts as income, spending and Net Worth by transaction kind, the summary, spending by category, the monthly trend, the Net Worth history, the forecast input.
 
 ### ADRs
 

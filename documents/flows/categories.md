@@ -2,7 +2,7 @@
 
 How transactions and budget amounts are classified: category groups that contain categories, exactly two levels, and "uncategorised" as the absence of a category. Deleting a category moves everything that pointed to it. Models and fields are defined in the [data model](../domain/data-model.md).
 
-**Decisions:** D-27 (groups and categories as two models; transactions and budgets only on categories; exactly two levels), D-28 (uncategorised is `null`; `systemKey` only to recognise bootstrap categories; no protected categories), D-29 (deletion moves transactions, payee defaults and rule actions to a chosen category or to `null`, deletes monthly budgets with a warning, and previews the counts first), D-48 (every query scoped to the user), D-62 (optional 50/30/20 classification), D-74 (income groups), D-75 (category names unique per group, case-insensitive), D-76 (a rule action with no target is removed), D-77 (deleting a group), D-79 (names ignore case and surrounding spaces), D-95 (template category mappings follow a category deletion).
+**Decisions:** D-27 (groups and categories as two models; transactions and budgets only on categories; exactly two levels), D-28 (uncategorised is `null`; `systemKey` only to recognise bootstrap categories; no protected categories), D-29 (deletion moves transactions, payee defaults and rule actions to a chosen category or to `null`, deletes monthly budgets with a warning, and previews the counts first), D-48 (every query scoped to the user), D-62 (optional 50/30/20 classification), D-74 (income groups), D-75 (category names unique per group, case-insensitive), D-76 (a rule action with no target is removed), D-77 (deleting a group), D-79 (names ignore case and surrounding spaces), D-95 (template category mappings follow a category deletion), D-97 (uncategorised transactions count by sign).
 
 ## Behaviour
 
@@ -24,7 +24,7 @@ A new user starts with a set of groups and categories created by the bootstrap; 
 
 ### Income categories
 
-A group is either an income group or a spending group (`CategoryGroup.isIncome`). Income, for the budget's percentage of income and for the analytics, is the transactions in the categories of income groups, not the positive amounts: a refund of +30.00 on "Shopping" reduces Shopping's spending and is not income (D-74).
+A group is either an income group or a spending group (`CategoryGroup.isIncome`). Income, for the budget's percentage of income and for the analytics, is the transactions in the categories of income groups, not the positive amounts: a refund of +30.00 on "Shopping" reduces Shopping's spending and is not income (D-74). Only an uncategorised transaction counts by its sign, under an "Uncategorized" entry of its own (D-97, [analytics](analytics.md#income-or-spending)).
 
 - A user can have several income groups, such as "Work" and "Investments", and can delete any of them.
 - A category never moves between an income group and a spending group, and a deletion never moves an income category's contents to a spending category, or the reverse: past income would become spending (D-74, as in Actual Budget).
@@ -71,7 +71,7 @@ As in Actual Budget (D-77): an empty group is deleted directly. A group with cat
 - **Budget amounts of the target** are not changed by the deletion: the deleted category's amounts are dropped, never added to the target's (D-29).
 - **A renamed bootstrap category** keeps its `systemKey` (CAT-8).
 - **A rule whose only action set the deleted category** stays, with no actions, and is shown as such (CAT-6).
-- **The last income group deleted:** allowed; until a new one exists, there is no income for the budget's percentages and the analytics (D-74).
+- **The last income group deleted:** allowed; until a new one exists, income for the budget's percentages and the analytics comes only from uncategorised positive amounts (D-74, D-97).
 
 ## Divergences from Actual Budget
 
