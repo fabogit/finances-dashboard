@@ -34,7 +34,7 @@ const rows = await this.prisma.$queryRaw<Row[]>`
 `;
 ```
 
-Whether `userId` references a `User` table is decided by the v2 data model (#104). The seed can create two users, so that tests catch leaks.
+Every `userId` is a foreign key to the `User` table ([data model](../../documents/domain/data-model.md#user), D-58). The seed creates the fixed user, and can create a second one so that tests catch leaks.
 
 ## Not decided yet
 

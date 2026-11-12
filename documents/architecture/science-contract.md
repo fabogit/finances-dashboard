@@ -51,7 +51,9 @@ Cleans and categorises raw import rows: dates (including Excel serial dates), am
 
 ## Types
 
-Python serialises `Decimal` values as JSON strings, while the core's DTOs type them as `number`. Callers must parse them as decimals, not trust the declared type.
+In v2 every amount is an integer number of cents in both directions, an `int` in Python (D-59, [data model § Conventions](../domain/data-model.md#conventions)).
+
+**v1:** Python serialises `Decimal` values as JSON strings, while the core's DTOs type them as `number`. Callers must parse them as decimals, not trust the declared type.
 
 ## Failure handling
 

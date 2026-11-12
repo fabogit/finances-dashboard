@@ -2,7 +2,7 @@
 
 The v2 plan: milestones, the steps inside them and their order, how releases are tagged, how every milestone is closed, and the risks being watched. **Status is not tracked here**: see the [milestones](https://github.com/fabogit/finances-dashboard/milestones) and the project "Finance Dashboard Roadmap" on GitHub.
 
-The plan rewrites the schema once, then rebuilds the modules flow by flow in dependency order (D-37), test-first from the examples in the specs (D-38, D-46). The code reuses what still fits (configuration, CI, Docker, validation, Decimal serialisation, module structure).
+The plan rewrites the schema once, then rebuilds the modules flow by flow in dependency order (D-37), test-first from the examples in the specs (D-38, D-46). The code reuses what still fits (configuration, CI, Docker, validation, module structure).
 
 ## Milestones
 
@@ -106,7 +106,7 @@ Every milestone M1–M6 ends with an `M<N> · Review & consolidation` issue (#98
 
 1. **Analysis**, read-only, on `main`: one agent per dimension, and an adversarial check of each finding. The dimensions:
    - documentation conformance: code against `documents/`, flows, ADRs, and the specs against the code (D-46);
-   - bugs and edge cases, especially `Decimal` precision, calendar dates and per-user scoping;
+   - bugs and edge cases, especially money precision (cents), calendar dates and per-user scoping;
    - duplication and dead code across the milestone's pull requests;
    - test gaps, especially across the core ↔ science boundary;
    - security and input validation;
@@ -127,8 +127,8 @@ M1 (#98) pilots the step.
 - **The schema as a bottleneck.** Every step after 2 depends on Schema v2 (#89). Mitigated by declaring in the issue when it touches the schema and never having two open sessions on it; with `db push` and a reset a conflict can be resolved, but it costs.
 - **Database sync method tied to CI and scripts.** The schema is applied with `prisma db push` until the MVP, then a `prisma migrate` baseline (D-19). Every place that applies the schema (Dockerfile, CI, scripts) must follow the same method ([`AGENTS.md` § Database sync method](../../AGENTS.md#database-sync-method)): a mismatch already broke CI once (fixed in #83). **Carried forward (#89):** `prisma:migrate`, `prisma:reset`, `prisma:deploy` and `db:test:migrate` are leftovers of `migrate` and are not used until the baseline.
 - **No durable data before the migrate baseline.** `db push` with resets erases the database, so the maintainer's own data cannot live in it yet. Accepted: imports must be repeatable, the bank files stay the source, and the baseline comes when the MVP closes, before any data that cannot be rebuilt.
-- **Per-user isolation not yet enforced.** v1 does not isolate users ([architecture § Multi-tenancy](../architecture/overview.md#multi-tenancy)), and there is no authentication until the post-MVP milestone. **Planned (D-48):** the request context and the Prisma extension that enforce isolation are built in M2, with a fixed user until authentication; part of #63 therefore moves into M2 and must be assigned to an issue (#89 or a new one). Until authentication exists, nothing beyond the generated `demo` data should be exposed publicly.
-- **Science "no result" outcomes still answered as 200 with an error body.** Since #85, failed calls to Python get timeouts, retries and real HTTP errors (502, 503, 504). Insufficient history, invalid dates and unreachable goals are still passed through as `200 { error }`. They follow D-49 (422 for insufficient data, an explicit outcome for unreachable goals) and land with `ScienceClient` (#96) or the forecast and goals issues, still to be assigned.
+- **Per-user isolation not yet enforced.** v1 does not isolate users ([architecture § Multi-tenancy](../architecture/overview.md#multi-tenancy)), and there is no authentication until the post-MVP milestone. **Planned (D-48):** the request context and the Prisma extension that enforce isolation are built in M2 by #108, with a fixed user until authentication; that part of #63 moves into #108. Until authentication exists, nothing beyond the generated `demo` data should be exposed publicly.
+- **Science "no result" outcomes still answered as 200 with an error body.** Since #85, failed calls to Python get timeouts, retries and real HTTP errors (502, 503, 504). Insufficient history, invalid dates and unreachable goals are still passed through as `200 { error }`. They follow D-49 (422 for insufficient data, an explicit outcome for unreachable goals): the goal projection changes with #94, the forecast and the removal of the leftovers with #96.
 - **Analytics in memory and in floating point.** In v1 distribution and monthly trends load every row and sum with `toNumber()`; the issue that claimed otherwise (#76) was closed without the work. Rewritten in the database by #95.
 - **Toolchain holds (#87, checked again in #109 on 2026-11-09).** Majors held back, each with its reason:
   - **TypeScript 7.** The Nest CLI (`@nestjs/cli` 12.0.12 depends on `typescript ~6.0.2`) and Angular 22 (`<6.1`) cap TypeScript at 6.0. `ts-jest` and `typescript-eslint`, the other caps, left with #109.
