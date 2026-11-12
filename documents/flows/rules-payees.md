@@ -2,7 +2,7 @@
 
 How a bank's text becomes a clean payee, and how the user's rules set the payee, the category, the notes or a transfer. Payees and rules are what makes the import better with use: each correction in the preview can become a payee default or a rule. Models and fields are defined in the [data model](../domain/data-model.md); where rules run during an import is in the [import flow](import.md).
 
-**Decisions:** D-12 (payees and rules in the MVP), D-13 (category sources: rules, payee default, bank mapping), D-22 (payee from a template column or from cleanup and rename rules; proposals, never silent), D-23 (ordered rules, the first that sets a field wins; applied in every preview and, on request with a preview, to existing transactions; never automatically to history), D-29 and D-76 (category deletion moves or removes rule actions and payee defaults), D-48 (every query scoped to the user), D-72 (transfers have no payee; rules mark transfers with their own action), D-79 (names ignore case and surrounding spaces), D-91 (merging and deleting payees; rules that reference a deleted payee or account), D-92 (cleanup patterns), D-93 (operators), D-94 (rules on transactions entered by hand), D-95 (conditions and actions as rows with foreign keys).
+**Decisions:** D-12 (payees and rules in the MVP), D-13 (category sources: rules, payee default, bank mapping), D-22 (payee from a template column or from cleanup and rename rules; proposals, never silent), D-23 (ordered rules, the first that sets a field wins; applied in every preview and, on request with a preview, to existing transactions; never automatically to history), D-29 and D-76 (category deletion moves or removes rule actions and payee defaults), D-48 (every query scoped to the user), D-72 (transfers have no payee; rules mark transfers with their own action), D-79 (names ignore case and surrounding spaces), D-91 (merging and deleting payees; rules that reference a deleted payee or account), D-92 (cleanup patterns), D-93 (operators), D-94 (rules on transactions entered by hand), D-95 (conditions and actions as rows with foreign keys), D-96 (no category on an off-budget account).
 
 ## Behaviour
 
@@ -60,6 +60,8 @@ With these rules:
 a payment of −180.00 with the imported payee "ESSELUNGA MILANO" gets payee "Esselunga" from rule 1 and category "Food › Big shopping" from rule 2; rule 3 matches but the category is already set (RUL-5).
 
 The preview shows, for each field, which rule set it (D-13).
+
+On a transaction of an off-budget account a "set category" action does nothing: such transactions have no category (D-96).
 
 ### Where rules run
 
