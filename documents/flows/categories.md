@@ -2,7 +2,7 @@
 
 How transactions and budget amounts are classified: category groups that contain categories, exactly two levels, and "uncategorised" as the absence of a category. Deleting a category moves everything that pointed to it. Models and fields are defined in the [data model](../domain/data-model.md).
 
-**Decisions:** D-27 (groups and categories as two models; transactions and budgets only on categories; exactly two levels), D-28 (uncategorised is `null`; `systemKey` only to recognise bootstrap categories; no protected categories), D-29 (deletion moves transactions, payee defaults and rule actions to a chosen category or to `null`, deletes monthly budgets with a warning, and previews the counts first), D-48 (every query scoped to the user), D-62 (optional 50/30/20 classification), D-74 (income groups), D-75 (category names unique per group, case-insensitive), D-76 (a rule action with no target is removed), D-77 (deleting a group), D-79 (names ignore case and surrounding spaces).
+**Decisions:** D-27 (groups and categories as two models; transactions and budgets only on categories; exactly two levels), D-28 (uncategorised is `null`; `systemKey` only to recognise bootstrap categories; no protected categories), D-29 (deletion moves transactions, payee defaults and rule actions to a chosen category or to `null`, deletes monthly budgets with a warning, and previews the counts first), D-48 (every query scoped to the user), D-62 (optional 50/30/20 classification), D-74 (income groups), D-75 (category names unique per group, case-insensitive), D-76 (a rule action with no target is removed), D-77 (deleting a group), D-79 (names ignore case and surrounding spaces), D-95 (template category mappings follow a category deletion).
 
 ## Behaviour
 
@@ -35,11 +35,12 @@ Names are stored without leading and trailing spaces and compared ignoring case 
 
 ### Deleting a category
 
-1. **Preview.** The user asks to delete a category and chooses a target category or none. The system answers with the counts of what points to the category: transactions, monthly budgets, payee defaults and rule actions. Nothing changes yet (D-29).
+1. **Preview.** The user asks to delete a category and chooses a target category or none. The system answers with the counts of what points to the category: transactions, monthly budgets, payee defaults, rule actions and import template mappings. Nothing changes yet (D-29, D-95).
 2. **Confirm.** In one database transaction:
    - transactions move to the target, or to `null`;
    - payee defaults move to the target, or to `null`;
    - rule actions that set the category move to the target; with no target, they are removed (see below);
+   - import template mappings of a bank category to this category move to the target; with no target, they are removed, and the bank's value maps to nothing (D-95);
    - the category's monthly budgets are deleted; the warning was in the preview;
    - the category is deleted.
 
@@ -56,7 +57,7 @@ As in Actual Budget (D-77): an empty group is deleted directly. A group with cat
 - A transaction's category is a category or `null`, never a group (CAT-1, CAT-3).
 - Categories have exactly two levels (CAT-2).
 - Group names are unique per user, ignoring case and surrounding spaces (CAT-9).
-- Deleting a category never leaves a transaction, payee or rule pointing to it (CAT-5, CAT-6).
+- Deleting a category never leaves a transaction, payee, rule or template mapping pointing to it (CAT-5, CAT-6, CAT-15).
 - Nothing changes before the user confirms the deletion preview (CAT-4).
 - A category deletion never touches another user's data (CAT-7).
 - Category names are unique per group, ignoring case (CAT-12).
@@ -75,7 +76,7 @@ As in Actual Budget (D-77): an empty group is deleted directly. A group with cat
 ## Divergences from Actual Budget
 
 1. **Budget amounts are deleted, not carried over.** When a category is deleted, Actual Budget moves its budget amounts to the target category along with its transactions; here they are deleted, with a warning in the preview, because adding them to the target's own plan may not be wanted (D-29).
-2. **Payee defaults and rule actions move too.** Actual Budget asks for a target only for the transactions and the budget; here everything that points to the category follows the same target, so no rule or payee is left pointing nowhere (D-29).
+2. **Payee defaults and rule actions move too.** Actual Budget asks for a target only for the transactions and the budget; here everything that points to the category follows the same target, template mappings included, so no rule, payee or mapping is left pointing nowhere (D-29, D-95).
 3. **A deletion preview with counts** before anything changes (D-29).
 4. **Several income groups, none protected.** Actual Budget has exactly one income group, which cannot be deleted; here any group can be an income group, and any can be deleted (D-28, D-74).
 
@@ -188,3 +189,13 @@ As in Actual Budget (D-77): an empty group is deleted directly. A group with cat
 - **When** in November 2026 the user records +2,000.00 on "Salary", +100.00 on "Other income", −30.00 and a refund of +30.00 on "Shopping"
 - **Then** November's income is 2,100.00
 - **And** November's spending on "Shopping" is 0.00
+
+### CAT-15 · Template mappings follow a deletion
+
+- **Given** template "Fineco account", which maps the bank category "Ristoranti" to "Restaurants" and "Bar" to "Restaurants"
+- **When** the user asks to delete "Restaurants" with target "Eating out"
+- **Then** the preview counts 2 template mappings
+- **When** the user confirms
+- **Then** "Ristoranti" and "Bar" map to "Eating out"
+- **When** the user deletes "Eating out" with no target
+- **Then** "Fineco account" no longer maps "Ristoranti" and "Bar", and their rows are uncategorised unless a rule or a payee default sets a category

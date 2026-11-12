@@ -1,8 +1,8 @@
 # Data model
 
-The v2 data model: every model, field, relation and constraint, and the invariants that hold across them. Schema v2 (#89) implements it; a pull request that changes the schema updates this document in the same pull request. Terms are defined in the [glossary](../CONTEXT.md); how each area behaves is in the flow documents ([balances](../flows/balances.md), [transfers](../flows/transfers.md), [categories](../flows/categories.md)).
+The v2 data model: every model, field, relation and constraint, and the invariants that hold across them. Schema v2 (#89) implements it; a pull request that changes the schema updates this document in the same pull request. Terms are defined in the [glossary](../CONTEXT.md); how each area behaves is in the flow documents ([balances](../flows/balances.md), [transfers](../flows/transfers.md), [categories](../flows/categories.md), [import](../flows/import.md), [rules and payees](../flows/rules-payees.md)).
 
-The ledger models (user, account, transaction, category group, category) are complete. The models of later areas (payee, rule, import template, monthly budget, savings goal) list their purpose, relations and the fields a decision already fixes; their remaining fields are completed together with their flow documents.
+The ledger and import models (user, account, transaction, category group, category, payee, rule with its conditions and actions, import template with its category mappings) are complete. The models of later areas (monthly budget, savings goal) list their purpose, relations and the fields a decision already fixes; their remaining fields are completed together with their flow documents.
 
 ## Conventions
 
@@ -30,6 +30,11 @@ erDiagram
     Category ||--o{ MonthlyBudget : "planned in"
     Account |o--o{ SavingsGoal : "progress of"
     ImportTemplate |o--o{ Account : "default of"
+    Rule ||--o{ RuleCondition : tests
+    RuleCondition ||--o{ RuleConditionReference : "payee or account"
+    Rule ||--o{ RuleAction : sets
+    ImportTemplate ||--o{ ImportTemplateCategoryMapping : maps
+    Category ||--o{ ImportTemplateCategoryMapping : "mapped to"
 ```
 
 Every model also belongs to a user; those relations are left out of the diagram.
@@ -85,7 +90,7 @@ A dated movement of money or value on one account.
 | `description` | text | no | The bank's description as imported, kept for rules and deduplication (D-22, D-23). |
 | `importedPayee` | text | no | The payee text from the bank after deterministic cleanup, before rules rename it (D-22). |
 | `bankId` | text | no | The bank's unique transaction ID, when the template maps one (D-16). |
-| `importHash` | text | no | Exact-match hash for re-imports (D-16); its composition is defined in the import flow. |
+| `importHash` | text | no | Exact-match hash for re-imports (D-16): a SHA-256 of the row as read, with its occurrence number among identical rows (D-86); see the [import flow](../flows/import.md#the-exact-hash). |
 | `createdAt`, `updatedAt` | timestamptz | yes | |
 
 - Unique: `(accountId, bankId)` and `(accountId, importHash)`, where not `null`. Uniqueness is per account, never global (D-16, [ADR-0007](../adr/0007-layered-deduplication.md)).
@@ -134,10 +139,13 @@ The clean name of who was paid or who paid, such as "Esselunga", with an optiona
 | --- | --- | --- | --- |
 | `id` | UUID | yes | |
 | `userId` | UUID | yes | |
-| `name` | text | yes | |
+| `name` | text | yes | Unique per user, ignoring case (D-79). |
 | `defaultCategoryId` | UUID → `Category` | no | Proposed for the payee's transactions when no rule sets a category (D-13). Moved by category deletion (D-29). |
+| `createdAt`, `updatedAt` | timestamptz | yes | |
 
-Fields completed with the rules and payees flow.
+- Unique: `(userId, lower(name))` (D-79).
+- Created by the user or from an accepted proposal in the import preview, never silently (D-22).
+- Merging moves its transactions and rule references to the target; deleting leaves its transactions with no payee (D-91, [rules and payees flow](../flows/rules-payees.md#payees)).
 
 ### Rule
 
@@ -148,8 +156,66 @@ An ordered rule with conditions (all, or at least one) and actions: set payee, s
 | `id` | UUID | yes | |
 | `userId` | UUID | yes | |
 | `position` | integer | yes | The user's order; unique per user (D-23). |
+| `conditionsOp` | `RuleConditionsOp` | yes | `ALL`: every condition must hold; `ANY`: at least one (D-23). |
+| `createdAt`, `updatedAt` | timestamptz | yes | |
 
-A "set category" action references a `Category` and is moved by category deletion (D-29). Fields completed with the rules and payees flow.
+- Unique: `(userId, position)`.
+- Its conditions and actions are rows of their own, with foreign keys to what they reference, not JSON columns (D-95): [`RuleCondition`](#rulecondition), [`RuleAction`](#ruleaction).
+- At least one action when the rule is created; a rule can later lose its actions through a deletion and is then shown as having none (D-76, D-91).
+
+### RuleCondition
+
+One condition of a rule: a field, an operator and a value (D-23, D-93).
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `id` | UUID | yes | |
+| `userId` | UUID | yes | |
+| `ruleId` | UUID → `Rule` | yes | Deleted with its rule. |
+| `field` | `RuleConditionField` | yes | What the condition tests. |
+| `operator` | `RuleOperator` | yes | Valid operators per field: see the [rules and payees flow](../flows/rules-payees.md#rules). |
+| `textValues` | text[] | no | For the text fields: one value, or several for "one of" and "not one of". A regular expression is checked when the rule is saved. |
+| `amount` | money | no | For the amount fields; the lower end for "is between". |
+| `amountTo` | money | no | The upper end for "is between". |
+| `date` | date | no | For the date. |
+| `createdAt`, `updatedAt` | timestamptz | yes | |
+
+- The value columns used are the ones of the field; the others are `null`. A condition on the payee or the account takes its values from [`RuleConditionReference`](#ruleconditionreference).
+- A condition on the payee or the account with no references left is a condition on a deleted payee or account: "is" and "one of" never hold, "is not" and "not one of" always hold (D-91).
+
+### RuleConditionReference
+
+A payee or an account that a condition tests, one row per value, so a list "one of" has one row per payee (D-95).
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `id` | UUID | yes | |
+| `userId` | UUID | yes | |
+| `conditionId` | UUID → `RuleCondition` | yes | Deleted with its condition. |
+| `payeeId` | UUID → `Payee` | no | Deleted with the payee; moved to the target when the payee is merged (D-91). |
+| `accountId` | UUID → `Account` | no | Deleted with the account (D-91). |
+
+- Exactly one of `payeeId` and `accountId` is set, the one of the condition's field.
+- Unique: `(conditionId, payeeId)` and `(conditionId, accountId)`, where not `null`.
+
+### RuleAction
+
+One action of a rule (D-23).
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `id` | UUID | yes | |
+| `userId` | UUID | yes | |
+| `ruleId` | UUID → `Rule` | yes | Deleted with its rule. |
+| `type` | `RuleActionType` | yes | |
+| `payeeId` | UUID → `Payee` | no | For `SET_PAYEE`. Moved to the target when the payee is merged; the action is deleted with the payee (D-91). |
+| `categoryId` | UUID → `Category` | no | For `SET_CATEGORY`. Moved to the target of a category deletion; deleted with the category when there is no target (D-29, D-76). |
+| `accountId` | UUID → `Account` | no | For `TRANSFER_TO`. Deleted with the account (D-91). |
+| `notes` | text | no | For `SET_NOTES`. |
+| `createdAt`, `updatedAt` | timestamptz | yes | |
+
+- Exactly the column of its type is set.
+- Unique: `(ruleId, type)`: a rule sets each field at most once.
 
 ### ImportTemplate
 
@@ -159,9 +225,36 @@ A named, reusable mapping of a bank file: start row, columns, date format, sign 
 | --- | --- | --- | --- |
 | `id` | UUID | yes | |
 | `userId` | UUID | yes | |
-| `name` | text | yes | |
+| `name` | text | yes | Unique per user, ignoring case (D-79). |
+| `startRow` | integer | yes | The first row of data in the file. |
+| `delimiter` | text | no | The csv delimiter; `null` for xlsx. |
+| `columns` | object | yes | The column of each field: date and description (required), amount or the in and out columns (required), time, payee, notes, bank category, bank ID, booking status (optional) (D-84, D-85). |
+| `dateFormat` | text | yes | Such as `DD/MM/YYYY`. |
+| `decimalSeparator` | text | yes | `,` or `.`. |
+| `signConvention` | `SignConvention` | yes | How the amount's sign is read. |
+| `notBookedValue` | text | no | The value of the booking status column that means "not booked yet"; such rows are deselected in the preview (D-85). |
+| `matchWindowDays` | integer | yes | Days before and after a row's date for the approximate match and the transfer suggestions; from 1 to 90, default 7 (D-88). |
+| `headerSignature` | text | no | The file's header row, for the system's proposal by exact match (D-83); see the [import flow](../flows/import.md#uploading-a-file). |
+| `createdAt`, `updatedAt` | timestamptz | yes | |
 
-Fields completed with the import flow.
+- Unique: `(userId, lower(name))` (D-79).
+- Deleting a template sets `Account.defaultImportTemplateId` to `null` on the accounts that used it, and deletes its category mappings.
+- Its category mappings are rows of their own: [`ImportTemplateCategoryMapping`](#importtemplatecategorymapping) (D-95).
+
+### ImportTemplateCategoryMapping
+
+A bank's category value mapped to one of the user's categories, the third category source (D-13), such as "Spesa supermercato" → "Food › Groceries".
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `id` | UUID | yes | |
+| `userId` | UUID | yes | |
+| `templateId` | UUID → `ImportTemplate` | yes | Deleted with its template. |
+| `bankCategory` | text | yes | The bank's value, as read. |
+| `categoryId` | UUID → `Category` | yes | Moved to the target of a category deletion, or deleted with the category when there is no target (D-95). |
+| `createdAt`, `updatedAt` | timestamptz | yes | |
+
+- Unique: `(templateId, bankCategory)`.
 
 ### MonthlyBudget
 
@@ -226,6 +319,49 @@ The 50/30/20 classification of a category (D-62): half of income to needs, 30% t
 - `WANTS`: discretionary spending, such as restaurants, travel.
 - `SAVINGS`: savings, investments, debt repayment.
 
+### RuleConditionsOp
+
+How a rule's conditions combine (D-23).
+
+- `ALL`: every condition must hold.
+- `ANY`: at least one condition must hold.
+
+### RuleConditionField
+
+What a rule condition tests (D-23, D-93).
+
+- `DESCRIPTION`, `IMPORTED_PAYEE`, `BANK_CATEGORY`: text.
+- `PAYEE`, `ACCOUNT`: references, through `RuleConditionReference`.
+- `AMOUNT`: the signed amount.
+- `AMOUNT_IN`, `AMOUNT_OUT`: money in or money out only, compared as a positive number.
+- `DATE`
+
+### RuleOperator
+
+The operators of a rule condition (D-93). Text is compared ignoring case.
+
+- `IS`, `IS_NOT`, `ONE_OF`, `NOT_ONE_OF`: text, payee, account.
+- `CONTAINS`, `DOES_NOT_CONTAIN`, `STARTS_WITH`, `MATCHES` (a regular expression): text.
+- `IS`, `IS_BETWEEN` (both ends included), `GREATER_THAN`, `LESS_THAN`: amounts.
+- `IS`, `BEFORE`, `AFTER`: the date.
+
+### RuleActionType
+
+What a rule action sets (D-23).
+
+- `SET_PAYEE`
+- `SET_CATEGORY`
+- `SET_NOTES`
+- `TRANSFER_TO`: marks the transaction as a suggested transfer to an account (D-24, D-72).
+
+### SignConvention
+
+How an import template reads the sign of an amount.
+
+- `SIGNED`: one column, positive in and negative out.
+- `SIGNED_FLIPPED`: one column with the opposite sign, as some card statements give it.
+- `IN_OUT`: two columns, money in and money out, both positive.
+
 ### GoalStatus
 
 The states of a savings goal that are set by hand (D-26).
@@ -246,10 +382,11 @@ The states of a savings goal that are set by hand (D-26).
 8. A transfer between two on-budget accounts, or between two off-budget accounts, has no category on either side (D-25, D-28). **Exercised by:** TRF-1, TRF-7.
 9. A transaction's category, when present, is a category, never a group; `null` means uncategorised. **Exercised by:** CAT-1, CAT-3.
 10. Categories have exactly two levels: a group contains categories, a category contains nothing. **Exercised by:** CAT-2.
-11. Names ignore case and surrounding spaces when compared: account and group names are unique per user, category names per group. **Exercised by:** CAT-9, CAT-12, DM-2.
-12. A bank ID or an import hash appears at most once per account. **Exercised by:** DM-4.
+11. Names ignore case and surrounding spaces when compared: account, group, payee and template names are unique per user, category names per group. **Exercised by:** CAT-9, CAT-12, DM-2, RUL-7.
+12. A bank ID or an import hash appears at most once per account. **Exercised by:** DM-4, IMP-7, IMP-8.
 13. Only a `REGULAR` transaction, or the on-budget side of a `TRANSFER` that crosses the on/off-budget boundary, has a category. **Exercised by:** BAL-5, BAL-11, TRF-2, TRF-6.
 14. Every account has exactly one `STARTING_BALANCE` transaction, and no transaction is dated before it. **Exercised by:** BAL-5, BAL-6.
+15. A rule action, a payee default and a template category mapping always point to an existing row: deleting what they reference moves them to a target or removes them. A rule condition on a deleted payee or account is kept and never holds with "is". **Exercised by:** CAT-5, CAT-6, CAT-15, RUL-11, RUL-12, RUL-13.
 
 ## v1 differences
 

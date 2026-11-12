@@ -15,11 +15,11 @@ A transfer is two transactions with `Transaction.kind` = `TRANSFER`, one on each
 - **By hand:** `POST /transfers` with the source account, the destination account, the amount and the date (D-24). Both sides are created with that date: the source with the negative amount, the destination with the positive one.
 - **From an existing transaction:** the user, a rule or the import preview marks a transaction as a transfer to another account (D-23, D-24). It becomes the first side and keeps its date and amount; the counterpart is generated on the other account with the same date and the opposite amount.
 - **By linking two existing transactions:** two transactions on different accounts of the user, with exactly opposite amounts, can be linked into a transfer (D-73). Both become `TRANSFER`, point to each other and keep their dates; the category follows the [Category](#category) rules. Merging an imported row with a generated side is this same operation.
-- **In the import preview** a transfer is only ever a suggestion, confirmed by the user (D-24): from a rule, or from the heuristic "opposite amount on another of the user's accounts, date within a few days". The details are in the import flow.
+- **In the import preview** a transfer is only ever a suggestion, confirmed by the user (D-24): from a rule, or from the heuristic "opposite amount on another of the user's accounts, date within a few days". The details are in the [import flow](import.md#transfer-suggestions).
 
 ### When the other side is imported later
 
-The generated counterpart already moves the destination account's balance. When the user later imports the destination account's statement, the row for the same movement is matched against the generated side by the approximate duplicate check (same account, same amount, date within the window), and the preview proposes to merge them; after the merge one transaction remains, still linked to the first side (D-16, D-24). Which fields the bank row brings into the merged transaction is defined in the import flow.
+The generated counterpart already moves the destination account's balance. When the user later imports the destination account's statement, the row for the same movement is matched against the generated side by the approximate duplicate check (same account, same amount, date within the window), and the preview proposes to merge them; after the merge one transaction remains, still linked to the first side (D-16, D-24). Which fields the bank row brings into the merged transaction is defined in the [import flow](import.md#merging-a-row-with-an-existing-transaction).
 
 ### Category
 

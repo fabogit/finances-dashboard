@@ -50,6 +50,8 @@ API contracts and UX details are not specified up front: they are written at the
 - [flows/balances.md](flows/balances.md): opening an account, derived balance and history, reconciliation, value adjustments, closing an account.
 - [flows/transfers.md](flows/transfers.md): transfers as linked pairs, the generated counterpart, category across the on/off-budget boundary.
 - [flows/categories.md](flows/categories.md): category groups and categories, uncategorised, deletion that moves everything to a chosen category.
+- [flows/import.md](flows/import.md): templates, validation, payee and category of each row, layered duplicates, transfer suggestions, the stateless preview and its confirm.
+- [flows/rules-payees.md](flows/rules-payees.md): payees, the imported payee and its cleanup, rules evaluated in order with the first winning per field, proposals in the preview.
 
 ### ADRs
 

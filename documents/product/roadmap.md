@@ -15,7 +15,7 @@ Six MVP milestones grouped by theme, plus two after the MVP (D-45). Each MVP mil
 - **M5 · Insights** — analytics aggregated in the database with the `kind` rules, Net Worth history, a robust `ScienceClient` with the adapted forecast. Steps 10, 11.
 - **M6 · Client** — the minimal Angular client, one screen per closed API. Step 12. Closing M6 is the MVP, `v2.0.0`.
 - **Post-MVP · Auth & multi-tenancy** — users, authentication, roles and the demo sandbox (#62–#65). Designed after the MVP; questions in [open-questions.md](open-questions.md).
-- **Post-MVP · Backlog** — accepted ideas outside the MVP: subscriptions (#78), forecast split (#77), multiple currencies (#81), the HTTP `QUERY` method (#80), observability with `@nestjs/observe` (#114).
+- **Post-MVP · Backlog** — accepted ideas outside the MVP: subscriptions (#78), forecast split (#77), multiple currencies (#81), the HTTP `QUERY` method (#80), observability with `@nestjs/observe` (#114), payee cleanup patterns per template with suggestions from the user's data (#125).
 
 ## Steps
 
