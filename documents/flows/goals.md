@@ -13,6 +13,7 @@ The user gives a name (`SavingsGoal.name`), a target amount greater than zero (`
 - **The account is required** in the MVP (D-106). To set a goal before its money has a place, the user opens an account with a balance of 0.00, which can be an on-budget account used only to set money aside: transfers between on-budget accounts never count as income or spending (D-25). The account of a goal can be changed; the progress becomes the new account's balance.
 - **One goal per account** among the goals that are not archived, while shares are post-MVP, so the same money never counts for two goals; an archived goal does not stop a new goal on its account (D-107, GOL-9).
 - **Names** are unique per user among the goals that are not archived, ignoring case (D-79, D-107): an archived "Holidays" does not stop a new "Holidays".
+- **Enforced by the database** through two columns that follow the status: `activeAccountId` and `activeNameKey` hold the account and the name key while the goal is not archived and are `null` once it is, and each is unique ([data model § SavingsGoal](../domain/data-model.md#savingsgoal), D-110). Archiving a goal clears them; reactivating it sets them again, so a reactivation that would collide is rejected by the database.
 
 Setting an archived goal back to `ACTIVE` or `PAUSED` is rejected when it would break one of these two rules.
 
