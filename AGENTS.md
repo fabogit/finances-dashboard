@@ -27,7 +27,7 @@ Status lives on GitHub, how the system works and why lives in `documents/`, and 
 6. Verify ([`.agents/workflows/test-backend.md`](.agents/workflows/test-backend.md)) and report the results to the maintainer with the **real output**.
 7. Open the pull request only after the maintainer's explicit go-ahead ([below](#commits-and-pull-requests)).
 
-**Never decide an uncovered case.** If the issue, the spec and the ADRs do not settle a design question, stop and ask the maintainer. The decision is recorded (ADR or flow document) before work continues.
+**Never decide an uncovered case.** If the issue, the spec and the ADRs do not settle a design question, stop and ask the maintainer. The decision is recorded (ADR or flow document) before work continues. It takes the next ID of [`documents/decisions.md`](documents/decisions.md), the last row plus one, and its row is added in the same pull request; a new ADR takes the number after the last entry of [`documents/README.md` § ADRs](documents/README.md#adrs).
 
 ## Rules
 
