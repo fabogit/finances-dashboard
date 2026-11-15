@@ -30,14 +30,14 @@ Forecast of income, expenses and balance for the next three months. Called by `G
 
 - **Input:** `{ "transactions": [ProcessedTransaction], "std_deviation_threshold": 0.2 }`. The threshold (0.0–1.0) decides how loosely a recurring expense counts as fixed.
 - **Logic:** monthly totals with a linear-regression trend; recurring items (at least three occurrences with low variance) are the fixed part; variable = total − fixed.
-- **Output:** a list of `{ "date": "YYYY-MM", "income": Flow, "expense": Flow, "balance": Decimal }`, where `Flow` is `{ "total", "fixed", "variable" }`.
+- **Output:** a list of `{ "date": "YYYY-MM", "income": Flow, "expense": Flow, "balance" }`, where `Flow` is `{ "total", "fixed", "variable" }`; the amounts are `Decimal` in v1.
 - **v2:** kept, with every amount in integer cents, `balance` included (D-59, [Types](#types)), and with its input filtered by transaction kind: `REGULAR` transactions of on-budget accounts plus the on-budget side of transfers that cross the on/off-budget boundary (D-35, D-96, [ADR-0008](../adr/0008-transaction-kind.md)). Income and expenses are still split by sign (D-100); see the [analytics flow](../flows/analytics.md#forecast-input).
 
 ### `POST /goals/projection`
 
 Estimated completion date of a savings goal. Called by `GET /goals/:id/projection` in the core.
 
-- **Input:** `{ "transactions": [ProcessedTransaction], "target_amount": Decimal, "current_amount": Decimal }`.
+- **Input:** `{ "transactions": [ProcessedTransaction], "target_amount", "current_amount" }`; the two amounts are `Decimal` in v1.
 - **Logic:** linear regression on the goal's recent history gives a monthly saving velocity; high variance lowers the confidence. The months remaining are capped at 1,200, beyond which the date is reported as unreachable.
 - **Output:** `{ "estimated_date", "monthly_avg", "months_remaining", "confidence", "error" }`, all optional.
 - **v2:** amounts in integer cents (`target_amount`, `current_amount`, `monthly_avg`, D-59); the input is every transaction of the goal's account except its starting balance, from the last 12 months, and `current_amount` is the account's balance at today; a goal already reached is answered by the core without calling the service, and more than 1,200 months is unreachable (D-108, [goals flow](../flows/goals.md#projection)).
