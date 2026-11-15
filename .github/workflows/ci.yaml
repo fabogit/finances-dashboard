@@ -37,6 +37,8 @@ jobs:
               - '.github/workflows/ci.yaml'
             client:
               - 'client-preview/**'
+              # client-quality reads its Node version from this file
+              - 'backend-core/.nvmrc'
               - '.github/workflows/ci.yaml'
 
   # --- JOB 1: CORE QUALITY CHECK (Lint, Format, Types) ---

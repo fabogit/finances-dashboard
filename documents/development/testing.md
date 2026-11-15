@@ -48,7 +48,7 @@ The tests pass without the science service running, as they do in CI.
 
 ## CI
 
-`.github/workflows/ci.yaml` runs on every push and pull request to `main`, with no `paths` filter on the triggers, so the checks required by the `main` ruleset are always reported. A first job, `changes`, detects which side changed (`backend-core/`, `backend-science/`, `client-preview/`, or `ci.yaml` itself, which counts for all three) and the other jobs run only for their side. A job skipped this way counts as passed, so a pull request that touches only the documents, or only the client (whose job is not required), can merge. The jobs:
+`.github/workflows/ci.yaml` runs on every push and pull request to `main`, with no `paths` filter on the triggers, so the checks required by the `main` ruleset are always reported. A first job, `changes`, detects which side changed (`backend-core/`, `backend-science/`, `client-preview/`, or `ci.yaml` itself, which counts for all three; `backend-core/.nvmrc`, where `client-quality` reads its Node version, counts for the client too) and the other jobs run only for their side. A job skipped this way counts as passed, so a pull request that touches only the documents, or only the client (whose job is not required), can merge. The jobs:
 
 | Job | Side | Steps |
 | --- | --- | --- |

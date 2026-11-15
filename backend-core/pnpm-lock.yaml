@@ -195,7 +195,7 @@ importers:
         version: 7.10.1
       '@prisma/client':
         specifier: ^7.10.1
-        version: 7.10.1(prisma@7.10.1(@types/node@24.19.2)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3))(typescript@6.0.3)
+        version: 7.10.1(prisma@7.10.1(@types/node@26.6.6)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3))(typescript@6.0.3)
       axios:
         specifier: ^1.21.0
         version: 1.21.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)
@@ -226,7 +226,7 @@ importers:
     devDependencies:
       '@nestjs/cli':
         specifier: ^12.0.12
-        version: 12.0.12(@types/node@24.19.2)(fork-ts-checker-webpack-plugin@9.1.0(typescript@6.0.3)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3)))(prettier@3.8.3)(ts-loader@9.6.2(typescript@6.0.3)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3)))(tsconfig-paths-webpack-plugin@4.2.0)(webpack-node-externals@3.0.0)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3))
+        version: 12.0.12(@types/node@26.6.6)(fork-ts-checker-webpack-plugin@9.1.0(typescript@6.0.3)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3)))(prettier@3.8.3)(ts-loader@9.6.2(typescript@6.0.3)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3)))(tsconfig-paths-webpack-plugin@4.2.0)(webpack-node-externals@3.0.0)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3))
       '@nestjs/schematics':
         specifier: ^12.0.13
         version: 12.0.13(chokidar@5.0.0)(prettier@3.8.3)(typescript@6.0.3)
@@ -240,8 +240,8 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0
       '@types/node':
-        specifier: ^24.19.2
-        version: 24.19.2
+        specifier: ^26.6.6
+        version: 26.6.6
       '@types/pg':
         specifier: ^8.23.1
         version: 8.23.1
@@ -265,7 +265,7 @@ importers:
         version: 7.0.2006
       prisma:
         specifier: ^7.10.1
-        version: 7.10.1(@types/node@24.19.2)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+        version: 7.10.1(@types/node@26.6.6)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
       source-map-support:
         specifier: ^0.5.21
         version: 0.5.21
@@ -280,10 +280,10 @@ importers:
         version: 6.0.3
       vite:
         specifier: ^8.3.6
-        version: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15)
+        version: 8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15)
       vitest:
         specifier: ^5.1.0
-        version: 5.1.0(@types/node@24.19.2)(@vitest/coverage-v8@5.1.0)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15))
+        version: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15))
 
 packages:
 
@@ -1455,8 +1455,8 @@ packages:
   '@types/multer@2.3.0':
     resolution: {integrity: sha512-i7STIm9V4K2MPH4ZYMtrZAwNxs3kglk2LgleaTuB9pUXgADBcQYQuYMd7+6xgTIxfoggIkFA/DkkvycdZpIARA==}
 
-  '@types/node@24.19.2':
-    resolution: {integrity: sha512-93d49wCWJkCyN87MxLpNN6KXPCwFw7bVUg79mGUV1OS40JGWwVCr8n61DXCSqz7CV6/VfPkb7xec7uP2M+QHWQ==}
+  '@types/node@26.6.6':
+    resolution: {integrity: sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==}
 
   '@types/pg@8.23.1':
     resolution: {integrity: sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A==}
@@ -2623,6 +2623,7 @@ packages:
 
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
+    deprecated: This package is no longer needed on supported Node.js versions. Node.js 16+ includes AbortController and AbortSignal as built-in globals. All Node.js versions requiring this polyfill are end-of-life. Use the built-in globals instead.
 
   node-emoji@2.2.0:
     resolution: {integrity: sha512-Z3lTE9pLaJF47NyMhd4ww1yFTAP8YhYI8SleJiHzM46Fgpm5cnNzSl9XfzFNqbaz+VlJrIj3fXQ4DeN1Rjm6cw==}
@@ -3202,8 +3203,8 @@ packages:
     resolution: {integrity: sha512-8iAasVS4wUx0gPLjH8Xtz2PeDzTSiy8QiLGu2DT3X5GU+egFEQhpnbtkehbAwjvDcxIERmCYcysiODFmE3Ud0Q==}
     engines: {node: '>=18'}
 
-  undici-types@7.24.6:
-    resolution: {integrity: sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==}
+  undici-types@8.9.0:
+    resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
 
   unicode-emoji-modifier-base@1.0.0:
     resolution: {integrity: sha512-yLSH4py7oFH3oG/9K+XWrz1pSi3dfUrWEnInbxMfArOfc1+33BlGPQtLsOYwvdMy11AwUBetYuaRxSPqgkq+8g==}
@@ -3398,11 +3399,11 @@ snapshots:
     optionalDependencies:
       chokidar: 5.0.0
 
-  '@angular-devkit/schematics-cli@22.2.6(@types/node@24.19.2)(chokidar@5.0.0)':
+  '@angular-devkit/schematics-cli@22.2.6(@types/node@26.6.6)(chokidar@5.0.0)':
     dependencies:
       '@angular-devkit/core': 22.2.6(chokidar@5.0.0)
       '@angular-devkit/schematics': 22.2.6(chokidar@5.0.0)
-      '@inquirer/prompts': 8.7.2(@types/node@24.19.2)
+      '@inquirer/prompts': 8.7.2(@types/node@26.6.6)
     transitivePeerDependencies:
       - '@types/node'
       - chokidar
@@ -3534,137 +3535,137 @@ snapshots:
 
   '@inquirer/ansi@2.0.10': {}
 
-  '@inquirer/checkbox@5.2.8(@types/node@24.19.2)':
+  '@inquirer/checkbox@5.2.8(@types/node@26.6.6)':
     dependencies:
       '@inquirer/ansi': 2.0.10
-      '@inquirer/core': 12.0.6(@types/node@24.19.2)
+      '@inquirer/core': 12.0.6(@types/node@26.6.6)
       '@inquirer/figures': 2.0.10
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
-  '@inquirer/confirm@6.3.5(@types/node@24.19.2)':
+  '@inquirer/confirm@6.3.5(@types/node@26.6.6)':
     dependencies:
-      '@inquirer/core': 12.0.6(@types/node@24.19.2)
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
+      '@inquirer/core': 12.0.6(@types/node@26.6.6)
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
-  '@inquirer/core@12.0.6(@types/node@24.19.2)':
+  '@inquirer/core@12.0.6(@types/node@26.6.6)':
     dependencies:
       '@inquirer/ansi': 2.0.10
       '@inquirer/figures': 2.0.10
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
       cli-width: 4.1.0
       fast-wrap-ansi: 0.2.2
       mute-stream: 3.0.0
       signal-exit: 4.1.0
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
-  '@inquirer/editor@5.3.6(@types/node@24.19.2)':
+  '@inquirer/editor@5.3.6(@types/node@26.6.6)':
     dependencies:
-      '@inquirer/core': 12.0.6(@types/node@24.19.2)
-      '@inquirer/external-editor': 3.0.7(@types/node@24.19.2)
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
+      '@inquirer/core': 12.0.6(@types/node@26.6.6)
+      '@inquirer/external-editor': 3.0.7(@types/node@26.6.6)
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
-  '@inquirer/expand@5.1.8(@types/node@24.19.2)':
+  '@inquirer/expand@5.1.8(@types/node@26.6.6)':
     dependencies:
-      '@inquirer/core': 12.0.6(@types/node@24.19.2)
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
+      '@inquirer/core': 12.0.6(@types/node@26.6.6)
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
-  '@inquirer/external-editor@3.0.7(@types/node@24.19.2)':
+  '@inquirer/external-editor@3.0.7(@types/node@26.6.6)':
     dependencies:
       chardet: 2.2.0
       iconv-lite: 0.7.3
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
   '@inquirer/figures@2.0.10': {}
 
-  '@inquirer/input@5.1.9(@types/node@24.19.2)':
+  '@inquirer/input@5.1.9(@types/node@26.6.6)':
     dependencies:
-      '@inquirer/core': 12.0.6(@types/node@24.19.2)
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
+      '@inquirer/core': 12.0.6(@types/node@26.6.6)
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
-  '@inquirer/number@4.2.6(@types/node@24.19.2)':
+  '@inquirer/number@4.2.6(@types/node@26.6.6)':
     dependencies:
-      '@inquirer/core': 12.0.6(@types/node@24.19.2)
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
+      '@inquirer/core': 12.0.6(@types/node@26.6.6)
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
-  '@inquirer/password@5.2.5(@types/node@24.19.2)':
-    dependencies:
-      '@inquirer/ansi': 2.0.10
-      '@inquirer/core': 12.0.6(@types/node@24.19.2)
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
-    optionalDependencies:
-      '@types/node': 24.19.2
-
-  '@inquirer/prompts@8.7.2(@types/node@24.19.2)':
-    dependencies:
-      '@inquirer/checkbox': 5.2.8(@types/node@24.19.2)
-      '@inquirer/confirm': 6.3.5(@types/node@24.19.2)
-      '@inquirer/editor': 5.3.6(@types/node@24.19.2)
-      '@inquirer/expand': 5.1.8(@types/node@24.19.2)
-      '@inquirer/input': 5.1.9(@types/node@24.19.2)
-      '@inquirer/number': 4.2.6(@types/node@24.19.2)
-      '@inquirer/password': 5.2.5(@types/node@24.19.2)
-      '@inquirer/rawlist': 5.3.8(@types/node@24.19.2)
-      '@inquirer/search': 4.3.6(@types/node@24.19.2)
-      '@inquirer/select': 5.2.8(@types/node@24.19.2)
-    optionalDependencies:
-      '@types/node': 24.19.2
-
-  '@inquirer/prompts@8.7.5(@types/node@24.19.2)':
-    dependencies:
-      '@inquirer/checkbox': 5.2.8(@types/node@24.19.2)
-      '@inquirer/confirm': 6.3.5(@types/node@24.19.2)
-      '@inquirer/editor': 5.3.6(@types/node@24.19.2)
-      '@inquirer/expand': 5.1.8(@types/node@24.19.2)
-      '@inquirer/input': 5.1.9(@types/node@24.19.2)
-      '@inquirer/number': 4.2.6(@types/node@24.19.2)
-      '@inquirer/password': 5.2.5(@types/node@24.19.2)
-      '@inquirer/rawlist': 5.3.8(@types/node@24.19.2)
-      '@inquirer/search': 4.3.6(@types/node@24.19.2)
-      '@inquirer/select': 5.2.8(@types/node@24.19.2)
-    optionalDependencies:
-      '@types/node': 24.19.2
-
-  '@inquirer/rawlist@5.3.8(@types/node@24.19.2)':
-    dependencies:
-      '@inquirer/core': 12.0.6(@types/node@24.19.2)
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
-    optionalDependencies:
-      '@types/node': 24.19.2
-
-  '@inquirer/search@4.3.6(@types/node@24.19.2)':
-    dependencies:
-      '@inquirer/core': 12.0.6(@types/node@24.19.2)
-      '@inquirer/figures': 2.0.10
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
-    optionalDependencies:
-      '@types/node': 24.19.2
-
-  '@inquirer/select@5.2.8(@types/node@24.19.2)':
+  '@inquirer/password@5.2.5(@types/node@26.6.6)':
     dependencies:
       '@inquirer/ansi': 2.0.10
-      '@inquirer/core': 12.0.6(@types/node@24.19.2)
-      '@inquirer/figures': 2.0.10
-      '@inquirer/type': 4.2.1(@types/node@24.19.2)
+      '@inquirer/core': 12.0.6(@types/node@26.6.6)
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
-  '@inquirer/type@4.2.1(@types/node@24.19.2)':
+  '@inquirer/prompts@8.7.2(@types/node@26.6.6)':
+    dependencies:
+      '@inquirer/checkbox': 5.2.8(@types/node@26.6.6)
+      '@inquirer/confirm': 6.3.5(@types/node@26.6.6)
+      '@inquirer/editor': 5.3.6(@types/node@26.6.6)
+      '@inquirer/expand': 5.1.8(@types/node@26.6.6)
+      '@inquirer/input': 5.1.9(@types/node@26.6.6)
+      '@inquirer/number': 4.2.6(@types/node@26.6.6)
+      '@inquirer/password': 5.2.5(@types/node@26.6.6)
+      '@inquirer/rawlist': 5.3.8(@types/node@26.6.6)
+      '@inquirer/search': 4.3.6(@types/node@26.6.6)
+      '@inquirer/select': 5.2.8(@types/node@26.6.6)
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
+
+  '@inquirer/prompts@8.7.5(@types/node@26.6.6)':
+    dependencies:
+      '@inquirer/checkbox': 5.2.8(@types/node@26.6.6)
+      '@inquirer/confirm': 6.3.5(@types/node@26.6.6)
+      '@inquirer/editor': 5.3.6(@types/node@26.6.6)
+      '@inquirer/expand': 5.1.8(@types/node@26.6.6)
+      '@inquirer/input': 5.1.9(@types/node@26.6.6)
+      '@inquirer/number': 4.2.6(@types/node@26.6.6)
+      '@inquirer/password': 5.2.5(@types/node@26.6.6)
+      '@inquirer/rawlist': 5.3.8(@types/node@26.6.6)
+      '@inquirer/search': 4.3.6(@types/node@26.6.6)
+      '@inquirer/select': 5.2.8(@types/node@26.6.6)
+    optionalDependencies:
+      '@types/node': 26.6.6
+
+  '@inquirer/rawlist@5.3.8(@types/node@26.6.6)':
+    dependencies:
+      '@inquirer/core': 12.0.6(@types/node@26.6.6)
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
+    optionalDependencies:
+      '@types/node': 26.6.6
+
+  '@inquirer/search@4.3.6(@types/node@26.6.6)':
+    dependencies:
+      '@inquirer/core': 12.0.6(@types/node@26.6.6)
+      '@inquirer/figures': 2.0.10
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
+    optionalDependencies:
+      '@types/node': 26.6.6
+
+  '@inquirer/select@5.2.8(@types/node@26.6.6)':
+    dependencies:
+      '@inquirer/ansi': 2.0.10
+      '@inquirer/core': 12.0.6(@types/node@26.6.6)
+      '@inquirer/figures': 2.0.10
+      '@inquirer/type': 4.2.1(@types/node@26.6.6)
+    optionalDependencies:
+      '@types/node': 26.6.6
+
+  '@inquirer/type@4.2.1(@types/node@26.6.6)':
+    optionalDependencies:
+      '@types/node': 26.6.6
 
   '@isaacs/nonrecursive-glob-match@1.1.0': {}
 
@@ -3699,12 +3700,12 @@ snapshots:
       axios: 1.21.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)
       rxjs: 7.8.2
 
-  '@nestjs/cli@12.0.12(@types/node@24.19.2)(fork-ts-checker-webpack-plugin@9.1.0(typescript@6.0.3)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3)))(prettier@3.8.3)(ts-loader@9.6.2(typescript@6.0.3)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3)))(tsconfig-paths-webpack-plugin@4.2.0)(webpack-node-externals@3.0.0)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3))':
+  '@nestjs/cli@12.0.12(@types/node@26.6.6)(fork-ts-checker-webpack-plugin@9.1.0(typescript@6.0.3)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3)))(prettier@3.8.3)(ts-loader@9.6.2(typescript@6.0.3)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3)))(tsconfig-paths-webpack-plugin@4.2.0)(webpack-node-externals@3.0.0)(webpack@5.106.0(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32)(uglify-js@3.19.3))':
     dependencies:
       '@angular-devkit/core': 22.2.6(chokidar@5.0.0)
       '@angular-devkit/schematics': 22.2.6(chokidar@5.0.0)
-      '@angular-devkit/schematics-cli': 22.2.6(@types/node@24.19.2)(chokidar@5.0.0)
-      '@inquirer/prompts': 8.7.5(@types/node@24.19.2)
+      '@angular-devkit/schematics-cli': 22.2.6(@types/node@26.6.6)(chokidar@5.0.0)
+      '@inquirer/prompts': 8.7.5(@types/node@26.6.6)
       '@nestjs/schematics': 12.0.13(chokidar@5.0.0)(prettier@3.8.3)(typescript@6.0.3)
       ansis: 4.5.0
       chokidar: 5.0.0
@@ -3982,11 +3983,11 @@ snapshots:
 
   '@prisma/client-runtime-utils@7.10.1': {}
 
-  '@prisma/client@7.10.1(prisma@7.10.1(@types/node@24.19.2)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3))(typescript@6.0.3)':
+  '@prisma/client@7.10.1(prisma@7.10.1(@types/node@26.6.6)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3))(typescript@6.0.3)':
     dependencies:
       '@prisma/client-runtime-utils': 7.10.1
     optionalDependencies:
-      prisma: 7.10.1(@types/node@24.19.2)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
+      prisma: 7.10.1(@types/node@26.6.6)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
       typescript: 6.0.3
 
   '@prisma/config@7.10.1(magicast@0.5.5)':
@@ -4197,7 +4198,7 @@ snapshots:
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
   '@types/chai@5.2.3':
     dependencies:
@@ -4206,7 +4207,7 @@ snapshots:
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
   '@types/cookiejar@2.1.5': {}
 
@@ -4258,7 +4259,7 @@ snapshots:
 
   '@types/express-serve-static-core@5.1.1':
     dependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
       '@types/qs': 6.15.1
       '@types/range-parser': 1.2.7
       '@types/send': 1.2.1
@@ -4284,13 +4285,13 @@ snapshots:
     dependencies:
       '@types/express': 5.0.6
 
-  '@types/node@24.19.2':
+  '@types/node@26.6.6':
     dependencies:
-      undici-types: 7.24.6
+      undici-types: 8.9.0
 
   '@types/pg@8.23.1':
     dependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
       pg-protocol: 1.16.1
       pg-types: 2.2.0
 
@@ -4304,18 +4305,18 @@ snapshots:
 
   '@types/send@1.2.1':
     dependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
   '@types/serve-static@2.2.0':
     dependencies:
       '@types/http-errors': 2.0.5
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
 
   '@types/superagent@8.1.9':
     dependencies:
       '@types/cookiejar': 2.1.5
       '@types/methods': 1.1.4
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
       form-data: 4.0.6
 
   '@types/supertest@7.2.1':
@@ -4412,7 +4413,7 @@ snapshots:
       obug: 3.0.0
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 5.1.0(@types/node@24.19.2)(@vitest/coverage-v8@5.1.0)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15))
+      vitest: 5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15))
 
   '@vitest/istanbul-lib-coverage@2.1.0': {}
 
@@ -4420,14 +4421,14 @@ snapshots:
     dependencies:
       '@vitest/istanbul-lib-coverage': 2.1.0
 
-  '@vitest/mocker@5.1.0(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15))':
+  '@vitest/mocker@5.1.0(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       '@vitest/spy': 5.1.0
       estree-walker: 3.0.3
       magic-string: 1.4.5
     optionalDependencies:
-      vite: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15)
+      vite: 8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15)
 
   '@vitest/spy@5.1.0': {}
 
@@ -5318,7 +5319,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
       merge-stream: 2.0.0
       supports-color: 8.1.1
     optional: true
@@ -5498,9 +5499,9 @@ snapshots:
 
   mute-stream@3.0.0: {}
 
-  mysql2@3.24.4(@types/node@24.19.2):
+  mysql2@3.24.4(@types/node@26.6.6):
     dependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
       aws-ssl-profiles: 1.1.2
       generate-function: 2.3.1
       iconv-lite: 0.7.3
@@ -5718,13 +5719,13 @@ snapshots:
   prettier@3.8.3:
     optional: true
 
-  prisma@7.10.1(@types/node@24.19.2)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3):
+  prisma@7.10.1(@types/node@26.6.6)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3):
     dependencies:
       '@prisma/config': 7.10.1(magicast@0.5.5)
       '@prisma/dev': 0.24.17(typescript@6.0.3)
       '@prisma/engines': 7.10.1
       '@prisma/studio-core': 0.33.0(@types/react@19.2.9)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      mysql2: 3.24.4(@types/node@24.19.2)
+      mysql2: 3.24.4(@types/node@26.6.6)
       postgres: 3.4.7
     optionalDependencies:
       typescript: 6.0.3
@@ -6127,7 +6128,7 @@ snapshots:
 
   uint8array-extras@1.6.0: {}
 
-  undici-types@7.24.6: {}
+  undici-types@8.9.0: {}
 
   unicode-emoji-modifier-base@1.0.0: {}
 
@@ -6156,7 +6157,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15):
+  vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15):
     dependencies:
       lightningcss: 1.33.0
       picomatch: 4.0.7
@@ -6164,17 +6165,17 @@ snapshots:
       rolldown: 1.2.16
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
       esbuild: 0.28.2
       fsevents: 2.3.3
       jiti: 2.7.0
       terser: 5.47.1
       tsx: 4.23.15
 
-  vitest@5.1.0(@types/node@24.19.2)(@vitest/coverage-v8@5.1.0)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15)):
+  vitest@5.1.0(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15)):
     dependencies:
       '@types/chai': 5.2.3
-      '@vitest/mocker': 5.1.0(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15))
+      '@vitest/mocker': 5.1.0(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15))
       chai: 6.3.0
       es-module-lexer: 2.3.2
       expect-type: 1.4.0
@@ -6185,10 +6186,10 @@ snapshots:
       tinybench: 6.2.3
       tinyexec: 1.3.1
       tinyglobby: 0.2.17
-      vite: 8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15)
+      vite: 8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.47.1)(tsx@4.23.15)
       why-is-node-running: 3.2.1
     optionalDependencies:
-      '@types/node': 24.19.2
+      '@types/node': 26.6.6
       '@vitest/coverage-v8': 5.1.0(vitest@5.1.0)
     transitivePeerDependencies:
       - msw
