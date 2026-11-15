@@ -66,6 +66,7 @@ API contracts and UX details are not specified up front: they are written at the
 - [ADR-0006](adr/0006-monthly-tracking-budget.md): monthly tracking budget per category.
 - [ADR-0007](adr/0007-layered-deduplication.md): layered deduplication.
 - [ADR-0008](adr/0008-transaction-kind.md): transaction `kind`.
+- [ADR-0009](adr/0009-money-in-integer-cents.md): money in integer cents.
 
 ### Architecture
 

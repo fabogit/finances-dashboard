@@ -77,7 +77,7 @@ Each line shows its amount and its share of income. The lines add up to income, 
 
 ### Forecast input
 
-The forecast is kept with its algorithm (D-35, [science contract](../architecture/science-contract.md#post-forecast)). The core sends the science service the transactions that count as income or spending, by the rule above, dated in the 18 months before today; on-budget transfers, starting balances, adjustments and off-budget transactions are left out.
+The forecast is kept with its algorithm (D-35, [science contract](../architecture/science-contract.md#post-forecast)). The core sends the science service the transactions that count as income or spending, by the rule above, dated in the 18 months before today (the window of v1, kept as it is, not a decision of the redesign); on-budget transfers, starting balances, adjustments and off-budget transactions are left out.
 
 The science service splits income from expenses by the sign of the amount, as it does today (D-100). Where the summary follows the category group, the forecast can differ: a refund lowers spending in the summary and is income in the forecast; a negative correction of a salary lowers income in the summary and is an expense in the forecast (ANL-12). The difference is accepted until the forecast is redesigned (#77, post-MVP).
 
@@ -105,6 +105,7 @@ Outcomes (D-49):
 - **An account opened during the period:** its starting balance moves the Net Worth, not income (ANL-1, BAL-5).
 - **A back-dated import or an edit:** every view is computed from the transactions when it is asked for, so it is right at once; nothing is stored to refresh (D-11).
 - **The science service is down:** only the forecast fails, with `503` (ANL-6).
+- **An uncategorised transfer from an off-budget account** (money taken from a brokerage account into the checking account): it crosses the boundary, so it counts, and without a category it is income by its sign (D-97). It inflates that month's income and, through the budget's percentages, the next month's budget amounts (D-101, [budget flow](budget.md#edge-cases)) until the user categorises it.
 
 ## Divergences from Actual Budget
 

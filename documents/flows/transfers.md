@@ -2,7 +2,7 @@
 
 Money moved between two of the user's own accounts: a linked pair of transactions with opposite amounts. When one side is created, the other is generated; when the other account is imported later, the generated side is recognised instead of duplicated. Models and fields are defined in the [data model](../domain/data-model.md).
 
-**Decisions:** D-24 (linked pair, generated counterpart, manual transfers through `POST /transfers`), D-25 (kind `TRANSFER`; only transfers that cross the on/off-budget boundary count as income or spending, [ADR-0008](../adr/0008-transaction-kind.md)), D-28 (transfers between on-budget accounts are uncategorised), D-16 (approximate matching recognises the generated side, [ADR-0007](../adr/0007-layered-deduplication.md)), D-11 (balances derived, so both balances are right at once), D-70 (each side points to the other), D-71 (the category on the on-budget side only), D-72 (no payee on transfers), D-73 (what stays in sync, and linking existing transactions).
+**Decisions:** D-24 (linked pair, generated counterpart, manual transfers through `POST /transfers`), D-25 (kind `TRANSFER`; only transfers that cross the on/off-budget boundary count as income or spending, [ADR-0008](../adr/0008-transaction-kind.md)), D-28 (transfers between on-budget accounts are uncategorised), D-16 (approximate matching recognises the generated side, [ADR-0007](../adr/0007-layered-deduplication.md)), D-11 (balances derived, so both balances are right at once), D-70 (each side points to the other), D-71 (the category on the on-budget side only), D-72 (no payee on transfers), D-73 (what stays in sync, and linking existing transactions), D-114 (no counterpart before the other account's starting balance), D-115 (a side on a closed account).
 
 ## Behaviour
 
@@ -15,6 +15,7 @@ A transfer is two transactions with `Transaction.kind` = `TRANSFER`, one on each
 - **By hand:** `POST /transfers` with the source account, the destination account, the amount and the date (D-24). Both sides are created with that date: the source with the negative amount, the destination with the positive one.
 - **From an existing transaction:** the user, a rule or the import preview marks a transaction as a transfer to another account (D-23, D-24). It becomes the first side and keeps its date and amount; the counterpart is generated on the other account with the same date and the opposite amount.
 - **By linking two existing transactions:** two transactions on different accounts of the user, with exactly opposite amounts, can be linked into a transfer (D-73). Both become `TRANSFER`, point to each other and keep their dates; the category follows the [Category](#category) rules. Merging an imported row with a generated side is this same operation.
+- **Before the other account's starting balance:** a transfer whose counterpart would be dated before the starting balance of the account it is generated on is rejected, whichever way it is created (by hand, from an existing transaction, by a rule, or the closing transfer of an account), with an error that names that account and its opening date. The starting balance already contains every movement before its date ([balances flow](balances.md#opening-an-account), D-65); to record the transfer, the user first moves it back (D-114, TRF-11). In the import preview such a row is flagged as before the starting balance. Linking two existing transactions is not affected: both already exist after their starting balances.
 - **In the import preview** a transfer is only ever a suggestion, confirmed by the user (D-24): from a rule, or from the heuristic "opposite amount on another of the user's accounts, date within a few days". The details are in the [import flow](import.md#transfer-suggestions).
 
 ### When the other side is imported later
@@ -62,7 +63,8 @@ Deleting either side deletes both, in one database transaction (D-24, as in Actu
 - **The other side never imported** (cash, an off-budget account updated by hand): the generated side stays as it is and keeps the destination balance right (TRF-3).
 - **The generated side not recognised at import** (the bank date falls outside the window): the row appears in the preview as a new transaction, not as a duplicate; the user can still merge it by hand or discard it. Nothing is merged or dropped silently (D-16).
 - **Source and destination are the same account:** rejected (TRF-8).
-- **A side on a closed account:** follows the rules for closed accounts in the [balances flow](balances.md#closing-and-deleting-an-account).
+- **A side on a closed account:** follows the rules for closed accounts in the [balances flow](balances.md#closing-and-deleting-an-account): no new transfer to or from it; the amount and the deletion of an existing pair are rejected from either side, while the notes and the category of the on-budget side can change (D-115, BAL-16).
+- **A counterpart before the other account's starting balance:** rejected (D-114, TRF-11).
 
 ## Divergences from Actual Budget
 
@@ -149,3 +151,12 @@ Deleting either side deletes both, in one database transaction (D-24, as in Actu
 - **Then** both become `TRANSFER`, point to each other, lose their category and keep their dates
 - **When** the user tries to link −200.00 on "Checking" with +150.00 on "Deposit"
 - **Then** it is rejected, because the amounts are not opposite
+
+### TRF-11 · A counterpart before the other account's starting balance
+
+- **Given** account "Checking", opened on 2026-01-01, and account "Deposit", opened on 2026-06-01 with a starting balance of 1,000.00
+- **When** the user records a transfer of 300.00 from "Checking" to "Deposit" dated 2026-03-01
+- **Then** it is rejected, because "Deposit" opens on 2026-06-01
+- **And** nothing is written on either account
+- **When** the user moves the starting balance of "Deposit" to 2026-02-01 and records the transfer again
+- **Then** both sides are created, dated 2026-03-01

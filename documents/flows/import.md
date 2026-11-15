@@ -160,6 +160,8 @@ The import does not call the computation service in the MVP: parsing, mapping, r
 - **A row not booked yet, imported anyway:** when the bank books it, its date or description may differ, so the booked row is usually a new row; with no bank ID, the approximate match does not see the first one either, since it came from an import. The label in the preview warns of this (IMP-18).
 - **A wide window** (30 or 90 days) on an account with manual entries flags more possible duplicates; the user chooses for each one (D-88).
 - **Two possible duplicates for one existing transaction:** only the first row in the order of preference matches it; the other is new (D-88).
+- **Rows discarded in a preview come back on the next import:** the preview is stateless and nothing records a discarded row ([ADR-0004](../adr/0004-stateless-import-staging.md)), so importing the same file again shows them as new once more.
+- **A template changed between two imports** (another column as the description, a time column added or removed): the [exact hash](#the-exact-hash) of every row changes, so a file already imported shows its rows as new again, apart from those matched by bank ID. The approximate match does not catch them either, because transactions that came from an import are not its candidates (D-88); the user discards them in the preview.
 
 ## Divergences from Actual Budget
 

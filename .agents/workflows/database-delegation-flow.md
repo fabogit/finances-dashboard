@@ -35,6 +35,7 @@ Signs that work can move to the database:
 - **Group on the calendar date.** Transactions have a calendar `DATE`; group on it directly, without time-zone conversion (D-30). (v1 still has a `DateTime` grouped by UTC month.)
 - **Count what the analytics rules say.** Income and spending count `REGULAR` transactions plus transfers that cross the on/off-budget boundary; Net Worth counts everything ([ADR-0008](../../documents/adr/0008-transaction-kind.md); exact rules in `documents/flows/analytics.md` once #104 writes it). Do not invent a filter.
 - **Keep money decimal.** `SUM` on `Decimal` columns returns `Prisma.Decimal`; keep it decimal through the service and convert only when serialising the response.
+- **Sums of cents are `bigint`.** From Schema v2 amounts are `Int` in cents (D-59, [ADR-0009](../../documents/adr/0009-money-in-integer-cents.md)); `SUM` and `SUM() OVER` on an `Int` column return `bigint`, which `$queryRaw` returns as `BigInt`, and `JSON.stringify` throws on it. Cast the total to `bigint` and convert it with `Number()` in the repository (exact up to 2^53). Never `::int` on a total: it overflows beyond 21,474,836.47, which a Net Worth with a property can reach.
 - **Handle empty sets.** `COALESCE(SUM(t."amount"), 0)`; `COUNT(*)::int` to avoid `bigint`.
 - **Quote identifiers.** PostgreSQL is case-sensitive with quoted names: `"EnrichedTransaction"`, `"assetId"`.
 
@@ -55,6 +56,7 @@ Signs that work can move to the database:
 | Problem | Likely cause | Fix |
 | --- | --- | --- |
 | `$queryRaw` returns `BigInt` | `COUNT(*)` is `bigint` in PostgreSQL | `COUNT(*)::int`, or `Number()` in the service |
+| `TypeError: Do not know how to serialize a BigInt` | `SUM` of an `Int` column is `bigint` | `SUM(...)::bigint` and `Number()` in the repository; never `::int` on a total |
 | Table or column not found | Unquoted identifier | Quote it: `"EnrichedTransaction"` |
 | `null` instead of 0 | `SUM` over no rows | `COALESCE(SUM(...), 0)` |
 | `Prisma.join` fails | Empty array gives `IN ()` | Skip the condition when the list is empty |

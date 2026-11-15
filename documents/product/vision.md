@@ -34,9 +34,9 @@ The MVP is version `v2.0.0` (D-33, D-42).
 | Categories | Groups and categories, deletion that moves everything to a chosen category | Hidden categories |
 | Budget | Monthly amounts per category, percentage of the previous month's income, convenience commands | Envelope budgeting |
 | Goals | Linked to a dedicated account, computed progress, completion estimate | Shares of a common account |
-| Analytics | In the database, with the `kind` rules: summary, distribution, trends, budget analysis, Net Worth history in EUR | Multiple currencies |
+| Analytics | In the database, with the `kind` rules: summary, distribution, trends, budget analysis, the 50/30/20 view (D-99), Net Worth history in EUR | Multiple currencies |
 | Science | Robust `ScienceClient` over REST, goal projection, the existing forecast with filtered input | NATS, machine learning, forecast split |
-| Client | Angular screens for accounts, import, transactions, categories, budget and dashboard, each built once its API is closed (D-34) | Desktop packaging |
+| Client | Angular screens for accounts, import (mapper and preview), transactions, categories, budget and dashboard, each built once its API is closed (D-34). Goals, payees and rules, and import templates are API-only in the MVP, used through Swagger (D-112) | Screens for goals, payees and rules, and import templates; desktop packaging |
 | Development | Profile-based seed, versioned documentation | Authentication, roles, demo sandbox |
 
 An area is done when its flow document is written, the examples from the spec are tests, the `demo` seed profile exercises it, and Swagger is up to date.

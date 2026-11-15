@@ -39,7 +39,7 @@ Six MVP milestones grouped by theme, plus two after the MVP (D-45). Each MVP mil
 9. **Savings goals on a dedicated account** (#94) (M4).
 10. **Analytics aggregated in the database** (#95) and **Net Worth history** (#61) (M5).
 11. **`ScienceClient` and the adapted forecast** (#96) (M5).
-12. **Minimal Angular client** (#97), screen by screen: accounts, import, transactions, categories, budget, dashboard (M6).
+12. **Minimal Angular client** (#97), screen by screen: accounts, import, transactions, categories, budget, dashboard (M6). Goals, payees and rules, and import templates stay API-only in the MVP; the dashboard shows the Net Worth history and the forecast, so it waits for steps 10 and 11 (D-112).
 
 Every step ends with tests green, its flow document current and the seed updated. Large steps are split into more issues when they are reached, not before: issues for distant steps are written better once the earlier ones are closed.
 
@@ -82,14 +82,14 @@ flowchart TD
     S3 --> S9
     S6 & S8 --> S10
     S10 --> S11
-    S3 & S4 & S7 & S8 & S9 & S10 -. closed API .-> S12
+    S3 & S4 & S7 & S8 & S9 & S10 & S11 -. closed API .-> S12
 ```
 
 ### Working in parallel
 
 - **The schema is the bottleneck:** everything after step 2 depends on it. No two open sessions change `schema.prisma` at the same time.
 - **At most two issue sessions at once.** The limit is the maintainer's attention for reports and reviews, not the tooling.
-- Pairs that work together: #85 with #86; #104 with #85 or #87 (it only touches `documents/` and `AGENTS.md`); #110 with #87; steps 3 and 4; steps 8 and 9; a client screen with the next backend step.
+- Pairs that work together: #85 with #86; #110 with #87; steps 3 and 4; steps 8 and 9; a client screen with the next backend step.
 
 ## Versioning
 
@@ -135,5 +135,7 @@ M1 (#98) pilots the step.
   - **Prisma 8.** A release candidate only. npm's `latest` tag points to it, so Prisma is pinned to `^7.10`: never `prisma@latest`.
   - **`@types/node` 25 and later.** The types follow the Node 24 LTS runtime.
 
-  **Spike of #109 (2026-11-09), passed:** with `"type": "module"` and Vitest 5.1 without SWC, the Prisma client (`prisma-client-js`, `@prisma/client` 7.10), supertest, `ValidationPipe` with decorator metadata and `Decimal` serialisation work in the unit and end-to-end tests; no hold, and the D-50 fallback (Jest kept) was not needed. The only test change was a `require()` turned into `await import()`. The toolchain of the core is now the `nest new` one with oxfmt ([setup § Toolchain](../development/setup.md#toolchain)). `@angular/animations` is deprecated in Angular 22 and still used by `provideAnimationsAsync` in `client-preview`.
+  **Spike of #109 (2026-11-09), passed:** with `"type": "module"` and Vitest 5.1 without SWC, the Prisma client (`prisma-client-js`, `@prisma/client` 7.10), supertest, `ValidationPipe` with decorator metadata and the v1 `Decimal` serialisation work in the unit and end-to-end tests; no hold, and the D-50 fallback (keeping the previous test runner) was not needed. The only test change was a `require()` turned into `await import()`. The toolchain of the core is now the `nest new` one with oxfmt ([setup § Toolchain](../development/setup.md#toolchain)). `@angular/animations` is deprecated in Angular 22 and still used by `provideAnimationsAsync` in `client-preview`.
+- **Tests across the core ↔ science boundary.** The end-to-end job runs without the science service, so an outcome that Python produces, such as the `422` for insufficient history that the core translates (GOL-6, ANL-5), cannot be reached there. The method is to be chosen before #94 and #96: the science service in the end-to-end job, or contract tests in pytest with a mirroring mock in the core.
+- **Calendar dates in a UTC test environment.** A `DATE` column reaches JavaScript as a `Date` at midnight UTC; code that reads it with local getters is wrong only off UTC, so DM-1 and ANL-3 pass on a machine in UTC whatever the code does. The unit and end-to-end suites should run with a time zone other than UTC (for example `TZ=America/New_York`) from Schema v2 (#89) onwards.
 - **An incomplete application between steps 2 and 11.** The modules are rewritten one flow at a time, so the application is not usable end to end in between. Accepted: there are no external users.

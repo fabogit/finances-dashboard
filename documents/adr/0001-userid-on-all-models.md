@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-07-11 (timing 2026-10-09, enforcement 2026-10-15)
-- **Decisions:** D-18, D-48; first taken before the v2 design review, in a stabilization session of 2026-07-11
+- **Decisions:** D-18, D-48, D-58, D-111; first taken before the v2 design review, in a stabilization session of 2026-07-11
 
 ## Context
 
@@ -19,7 +19,7 @@ The planned enforcement is a Prisma client extension that adds `where: { userId 
 - **Why uniform:** the extension can scope every model the same way, with no per-model join paths to configure and forget when a model is added; filtering on a column of the table itself avoids multi-table joins and lets every table have `(userId, …)` composite indexes; each row carries its owner even if a relation chain changes later (defence in depth).
 - **When (D-18):** in the Schema v2 rewrite (#89), with unique constraints and indexes scoped per user, not later with authentication.
 - **Enforcement (D-48):** built in M2, before authentication. A middleware puts a fixed, configured user into the request context; the Prisma extension adds `where: { userId }` to every query and sets `userId` on every create; raw SQL, which extensions do not see, reads the user from the context and filters on it explicitly. When authentication arrives (#62, #63), a JWT guard replaces the middleware and the repositories do not change.
-- Whether `userId` references a `User` table is decided by the v2 data model (#104).
+- **Owner table (D-58):** every `userId` is a foreign key to a `User` table ([data model § User](../domain/data-model.md#user)); until authentication the seed creates the fixed user.
 
 ## Alternatives considered
 
@@ -34,6 +34,7 @@ The planned enforcement is a Prisma client extension that adds `where: { userId 
 - Every create must set `userId`; the extension does it from the request context.
 - About 36 bytes more per row, negligible at the volumes of personal finance.
 - A redundant column on models whose owner could be inferred, accepted as the cost of uniformity.
+- References between models carry the owner too (D-111): each is a composite foreign key `(userId, xId) → X(userId, id)`, with `(userId, id)` unique on the referenced model, so the database rejects a reference to another user's row even from raw SQL or the seed, where the extension does not reach. One isolation test per foreign key (#108) proves it ([data model § Conventions](../domain/data-model.md#conventions)).
 - Unique constraints are reviewed one by one: some include `userId`, others are already scoped by a parent that belongs to one user (for example, uniqueness per account).
 - Part of the post-MVP tenancy work (#63: request context and extension, without JWT) moves into M2.
 - Procedure for agents: [`.agents/workflows/multi-tenancy-flow.md`](../../.agents/workflows/multi-tenancy-flow.md). Authentication, roles and the demo sandbox: post-MVP milestone "Auth & multi-tenancy" (#62–#65).

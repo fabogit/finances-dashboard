@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-09
-- **Decisions:** D-25
+- **Decisions:** D-25; amended by D-96 and D-97 (2026-11-12)
 
 ## Context
 
@@ -19,7 +19,7 @@ The previous specs also contradicted each other: one plan excluded every transfe
 
 Every transaction has a **`kind`**: `REGULAR`, `TRANSFER`, `STARTING_BALANCE` or `ADJUSTMENT`. The kinds are mutually exclusive.
 
-- **Income and spending analytics** count `REGULAR` transactions plus the `TRANSFER` transactions that **cross the on-budget / off-budget boundary**: those carry a category, and on → off counts as spending, off → on as income.
+- **Income and spending analytics** count `REGULAR` transactions (of on-budget accounts, see [Amendments](#amendments)) plus the `TRANSFER` transactions that **cross the on-budget / off-budget boundary**: those carry a category, and on → off counts as spending, off → on as income.
 - Transfers that do not cross the boundary do not count. Between two on-budget accounts they have no category (D-28).
 - **Net Worth** counts every transaction, whatever its kind.
 - The rule is written once, in the analytics flow document, and applied in the database queries (issue #95). The forecast input is filtered by the same rule (D-35).
@@ -35,3 +35,10 @@ Every transaction has a **`kind`**: `REGULAR`, `TRANSFER`, `STARTING_BALANCE` or
 - The analytics rule must be defined for every pair of kind and on/off-budget accounts; the flow document lists them with examples.
 - Starting balances and adjustments never distort income and spending, yet still move balances and Net Worth.
 - Issue #74 builds transactions with `kind` and transfers; issue #95 applies the rule in the database.
+
+## Amendments
+
+Two decisions taken while writing the v2 specs (#104) narrow the rule above; the full rule, with examples, is in the [analytics flow](../flows/analytics.md#what-counts).
+
+- **D-96 · `REGULAR` transactions of off-budget accounts stay out of income and spending.** They count only towards Net Worth and carry no category, as in Actual Budget: a category sits only on a `REGULAR` transaction of an on-budget account or on the on-budget side of a transfer that crosses the boundary. A dividend that must count as income reaches the checking account through a categorised off → on transfer. Rejected: counting them when they have a category, which would make income swing with investment returns.
+- **D-97 · Uncategorised transactions count by sign.** A transaction that counts and has no category is spending when negative and income when positive, under a separate "Uncategorized" line on both sides (D-28); for a transfer that crosses the boundary the direction decides, as above. This is Actual's Cash Flow report. Rejected: all of them as spending with their sign (Actual's Spending report), or left out of the totals.
