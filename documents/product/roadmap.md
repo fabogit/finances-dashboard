@@ -8,7 +8,7 @@ The plan rewrites the schema once, then rebuilds the modules flow by flow in dep
 
 Six MVP milestones grouped by theme, plus two after the MVP (D-45). Each MVP milestone ends with its own Review & consolidation issue ([below](#review--consolidation)).
 
-- **M1 · Groundwork** — fixes that survive the redesign, documentation restructured with agent entry files, dependencies refreshed (NestJS 12), the core toolchain on the NestJS 12 project defaults, the science toolchain, the native HTTP adapter, the validation choice, the runtime on Node 26, and the v2 specs. Step 1.
+- **M1 · Groundwork** — fixes that survive the redesign, documentation restructured with agent entry files, dependencies refreshed (NestJS 12), the core toolchain on the NestJS 12 project defaults, the science toolchain, the native HTTP adapter, the validation choice, the runtime on Node 26, the versioned index of the decisions, and the v2 specs. Step 1.
 - **M2 · Ledger** — Schema v2 and the profile-based seed, accounts with derived balances, category groups, transactions with `kind` and transfers. Steps 2, 3, 4, 6.
 - **M3 · Import** — payees and rules, then the guided import: templates, column mapper, stateless preview, layered deduplication, transfer detection. Steps 5, 7.
 - **M4 · Planning** — monthly budget per category and savings goals on a dedicated account. Steps 8, 9.
