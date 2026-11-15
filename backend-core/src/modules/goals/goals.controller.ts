@@ -98,7 +98,6 @@ export class GoalsController {
   }
 
   @Get(':id/projection')
-  @Serialize(GoalProjectionResponseDto)
   @ApiOperation({
     summary: 'Get Savings Goal completion projection',
     description:

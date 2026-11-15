@@ -1,9 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { plainToInstance } from 'class-transformer';
 import { GoalsRepository } from './goals.repository.js';
 import { CreateGoalDto } from './dto/create-goal.dto.js';
 import { UpdateGoalDto } from './dto/update-goal.dto.js';
 import { ScienceService } from '../science/science.service.js';
+import { GoalProjectionResponseDto } from '../science/dto/goal-projection-response.dto.js';
 
 @Injectable()
 export class GoalsService {
@@ -81,7 +83,12 @@ export class GoalsService {
     }
   }
 
-  async getProjection(id: string) {
+  /**
+   * Builds the projection through `GoalProjectionResponseDto` here rather than
+   * with `@Serialize`: science always sends an `error` key, which makes
+   * `SerializeInterceptor` skip the DTO and leak raw Decimals (#117).
+   */
+  async getProjection(id: string): Promise<GoalProjectionResponseDto> {
     const goal = await this.findOne(id, 100); // Fetch more history for better projection
 
     const projection = await this.scienceService.getGoalProjection({
@@ -99,11 +106,15 @@ export class GoalsService {
       current_amount: goal.currentAmount.toNumber(),
     });
 
-    return {
-      ...projection,
-      goalName: goal.name,
-      currentProgress: goal.currentAmount,
-      targetAmount: goal.targetAmount,
-    };
+    return plainToInstance(
+      GoalProjectionResponseDto,
+      {
+        ...projection,
+        goalName: goal.name,
+        currentProgress: goal.currentAmount,
+        targetAmount: goal.targetAmount,
+      },
+      { excludeExtraneousValues: true },
+    );
   }
 }
