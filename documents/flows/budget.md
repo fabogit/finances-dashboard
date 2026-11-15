@@ -62,7 +62,7 @@ Each month starts from its own amounts. What is left in a category at the end of
 
 ### Convenience commands
 
-Commands that write many amounts at once (D-17), as in Actual Budget (D-105). They overwrite the amounts of the categories they write, never remove one, and never create a budget of 0.00 where there was none: a category without a row in the month copied from is left as it is in the month copied to, because no row means no budget (D-104), not 0.
+Commands that write many amounts at once (D-17), as in Actual Budget (D-105). They overwrite the amounts of the categories they write and never remove one. A category without a row in the month copied from is left as it is in the month copied to, because no row means no budget (D-104), not 0; a row of 0.00 is a budget like any other and is copied (BUD-10).
 
 On a whole month, for every category:
 
@@ -98,6 +98,7 @@ The model must not rule out envelope budgeting (D-09). Amounts per category per 
 - **Spending in a category of a month with no budget amount:** `NO_BUDGET`, shown with its spending (BUD-9).
 - **Refunds larger than the purchases:** spending is negative and the status is `OK`.
 - **Averages over a category created last month:** only the months since its first transaction count (BUD-11).
+- **An uncategorised transfer from an off-budget account:** money moved from a brokerage account to the checking account crosses the boundary, so without a category it counts as income by its sign (D-97), and the next month every percentage is computed on that income too (D-101). Categorising it says what it is: in an income category it stays income, in a spending category it lowers that category's spending ([analytics flow](analytics.md#edge-cases)).
 - **A month in the future:** amounts can be set; spending is what is already dated in that month.
 - **A category deleted:** its budget amounts go with it, after the warning in the preview (D-29).
 
