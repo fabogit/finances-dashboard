@@ -14,11 +14,11 @@ Documentation is versioned in this folder, split by topic (D-04). A folder exist
 
 ## Decisions and ADRs
 
-The v2 redesign was decided in a design review held between 2026-10-08 and 2026-10-15. Its decisions carry IDs `D-01`, `D-02`, … The register is kept by the maintainer; versioned documents cite the IDs and summarise each decision where they rely on it, so they can be read on their own.
+The v2 redesign was decided in a design review held between 2026-10-08 and 2026-10-15. Its decisions, and every decision taken since, carry IDs `D-01`, `D-02`, … Each one has a row in [decisions.md](decisions.md): a one-line title, the date and where it is recorded. Versioned documents cite the IDs and summarise each decision where they rely on it, so they can be read on their own; the full text of each decision, with the options that were rejected, stays in the maintainer's register, outside the repository.
 
 A decision becomes an **ADR** in [`adr/`](#adrs) when it is hard to reverse, surprising, and comes with a real trade-off. Each ADR records the context, the decision, the alternatives considered and the consequences. Process decisions are not ADRs: they are listed below.
 
-A new decision is recorded before it is implemented: as an ADR when it meets the criterion above, otherwise in the flow document it belongs to. An issue session never settles an uncovered case on its own: it stops and asks the maintainer.
+A new decision is recorded before it is implemented: as an ADR when it meets the criterion above, otherwise in the flow document it belongs to. It takes the next ID of [decisions.md](decisions.md), the last row plus one, and its row is added in the pull request that records it. A new ADR takes the number after the last entry of [§ ADRs](#adrs), and its entry is added there in the same pull request. Two sessions that take the same number change the same line, so the collision shows as a conflict at rebase. An issue session never settles an uncovered case on its own: it stops and asks the maintainer.
 
 ## Process decisions
 
@@ -55,6 +55,10 @@ API contracts and UX details are not specified up front: they are written at the
 - [flows/budget.md](flows/budget.md): the monthly tracking budget per category, fixed amounts and percentages of the previous month's income, convenience commands, the budget analysis.
 - [flows/goals.md](flows/goals.md): savings goals on a dedicated account, progress and "reached" computed, paused and archived, the projection and its outcomes.
 - [flows/analytics.md](flows/analytics.md): what counts as income, spending and Net Worth by transaction kind, the summary, spending by category, the monthly trend, the Net Worth history, the forecast input.
+
+### Decisions
+
+- [decisions.md](decisions.md): one row per decision, with its date and where it is recorded; the next decision ID is taken here.
 
 ### ADRs
 
