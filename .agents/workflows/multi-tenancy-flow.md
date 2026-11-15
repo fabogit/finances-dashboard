@@ -34,6 +34,24 @@ const rows = await this.prisma.$queryRaw<Row[]>`
 `;
 ```
 
+5. **References carry the owner (D-111).** The extension filters reads, not foreign keys: without more, user A could save a transaction with user B's `categoryId`, and B could then no longer delete that category. Every foreign key between models is therefore composite, `(userId, xId) → X(userId, id)`, with `@@unique([userId, id])` on the referenced model ([data model § Conventions](../../documents/domain/data-model.md#conventions)). The database rejects a reference to another user's row from any path: the Prisma Client, raw SQL, the seed, bulk endpoints.
+
+```prisma
+model Transaction {
+  userId     String
+  categoryId String?
+  category   Category? @relation(fields: [userId, categoryId], references: [userId, id])
+}
+
+model Category {
+  id     String @id @default(uuid())
+  userId String
+  @@unique([userId, id])
+}
+```
+
+6. **One isolation test per foreign key (#108).** For every reference (category, payee, account, transfer counterpart, import template, goal account), an end-to-end test writes with the id of another user's row and expects a 4xx.
+
 Every `userId` is a foreign key to the `User` table ([data model](../../documents/domain/data-model.md#user), D-58). The seed creates the fixed user, and can create a second one so that tests catch leaks.
 
 ## Not decided yet
@@ -42,7 +60,7 @@ D-48 fixes the mechanism above, not these details. The issue that builds it (M2)
 
 - **An empty context** (no user): reject the request or query, or run without a user? The pre-v2 version of this workflow let system jobs run without raising.
 - **System actions** (seed, bootstrap of a new user's categories): run inside an explicit context for the user they write for (for example `this.cls.runWith({ userId }, …)`), or bypass the extension?
-- **Isolation tests:** which tests every model and every raw query must have (for example: with user A in the context, user B's rows are invisible to reads and untouched by updates and deletes).
+- **Isolation tests beyond the foreign keys:** which tests every model and every raw query must have (for example: with user A in the context, user B's rows are invisible to reads and untouched by updates and deletes). The test per foreign key is decided (D-111, point 6 above).
 
 ## After the MVP
 
