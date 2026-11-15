@@ -30,6 +30,7 @@ Six MVP milestones grouped by theme, plus two after the MVP (D-45). Each MVP mil
    - Validation: Standard Schema (Zod) or class-validator (#113), after #109 and before Schema v2, so the v2 DTOs are written once (D-54).
    - Runtime on Node 26 LTS (#133), with no dependencies (D-116).
    - **v2 specs: data model and flow documents (#104)**, after #86 and **before Schema v2**: the data model and one flow document per MVP area, with numbered Given / When / Then examples (D-46, D-47).
+   - Versioned index of the decisions, where the next decision ID and ADR number are taken (#135) (D-119).
 2. **Schema v2** (#89) and the **profile-based seed** (#90) (M2). Done alone, with no other session touching the code.
 3. **Accounts with derived balances** (#91): starting balance, reconciliation, adjustments (M2).
 4. **Category groups and categories** (#92), with deletion that moves everything to a chosen category (M2).
@@ -59,6 +60,7 @@ flowchart TD
     S1h["#88 HTTP adapter"]
     S1s["#104 v2 specs"]
     S1n["#133 Node 26"]
+    S1i["#135 Decisions index"]
     S2["2 · Schema v2 + seed"]
     S3["3 · Accounts, derived balances"]
     S4["4 · Categories"]
@@ -77,6 +79,7 @@ flowchart TD
     S1c --> S1p --> S2
     S1c --> S1s --> S2
     S1n --> S2
+    S1i --> S2
     S2 --> S3 & S4
     S4 --> S5
     S3 & S4 --> S6
