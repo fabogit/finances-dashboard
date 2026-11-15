@@ -399,7 +399,7 @@ The states of a savings goal that are set by hand (D-26).
 11. Names ignore case and surrounding spaces when compared: account, group, payee and template names are unique per user, category names per group, through `nameKey` (D-110). **Exercised by:** CAT-9, CAT-12, DM-2, RUL-7.
 12. A bank ID or an import hash appears at most once per account. **Exercised by:** DM-4, IMP-7, IMP-8.
 13. Only a `REGULAR` transaction of an on-budget account, or the on-budget side of a `TRANSFER` that crosses the on/off-budget boundary, has a category. **Exercised by:** BAL-5, BAL-11, TRF-2, TRF-6, ANL-8.
-14. Every account has exactly one `STARTING_BALANCE` transaction, and no transaction is dated before it. **Exercised by:** BAL-5, BAL-6.
+14. Every account has exactly one `STARTING_BALANCE` transaction, and no transaction is dated before it, the generated side of a transfer included (D-114). **Exercised by:** BAL-5, BAL-6, TRF-11.
 15. A rule action, a payee default and a template category mapping always point to an existing row: deleting what they reference moves them to a target or removes them. A rule condition on a deleted payee or account is kept and never holds with "is". **Exercised by:** CAT-5, CAT-6, CAT-15, RUL-11, RUL-12, RUL-13.
 16. A category has at most one budget amount per month, and a group never has one. **Exercised by:** BUD-2.
 17. A goal's progress is the balance of its account, and "reached" is computed from it; neither is stored. **Exercised by:** GOL-1, GOL-2, GOL-3.
