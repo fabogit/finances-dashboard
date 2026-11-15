@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-10-08 (scope and divergences 2026-10-09)
-- **Decisions:** D-08, D-12
+- **Decisions:** D-08, D-12, D-78
 
 ## Context
 
@@ -29,7 +29,7 @@ Decisions taken case by case had become inconsistent with each other. The redesi
 
 **In the MVP** (D-12): payees with a default category, transfers as linked pairs, rules in a simple form, starting balance, reconcile.
 
-**After the MVP:** schedules (subscriptions), split transactions, hidden categories, notes, tags.
+**After the MVP:** schedules (subscriptions), split transactions, hidden categories, advanced notes, tags. Simple notes, one text field per transaction, are in the MVP (D-78).
 
 **Declared divergences:**
 
