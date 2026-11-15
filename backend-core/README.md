@@ -14,7 +14,7 @@ Backend Core engine for the Finance Dashboard project. Built with **NestJS**, **
 
 ## 🛠️ Prerequisites
 
-- **Node.js**: 24, the patch in `.nvmrc` (>= 24.22.2)
+- **Node.js**: 26, the patch in `.nvmrc` (>= 26.13.1)
 - **pnpm**: 12, the version in `packageManager` (>= 12.18.0)
 - **Docker**: For PostgreSQL and Science Service containers.
 

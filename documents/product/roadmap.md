@@ -8,7 +8,7 @@ The plan rewrites the schema once, then rebuilds the modules flow by flow in dep
 
 Six MVP milestones grouped by theme, plus two after the MVP (D-45). Each MVP milestone ends with its own Review & consolidation issue ([below](#review--consolidation)).
 
-- **M1 · Groundwork** — fixes that survive the redesign, documentation restructured with agent entry files, dependencies refreshed (NestJS 12), the core toolchain on the NestJS 12 project defaults, the science toolchain, the native HTTP adapter, the validation choice, and the v2 specs. Step 1.
+- **M1 · Groundwork** — fixes that survive the redesign, documentation restructured with agent entry files, dependencies refreshed (NestJS 12), the core toolchain on the NestJS 12 project defaults, the science toolchain, the native HTTP adapter, the validation choice, the runtime on Node 26, and the v2 specs. Step 1.
 - **M2 · Ledger** — Schema v2 and the profile-based seed, accounts with derived balances, category groups, transactions with `kind` and transfers. Steps 2, 3, 4, 6.
 - **M3 · Import** — payees and rules, then the guided import: templates, column mapper, stateless preview, layered deduplication, transfer detection. Steps 5, 7.
 - **M4 · Planning** — monthly budget per category and savings goals on a dedicated account. Steps 8, 9.
@@ -28,6 +28,7 @@ Six MVP milestones grouped by theme, plus two after the MVP (D-45). Each MVP mil
    - Science toolchain: uv, `pyproject.toml` and ruff (#110), after #86; a different perimeter from #87, so the two can run in parallel (D-51).
    - Native HTTP adapter, `@nestjs/platform-node` (#88), after #87, #109 and #111, and not before 2026-11-17 (D-52).
    - Validation: Standard Schema (Zod) or class-validator (#113), after #109 and before Schema v2, so the v2 DTOs are written once (D-54).
+   - Runtime on Node 26 LTS (#133), with no dependencies (D-116).
    - **v2 specs: data model and flow documents (#104)**, after #86 and **before Schema v2**: the data model and one flow document per MVP area, with numbered Given / When / Then examples (D-46, D-47).
 2. **Schema v2** (#89) and the **profile-based seed** (#90) (M2). Done alone, with no other session touching the code.
 3. **Accounts with derived balances** (#91): starting balance, reconciliation, adjustments (M2).
@@ -57,6 +58,7 @@ flowchart TD
     S1p["#110 Science toolchain"]
     S1h["#88 HTTP adapter"]
     S1s["#104 v2 specs"]
+    S1n["#133 Node 26"]
     S2["2 · Schema v2 + seed"]
     S3["3 · Accounts, derived balances"]
     S4["4 · Categories"]
@@ -74,6 +76,7 @@ flowchart TD
     S1t --> S1v --> S2
     S1c --> S1p --> S2
     S1c --> S1s --> S2
+    S1n --> S2
     S2 --> S3 & S4
     S4 --> S5
     S3 & S4 --> S6
@@ -133,7 +136,7 @@ M1 (#98) pilots the step.
 - **Toolchain holds (#87, checked again in #109 on 2026-11-09).** Majors held back, each with its reason:
   - **TypeScript 7.** The Nest CLI (`@nestjs/cli` 12.0.12 depends on `typescript ~6.0.2`) and Angular 22 (`<6.1`) cap TypeScript at 6.0. `ts-jest` and `typescript-eslint`, the other caps, left with #109.
   - **Prisma 8.** A release candidate only. npm's `latest` tag points to it, so Prisma is pinned to `^7.10`: never `prisma@latest`.
-  - **`@types/node` 25 and later.** The types follow the Node 24 LTS runtime.
+  - **`@types/node` 27 and later.** The types follow the Node 26 LTS runtime (#133).
 
   **Spike of #109 (2026-11-09), passed:** with `"type": "module"` and Vitest 5.1 without SWC, the Prisma client (`prisma-client-js`, `@prisma/client` 7.10), supertest, `ValidationPipe` with decorator metadata and the v1 `Decimal` serialisation work in the unit and end-to-end tests; no hold, and the D-50 fallback (keeping the previous test runner) was not needed. The only test change was a `require()` turned into `await import()`. The toolchain of the core is now the `nest new` one with oxfmt ([setup § Toolchain](../development/setup.md#toolchain)). `@angular/animations` is deprecated in Angular 22 and still used by `provideAnimationsAsync` in `client-preview`.
 - **Tests across the core ↔ science boundary.** The end-to-end job runs without the science service, so an outcome that Python produces, such as the `422` for insufficient history that the core translates (GOL-6, ANL-5), cannot be reached there. The method is to be chosen before #94 and #96: the science service in the end-to-end job, or contract tests in pytest with a mirroring mock in the core.
