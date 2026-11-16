@@ -41,8 +41,47 @@ Business logic lives in `backend-core/src/modules/`, one NestJS module per area,
 
 - **Atomic writes.** Operations that touch several rows (a transfer pair, a confirmed import) run in one Prisma transaction.
 - **Derived balances.** In v2 no balance is stored or updated by deltas: balances, history and goal progress are computed from transactions ([ADR-0003](../adr/0003-derived-balances.md)). v1 still keeps `Asset.balance` and `AssetHistory` updated by deltas.
-- **Money in cents.** Every amount is an integer number of cents (`Int`), as in Actual Budget: in the database, the core, the API and the computation service; the client turns it into euros for display, in one place (D-59, [ADR-0009](../adr/0009-money-in-integer-cents.md), [data model § Conventions](../domain/data-model.md#conventions)). Integer sums are exact; aggregations happen in the database. A global `SerializeInterceptor` lets out only properties marked `@Expose()`. **v1 difference:** money is `Prisma.Decimal`, parsed by `@ParseDecimal()` and serialised by `@SerializeDecimal()`; distribution and monthly trends load every row and sum with `toNumber()` in memory (fixed by #95).
+- **Money in cents.** Every amount is an integer number of cents (`Int`), as in Actual Budget: in the database, the core, the API and the computation service; the client turns it into euros for display, in one place (D-59, [ADR-0009](../adr/0009-money-in-integer-cents.md), [data model § Conventions](../domain/data-model.md#conventions)). Integer sums are exact; aggregations happen in the database. Responses let out only the fields of their schema ([below](#validation-and-dtos)). **v1 difference:** a global `SerializeInterceptor` lets out only properties marked `@Expose()`; money is `Prisma.Decimal`, parsed by `@ParseDecimal()` and serialised by `@SerializeDecimal()`; distribution and monthly trends load every row and sum with `toNumber()` in memory (fixed by #95).
 - **Dates.** Transactions carry a calendar date (`DATE`) and an optional local time; months and days are computed on the calendar date, never converted between time zones. The user's time zone (default Europe/Rome) only decides "today" and the date of transactions created by the app (D-30). **v1 difference:** `date` is a `DateTime`; trends group by UTC month and the budget by the server's local month.
+
+## Validation and DTOs
+
+From step 3, every DTO is a Zod schema checked through Standard Schema, as the NestJS documentation describes ([validation](https://docs.nestjs.com/application/validation#schema-based-validation), [OpenAPI](https://docs.nestjs.com/openapi/introduction#standard-schema-zod-valibot)) (D-120, [ADR-0010](../adr/0010-validation-with-zod.md)). The schema validates the request, gives the TypeScript type and generates Swagger; there are no DTO classes and no `@ApiProperty`.
+
+```typescript
+// dto/create-import-template.dto.ts
+export const createImportTemplateSchema = z
+  .object({
+    name: z.string().trim().min(1).meta({ example: 'Bank statement' }),
+    matchWindowDays: z.int().min(1).max(90).optional().meta({ default: 7 }),
+  })
+  .meta({ id: 'CreateImportTemplate' });
+export type CreateImportTemplateDto = z.infer<typeof createImportTemplateSchema>;
+
+// dto/update-import-template.dto.ts
+export const updateImportTemplateSchema = createImportTemplateSchema
+  .partial()
+  .meta({ id: 'UpdateImportTemplate' });
+
+// import-templates.controller.ts
+@Post()
+@SerializeOptions({ schema: importTemplateResponseSchema })
+@ApiResponse({ status: HttpStatus.CREATED, standardSchema: importTemplateResponseSchema })
+create(@Body({ schema: createImportTemplateSchema }) dto: CreateImportTemplateDto) { … }
+```
+
+- **Where:** one file per schema in the module's `dto/` folder, exporting the schema and its type (`createXSchema`, `CreateXDto`). Other schemas derive from it with `.partial()`, `.pick()`, `.omit()` and `.extend()`.
+- **Swagger:** `.meta({ id })` names the component; `.meta({ description, example })` documents a field. A response is documented with `@ApiResponse({ standardSchema })`, with `isArray: true` for a list.
+- **Amounts:** `z.int()` within the bounds of `Int`, through a shared cents schema in `src/common/`; never a decimal, never a string (D-59).
+- **Integers in a query string:** through a shared strict parser in `src/common/`: digits with an optional sign, then the range. `z.coerce.number()` is not used for them: it reads an empty value as `0` and `12.00` as twelve. A client that wants no filter leaves the parameter out.
+- **Optional and `null`:** a field that may be left out is `.optional()`. `.nullable()` or `.nullish()` only where `null` has a meaning, such as clearing a value in an update; the API contract of each step says where.
+- **Defaults:** a request body schema has no `.default()`. The default is the Prisma `@default` written in the [data model](../domain/data-model.md), and `.meta({ default })` documents it. `.partial()` keeps defaults, so a default in a create schema would overwrite the stored value in every update that leaves the field out. Every module tests that its update schema parses `{}` to `{}`. A service that needs a default before the insert reads it from a named constant. Query schemas (page, limit) may have defaults.
+- **Unknown fields:** `z.object()`, which drops them.
+- **Responses:** every route that returns data has a response schema, applied with `@SerializeOptions({ schema })`. Fields not in it are not sent; a value that does not match it is a `500`, a server bug.
+- **Errors:** a failed validation is a `400` through the global exception filter, each message prefixed by the path of its field (`limitValue: Too big: expected number to be <=2147483647`).
+- **Environment:** a Zod schema passed to `ConfigModule.forRoot({ validationSchema })`, with `z.coerce` for numbers. It replaces `env.validation.ts` in the first step that brings Zod into the core.
+
+`StandardSchemaValidationPipe` and `StandardSchemaSerializerInterceptor` are registered globally in `app-setup.ts` next to the v1 ones, and act only where a schema is declared. **v1 difference:** DTOs are class-validator classes with `@ApiProperty`, responses go through `@Serialize()` and `@Expose()`, money through `@ParseDecimal()` and `@SerializeDecimal()`, and the environment through a decorated class. They go as the modules are rebuilt (D-37); with the last one, class-validator, class-transformer, `ValidationPipe` and `ClassSerializerInterceptor` go too.
 
 ## Multi-tenancy
 
