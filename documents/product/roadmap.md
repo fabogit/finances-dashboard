@@ -26,7 +26,7 @@ Six MVP milestones grouped by theme, plus two after the MVP (D-45). Each MVP mil
    - Static fallback fix (#111) and client scaffold spec fix (#112), after #87.
    - Core toolchain on the NestJS 12 project defaults: ESM, Vitest, oxlint, with oxfmt instead of Prettier (#109), after #87 and #111, before the v2 tests are written (D-53).
    - Science toolchain: uv, `pyproject.toml` and ruff (#110), after #86; a different perimeter from #87, so the two can run in parallel (D-51).
-   - Native HTTP adapter, `@nestjs/platform-node` (#88), after #87, #109 and #111, and not before 2026-11-17 (D-52).
+   - Native HTTP adapter, `@nestjs/platform-node` (#88), after #87, #109 and #111, and not before 2026-11-17 (D-52); decided in [ADR-0011](../adr/0011-native-http-adapter.md) (D-121).
    - Validation: Standard Schema (Zod) or class-validator (#113), after #109 and before Schema v2, so the v2 DTOs are written once (D-54).
    - Runtime on Node 26 LTS (#133), with no dependencies (D-116).
    - **v2 specs: data model and flow documents (#104)**, after #86 and **before Schema v2**: the data model and one flow document per MVP area, with numbered Given / When / Then examples (D-46, D-47).
