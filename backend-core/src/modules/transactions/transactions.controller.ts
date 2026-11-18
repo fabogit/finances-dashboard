@@ -13,7 +13,7 @@ import {
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor } from '@nestjs/platform-node';
 import {
   ApiTags,
   ApiOperation,
@@ -33,6 +33,7 @@ import {
   UpdateTransactionDto,
 } from './dto/create-update-transaction.dto.js';
 import { RawTransactionDto } from './dto/raw-transaction.dto.js';
+import type { MulterFile } from './interfaces/multer-file.interface.js';
 import { Serialize } from '../../common/interceptors/serialize.interceptor.js';
 
 @ApiTags('Transactions')
@@ -73,7 +74,7 @@ export class TransactionsController {
         .addMaxSizeValidator({ maxSize: 1024 * 1024 * 5 })
         .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
     )
-    file: Express.Multer.File,
+    file: MulterFile,
   ): Promise<UploadTransactionResponseDto> {
     return this.transactionsService.uploadFile(file);
   }

@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
-import { configureApp } from '../src/app-setup.js';
+import { createApp } from './create-app.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -16,9 +16,7 @@ describe('Precision Verification (E2E)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
-    configureApp(app);
-    await app.init();
+    app = await createApp(moduleFixture);
 
     prisma = app.get<PrismaService>(PrismaService);
   });

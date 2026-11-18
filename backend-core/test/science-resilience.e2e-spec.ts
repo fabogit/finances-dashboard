@@ -4,7 +4,7 @@ import { createServer, Server, ServerResponse } from 'http';
 import { AddressInfo } from 'net';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../src/prisma/prisma.service.js';
-import { configureApp } from '../src/app-setup.js';
+import { createApp } from './create-app.js';
 
 const API_PREFIX = '/api/v1';
 const SCIENCE_TIMEOUT_MS = 300;
@@ -82,9 +82,7 @@ describe('Science service resilience (E2E)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
-    configureApp(app);
-    await app.init();
+    app = await createApp(moduleFixture);
 
     prisma = app.get(PrismaService);
     server = app.getHttpServer() as Server;

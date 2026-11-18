@@ -11,6 +11,7 @@ import { TransactionsRepository } from './transactions.repository.js';
 import { ScienceService } from '../science/science.service.js';
 import { BankExportRow } from './interfaces/bank-export-row.interface.js';
 import { UploadScienceResult } from './interfaces/upload-science-result.interface.js';
+import type { MulterFile } from './interfaces/multer-file.interface.js';
 import { GetTransactionsFilterDto } from './dto/get-transactions.dto.js';
 import {
   CreateTransactionDto,
@@ -57,7 +58,7 @@ export class TransactionsService {
   }
 
   // --- UPLOAD FLOW ---
-  async uploadFile(file: Express.Multer.File) {
+  async uploadFile(file: MulterFile) {
     this.logger.log(`Starting file processing. Size: ${file.size} bytes`);
 
     // --- 1. EXCEL PARSING ---

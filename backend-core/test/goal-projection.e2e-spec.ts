@@ -4,7 +4,7 @@ import { createServer, Server } from 'http';
 import { AddressInfo } from 'net';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../src/prisma/prisma.service.js';
-import { configureApp } from '../src/app-setup.js';
+import { createApp } from './create-app.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -71,9 +71,7 @@ describe('Goal projection serialization (E2E, #117)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
-    configureApp(app);
-    await app.init();
+    app = await createApp(moduleFixture);
 
     prisma = app.get(PrismaService);
     server = app.getHttpServer() as Server;

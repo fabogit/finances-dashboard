@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NodeAdapter } from '@nestjs/platform-node';
 import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module.js';
@@ -30,7 +31,9 @@ describe('Static assets (E2E)', () => {
   let server: Server;
 
   beforeAll(async () => {
-    app = await NestFactory.create(AppModule, { logger: false });
+    app = await NestFactory.create(AppModule, new NodeAdapter(), {
+      logger: false,
+    });
     configureApp(app);
     await app.init();
     server = app.getHttpServer() as Server;

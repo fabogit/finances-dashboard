@@ -13,6 +13,7 @@ import { AssetsService } from '../assets/assets.service.js';
 import { GoalsService } from '../goals/goals.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { CreateTransactionDto } from './dto/create-update-transaction.dto.js';
+import type { MulterFile } from './interfaces/multer-file.interface.js';
 import { ProcessedTransactionDto } from '../science/dto/processed-transaction.dto.js';
 import {
   GetTransactionsFilterDto,
@@ -143,7 +144,7 @@ describe('TransactionsService', () => {
 
     it('Should PROCESS valid Excel file and SAVE enriched data when Science is UP', async () => {
       const buffer = createMockExcelBuffer([rawExcelRow]);
-      const mockFile = { buffer, size: buffer.length } as Express.Multer.File;
+      const mockFile = { buffer, size: buffer.length } as MulterFile;
 
       transactionsRepo.createManyRaw!.mockResolvedValue({ count: 1 });
       transactionsRepo.createManyEnriched!.mockResolvedValue({ count: 1 });
@@ -174,7 +175,7 @@ describe('TransactionsService', () => {
 
     it('Should HANDLE Science failure (save RAW only)', async () => {
       const buffer = createMockExcelBuffer([rawExcelRow]);
-      const mockFile = { buffer, size: buffer.length } as Express.Multer.File;
+      const mockFile = { buffer, size: buffer.length } as MulterFile;
 
       transactionsRepo.createManyRaw!.mockResolvedValue({ count: 1 });
       scienceService.processTransactions!.mockRejectedValue(
@@ -189,7 +190,7 @@ describe('TransactionsService', () => {
 
     it('Should FILTER OUT duplicate transactions and not save them', async () => {
       const buffer = createMockExcelBuffer([rawExcelRow]);
-      const mockFile = { buffer, size: buffer.length } as Express.Multer.File;
+      const mockFile = { buffer, size: buffer.length } as MulterFile;
 
       const prismaMock = service['prisma'] as unknown as {
         enrichedTransaction: {
@@ -244,7 +245,7 @@ describe('TransactionsService', () => {
 
     it('Should trigger asset and goal balance updates during import when enriched transactions are saved', async () => {
       const buffer = createMockExcelBuffer([rawExcelRow]);
-      const mockFile = { buffer, size: buffer.length } as Express.Multer.File;
+      const mockFile = { buffer, size: buffer.length } as MulterFile;
 
       transactionsRepo.createManyRaw!.mockResolvedValue({ count: 1 });
       transactionsRepo.createManyEnriched!.mockResolvedValue({ count: 1 });
@@ -299,7 +300,7 @@ describe('TransactionsService', () => {
 
     it('Should NOT trigger balance updates if no new enriched transactions are saved', async () => {
       const buffer = createMockExcelBuffer([rawExcelRow]);
-      const mockFile = { buffer, size: buffer.length } as Express.Multer.File;
+      const mockFile = { buffer, size: buffer.length } as MulterFile;
 
       transactionsRepo.createManyRaw!.mockResolvedValue({ count: 1 });
       transactionsRepo.createManyEnriched!.mockResolvedValue({ count: 0 });

@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module.js';
-import { configureApp } from '../src/app-setup.js';
+import { createApp } from './create-app.js';
 
 const CATEGORIES_URL = '/api/v1/categories';
 
@@ -20,9 +20,7 @@ describe('HTTP body parsing (E2E)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
-    configureApp(app);
-    await app.init();
+    app = await createApp(moduleFixture);
 
     server = app.getHttpServer() as Server;
   });
@@ -56,6 +54,23 @@ describe('HTTP body parsing (E2E)', () => {
       .post(CATEGORIES_URL)
       .set('Content-Type', 'application/json')
       .send('{"name": ')
+      .expect(400);
+
+    expectError(res.body, 400);
+  });
+
+  // Express accepted these keys; the Node adapter rejects them (ADR-0011).
+  it.each([
+    ['__proto__', '{"name":"P","type":"NEEDS","__proto__":{"isSystem":true}}'],
+    [
+      'constructor.prototype',
+      '{"name":"P","type":"NEEDS","constructor":{"prototype":{"isSystem":true}}}',
+    ],
+  ])('Should answer 400 to a JSON body with a %s key', async (_key, body) => {
+    const res = await request(server)
+      .post(CATEGORIES_URL)
+      .set('Content-Type', 'application/json')
+      .send(body)
       .expect(400);
 
     expectError(res.body, 400);

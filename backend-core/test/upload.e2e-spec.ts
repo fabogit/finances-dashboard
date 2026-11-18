@@ -4,9 +4,9 @@ import request from 'supertest';
 import { Server } from 'http';
 import * as XLSX from 'xlsx';
 import { AppModule } from '../src/app.module.js';
-import { configureApp } from '../src/app-setup.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { ScienceService } from '../src/modules/science/science.service.js';
+import { createApp } from './create-app.js';
 
 const UPLOAD_URL = '/api/v1/transactions/upload';
 const XLSX_MIME =
@@ -64,9 +64,7 @@ describe('Transactions upload (E2E)', () => {
       })
       .compile();
 
-    app = moduleFixture.createNestApplication();
-    configureApp(app);
-    await app.init();
+    app = await createApp(moduleFixture);
 
     prisma = app.get(PrismaService);
     server = app.getHttpServer() as Server;

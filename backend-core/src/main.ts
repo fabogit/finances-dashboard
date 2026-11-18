@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
+import { NestNodeApplication, NodeAdapter } from '@nestjs/platform-node';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
@@ -13,7 +14,11 @@ const { version } = JSON.parse(
 ) as { version: string };
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Native Node HTTP adapter instead of Express (ADR-0011).
+  const app = await NestFactory.create<NestNodeApplication>(
+    AppModule,
+    new NodeAdapter(),
+  );
   const logger = new Logger('Bootstrap');
   const configService = app.get(ConfigService);
 
