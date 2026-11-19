@@ -11,8 +11,8 @@ A change to an endpoint or a Pydantic model updates, in the same pull request, t
   | Variable | Default | Meaning |
   | --- | --- | --- |
   | `SCIENCE_SERVICE_URL` | `http://backend-science:8000` | Base URL of the Python service: the container name in Compose, `http://localhost:8000` when running locally |
-  | `SCIENCE_TIMEOUT_MS` | `10000` | Timeout of each attempt, in milliseconds (integer ≥ 1) |
-  | `SCIENCE_RETRY_COUNT` | `2` | Retries after the first attempt, for transient failures only (integer ≥ 0) |
+  | `SCIENCE_TIMEOUT_MS` | `10000` | Timeout of the whole call, retries included, in milliseconds (integer from 1 to 2,147,483,647, the largest delay a Node.js timer holds) |
+  | `SCIENCE_RETRY_COUNT` | `2` | Retries after the first attempt, for transient failures only (integer from 0 to 10) |
 
   The defaults, and the reasons behind them, live in `science.constants.ts`.
 - The service runs with uvicorn on `src.main:app`, port 8000. Interactive docs at `/docs` and `/redoc`.
@@ -60,9 +60,9 @@ In v2 every amount is an integer number of cents in both directions, an `int` in
 
 Every call from the core to Python goes through the same path in `ScienceService` (issue #85).
 
-**Timeout.** Each attempt has a timeout of `SCIENCE_TIMEOUT_MS`, covering the whole request. A timed-out attempt is **not** retried, so a call that exceeds the timeout fails after roughly `SCIENCE_TIMEOUT_MS`.
+**Timeout.** `SCIENCE_TIMEOUT_MS` bounds the whole call: every attempt, and the backoff between them. When it runs out the call fails, even in the middle of a retry, and is **not** retried, so a call fails after roughly `SCIENCE_TIMEOUT_MS` at most (#98).
 
-**Retry.** All three endpoints (`/process`, `/forecast`, `/goals/projection`) are stateless computations, so repeating a call is safe. Only transient failures are retried, up to `SCIENCE_RETRY_COUNT` times, with exponential backoff (200 ms, 400 ms, …):
+**Retry.** All three endpoints (`/process`, `/forecast`, `/goals/projection`) are stateless computations, so repeating a call is safe. Only transient failures are retried, up to `SCIENCE_RETRY_COUNT` times, with exponential backoff (200 ms, 400 ms, …), and only while the timeout of the call has not run out:
 
 | Failure | Retried |
 | --- | --- |

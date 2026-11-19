@@ -169,7 +169,13 @@ describe('ScienceService', () => {
    * they would against backend-science, without needing Python running.
    */
   describe('resilience against a stub HTTP server', () => {
+    /** Timeout of the tests that measure it. */
     const TEST_TIMEOUT_MS = 200;
+    /**
+     * Timeout of every other test: the timeout bounds the whole call, so it
+     * must leave room for two retries of backoff (200 + 400 ms).
+     */
+    const CALL_TIMEOUT_MS = 2000;
     /** Slack allowed above the timeout for scheduling and error mapping. */
     const TIMEOUT_MARGIN_MS = 150;
 
@@ -220,7 +226,7 @@ describe('ScienceService', () => {
     ): Promise<ScienceService> => {
       const config: Record<string, unknown> = {
         SCIENCE_SERVICE_URL: url,
-        SCIENCE_TIMEOUT_MS: TEST_TIMEOUT_MS,
+        SCIENCE_TIMEOUT_MS: CALL_TIMEOUT_MS,
         SCIENCE_RETRY_COUNT: 2,
         ...overrides,
       };
@@ -267,7 +273,9 @@ describe('ScienceService', () => {
       const url = await startStub(() => {
         /* never answers */
       });
-      const service = await buildService(url);
+      const service = await buildService(url, {
+        SCIENCE_TIMEOUT_MS: TEST_TIMEOUT_MS,
+      });
       await captureError(service.getForecast(forecastInput));
       await stopStub();
     });
@@ -279,7 +287,9 @@ describe('ScienceService', () => {
         const url = await startStub(() => {
           /* never answers */
         });
-        const service = await buildService(url);
+        const service = await buildService(url, {
+          SCIENCE_TIMEOUT_MS: TEST_TIMEOUT_MS,
+        });
 
         const started = Date.now();
         const error = await captureError(service.getForecast(forecastInput));
@@ -291,6 +301,30 @@ describe('ScienceService', () => {
         expect(elapsed).toBeGreaterThanOrEqual(TEST_TIMEOUT_MS);
         expect(elapsed).toBeLessThan(TEST_TIMEOUT_MS + TIMEOUT_MARGIN_MS);
         expect(requestTimes).toHaveLength(1);
+      });
+
+      it('should fail with 504 within the timeout when retries would run past it', async () => {
+        // A transient failure that arrives late would start a retry with
+        // little or no time left: the timeout bounds the whole call
+        const url = await startStub(
+          (req, res) => {
+            setTimeout(() => reply(503, {})(req, res), 150);
+          },
+          () => {
+            /* never answers */
+          },
+        );
+        const service = await buildService(url, { SCIENCE_TIMEOUT_MS: 400 });
+
+        const started = Date.now();
+        const error = await captureError(service.getForecast(forecastInput));
+        const elapsed = Date.now() - started;
+
+        expect(error).toBeInstanceOf(GatewayTimeoutException);
+        expect(error.getResponse()).toMatchObject({ error: 'SCIENCE_TIMEOUT' });
+        expect(elapsed).toBeGreaterThanOrEqual(400);
+        expect(elapsed).toBeLessThan(400 + TIMEOUT_MARGIN_MS);
+        expect(requestTimes).toHaveLength(2);
       });
 
       it('should read the timeout from SCIENCE_TIMEOUT_MS', async () => {
