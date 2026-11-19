@@ -6,6 +6,7 @@ import {
   BadGatewayException,
   GatewayTimeoutException,
   HttpException,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { AxiosResponse, InternalAxiosRequestConfig, AxiosHeaders } from 'axios';
@@ -345,6 +346,24 @@ describe('ScienceService', () => {
           mockForecast,
         );
         expect(requestTimes).toHaveLength(2);
+      });
+
+      it('should retry after a DNS failure, then answer 503', async () => {
+        // `.invalid` never resolves (RFC 6761), like a misspelt service name
+        const warn = vi.spyOn(Logger.prototype, 'warn');
+        const service = await buildService('http://backend-science.invalid', {
+          SCIENCE_RETRY_COUNT: 1,
+        });
+
+        const error = await captureError(service.getForecast(forecastInput));
+
+        expect(error).toBeInstanceOf(ServiceUnavailableException);
+        expect(error.message).toBe(
+          'Science service unreachable on /forecast: ENOTFOUND',
+        );
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(warn.mock.calls[0][0]).toContain('retry 1/1');
+        warn.mockRestore();
       });
 
       it('should wait with backoff between attempts', async () => {
