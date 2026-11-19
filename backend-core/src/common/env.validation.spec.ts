@@ -3,6 +3,8 @@ import { validate } from './env.validation.js';
 import {
   DEFAULT_SCIENCE_RETRY_COUNT,
   DEFAULT_SCIENCE_TIMEOUT_MS,
+  MAX_SCIENCE_RETRY_COUNT,
+  MAX_SCIENCE_TIMEOUT_MS,
 } from '../modules/science/science.constants.js';
 
 describe('validate (environment)', () => {
@@ -26,11 +28,24 @@ describe('validate (environment)', () => {
     expect(config.SCIENCE_RETRY_COUNT).toBe(0);
   });
 
+  it('should accept the largest science client values', () => {
+    const config = validate({
+      ...base,
+      SCIENCE_TIMEOUT_MS: String(MAX_SCIENCE_TIMEOUT_MS),
+      SCIENCE_RETRY_COUNT: String(MAX_SCIENCE_RETRY_COUNT),
+    });
+
+    expect(config.SCIENCE_TIMEOUT_MS).toBe(2_147_483_647);
+    expect(config.SCIENCE_RETRY_COUNT).toBe(10);
+  });
+
   it.each([
     ['SCIENCE_TIMEOUT_MS', '0'],
     ['SCIENCE_TIMEOUT_MS', 'soon'],
+    ['SCIENCE_TIMEOUT_MS', '2147483648'],
     ['SCIENCE_RETRY_COUNT', '-1'],
     ['SCIENCE_RETRY_COUNT', '1.5'],
+    ['SCIENCE_RETRY_COUNT', '11'],
   ])('should reject %s=%s', (key, value) => {
     expect(() => validate({ ...base, [key]: value })).toThrow(key);
   });

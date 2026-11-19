@@ -5,12 +5,15 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
   validateSync,
 } from 'class-validator';
 import {
   DEFAULT_SCIENCE_RETRY_COUNT,
   DEFAULT_SCIENCE_TIMEOUT_MS,
+  MAX_SCIENCE_RETRY_COUNT,
+  MAX_SCIENCE_TIMEOUT_MS,
 } from '../modules/science/science.constants.js';
 
 export enum Environment {
@@ -45,11 +48,13 @@ class EnvironmentVariables {
 
   @IsInt()
   @Min(1)
+  @Max(MAX_SCIENCE_TIMEOUT_MS)
   @IsOptional()
   SCIENCE_TIMEOUT_MS: number = DEFAULT_SCIENCE_TIMEOUT_MS;
 
   @IsInt()
   @Min(0)
+  @Max(MAX_SCIENCE_RETRY_COUNT)
   @IsOptional()
   SCIENCE_RETRY_COUNT: number = DEFAULT_SCIENCE_RETRY_COUNT;
 }

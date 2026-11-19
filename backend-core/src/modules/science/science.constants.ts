@@ -10,6 +10,14 @@
 export const DEFAULT_SCIENCE_TIMEOUT_MS = 10_000;
 
 /**
+ * Largest accepted `SCIENCE_TIMEOUT_MS`: 2^31 − 1 ms (about 24.8 days), the
+ * largest delay a Node.js timer holds. Above it Node replaces the delay with
+ * 1 ms (`TimeoutOverflowWarning`), so every call to backend-science would
+ * time out at once.
+ */
+export const MAX_SCIENCE_TIMEOUT_MS = 2_147_483_647;
+
+/**
  * Default number of retries after the first attempt, for transient failures
  * only (network errors, 502, 503, 504). Overridden by `SCIENCE_RETRY_COUNT`.
  *
@@ -19,6 +27,13 @@ export const DEFAULT_SCIENCE_TIMEOUT_MS = 10_000;
  * about 600 ms (200 + 400) before giving up.
  */
 export const DEFAULT_SCIENCE_RETRY_COUNT = 2;
+
+/**
+ * Largest accepted `SCIENCE_RETRY_COUNT`. 10 retries already wait about
+ * 3.4 minutes of backoff (200 ms doubling: 200 + 400 + … + 102,400 ms);
+ * more could only hide an outage behind a request that never ends.
+ */
+export const MAX_SCIENCE_RETRY_COUNT = 10;
 
 /**
  * Base delay, in milliseconds, of the exponential backoff between retries:
