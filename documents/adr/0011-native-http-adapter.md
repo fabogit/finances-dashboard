@@ -47,7 +47,7 @@ Each request was sent to the built application on Express and then on the Node a
 | A string returned by a handler is `text/plain` | No handler returns a string | — | — | No effect. `Content-Type` of JSON responses, static files and Swagger is the same, `charset=utf-8` included. |
 | `res.set()`/`res.type()` add no `; charset=utf-8` | The core calls neither | — | — | No effect. |
 | `req.path` is the decoded path | No middleware of the core reads it | — | — | No effect. |
-| No `ETag`, no `304` on API responses | `GET /api/v1/categories`, then with `If-None-Match` | Weak `ETag`, then `304` | No `ETag`, then `200` with the body | Accepted: the client makes no conditional requests. Static files and Swagger assets keep `ETag`. |
+| No `ETag`, no `304` on API responses | `GET /api/v1/categories`, then with `If-None-Match` | Weak `ETag`, then `304` | No `ETag`, then `200` with the body | Accepted. The browser revalidates a stored `GET` response with `If-None-Match` on its own; it now gets the full body instead of a `304`. Only bytes are lost: Express computed the `ETag` from the finished body, so the server did the same work. Static files and Swagger assets keep `ETag`. |
 | Route parameter over 100 characters | `PATCH /api/v1/transactions/<101 characters>` | `400`, invalid UUID | `414`, global error format | Accepted: identifiers are 36-character UUIDs. 100 characters: `400` on both. |
 | Prototype keys in a JSON body | `POST /api/v1/categories` with `__proto__` or `constructor.prototype` | `201` | `400` | Kept (D-121), pinned by an end-to-end test. |
 | Built-in body parsers | JSON over 100 kb; malformed JSON | `413`; `400` | `413`; `400` | Same (end-to-end). |
@@ -86,5 +86,5 @@ About a third faster on the route that only crosses the framework, 10 to 20% fas
 - An end-to-end test builds its application with `createApp()` from `test/create-app.ts`; one built without an adapter runs on Express, which is no longer installed.
 - Paths are case-sensitive, and a mis-cased `/API/…` path gets the router's plain-text `404`.
 - A new Express middleware is checked against the [Express compatibility](https://docs.nestjs.com/http/performance#express-compatibility) list first: `res.render()`, `res.download()`, `req.accepts()` and Express settings, among others, do not exist on the Node adapter.
-- API responses carry no `ETag`; a cache that needs one sets it explicitly.
+- API responses carry no `ETag`. A route that needs conditional requests sets its own validator (from `updatedAt`, for instance, which also spares the server's work) and answers the `304` itself: the adapter does not, even when the handler sets `ETag`. A global middleware wrapping `res.send()` as Express does was rejected: a hash of every response and the adapter's fast path lost, to save bytes the application does not need to save.
 - `nest new` still scaffolds Express: the adapter is a divergence from the scaffold ([setup § Divergences from `nest new`](../development/setup.md#divergences-from-nest-new)).
