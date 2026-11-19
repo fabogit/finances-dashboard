@@ -9,7 +9,7 @@ import {
   TransactionDto,
   PaginatedTransactionsResponseDto,
 } from '../src/modules/transactions/dto/transaction.dto.js';
-import { configureApp } from '../src/app-setup.js';
+import { createApp } from './create-app.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -32,9 +32,7 @@ describe('TransactionsModule (E2E)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
-    configureApp(app);
-    await app.init();
+    app = await createApp(moduleFixture);
 
     prisma = app.get<PrismaService>(PrismaService);
     server = app.getHttpServer() as Server;

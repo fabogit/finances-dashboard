@@ -1,9 +1,28 @@
 import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NodeAdapter } from '@nestjs/platform-node';
 import request from 'supertest';
 import { Server } from 'http';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app-setup.js';
+
+// The headers helmet sets with the options of configureApp, on every response.
+const expectSecurityHeaders = (res: request.Response) => {
+  const csp = res.headers['content-security-policy'];
+  expect(csp).toContain("default-src 'self'");
+  expect(csp).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'");
+  expect(csp).toContain("style-src 'self' 'unsafe-inline' https:");
+  expect(csp).toContain("img-src 'self' data: https:");
+  expect(res.headers).toMatchObject({
+    'cross-origin-opener-policy': 'same-origin',
+    'cross-origin-resource-policy': 'same-origin',
+    'referrer-policy': 'no-referrer',
+    'strict-transport-security': 'max-age=31536000; includeSubDomains',
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'SAMEORIGIN',
+  });
+  expect(res.headers).not.toHaveProperty('x-powered-by');
+};
 
 // Built with NestFactory, as in main.ts: a TestingModule instantiates
 // ServeStaticModule before the HTTP adapter exists, so it would serve nothing.
@@ -12,7 +31,9 @@ describe('Static assets (E2E)', () => {
   let server: Server;
 
   beforeAll(async () => {
-    app = await NestFactory.create(AppModule, { logger: false });
+    app = await NestFactory.create(AppModule, new NodeAdapter(), {
+      logger: false,
+    });
     configureApp(app);
     await app.init();
     server = app.getHttpServer() as Server;
@@ -69,5 +90,29 @@ describe('Static assets (E2E)', () => {
       .expect('Content-Type', /json/);
 
     expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  it('Should send the security headers on an API response', async () => {
+    const res = await request(server).get('/api/v1/categories').expect(200);
+
+    expectSecurityHeaders(res);
+  });
+
+  it('Should send the security headers on a static file and the fallback', async () => {
+    expectSecurityHeaders(await request(server).get('/').expect(200));
+    expectSecurityHeaders(await request(server).get('/some/page').expect(200));
+  });
+
+  it('Should answer a CORS preflight on an API route', async () => {
+    const res = await request(server)
+      .options('/api/v1/categories')
+      .set('Origin', 'http://localhost:4200')
+      .set('Access-Control-Request-Method', 'POST')
+      .expect(204);
+
+    expect(res.headers['access-control-allow-origin']).toBeDefined();
+    expect(res.headers['access-control-allow-methods']).toBe(
+      'GET,HEAD,PUT,PATCH,POST,DELETE',
+    );
   });
 });

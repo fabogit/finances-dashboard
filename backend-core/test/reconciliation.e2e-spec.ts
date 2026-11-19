@@ -5,7 +5,7 @@ import { Server } from 'http';
 import { AppModule } from '../src/app.module.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 import { ExpenseType } from '@prisma/client';
-import { configureApp } from '../src/app-setup.js';
+import { createApp } from './create-app.js';
 
 const API_PREFIX = '/api/v1';
 
@@ -19,9 +19,7 @@ describe('Reconciliation & ACID Updates (E2E)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
-    configureApp(app);
-    await app.init();
+    app = await createApp(moduleFixture);
 
     prisma = app.get<PrismaService>(PrismaService);
     server = app.getHttpServer() as Server;

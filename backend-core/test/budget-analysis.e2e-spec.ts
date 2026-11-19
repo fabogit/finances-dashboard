@@ -12,7 +12,7 @@ import {
 import { CategoryResponseDto } from '../src/modules/categories/dto/category-response.dto.js';
 import { BudgetAnalysisResponseDto } from '../src/modules/analytics/dto/budget-analysis.dto.js';
 import { CreateCategoryDto } from '../src/modules/categories/dto/create-category.dto.js';
-import { configureApp } from '../src/app-setup.js';
+import { createApp } from './create-app.js';
 
 const API_PREFIX = '/api/v1';
 const getCurrentMonth = () => new Date().toISOString().slice(0, 7);
@@ -28,9 +28,7 @@ describe('Budget Analysis Flow (E2E)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
-    configureApp(app);
-    await app.init();
+    app = await createApp(moduleFixture);
 
     prisma = app.get<PrismaService>(PrismaService);
     server = app.getHttpServer() as Server;

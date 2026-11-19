@@ -116,7 +116,8 @@ The schema is applied with `prisma db push`, not migrations, until the MVP (D-19
 | `.oxlintrc.json` turns `no-explicit-any` off and `no-floating-promises` to error | The rules of the former ESLint setup (`@eslint/js` recommended, `typescript-eslint` `recommendedTypeChecked` and its overrides) at the same levels, on top of oxlint's default `correctness` category. oxlint has 88 of the 89; `no-octal` is missing, and octal literals are already a TypeScript error in strict mode | Carry the existing rules over (#109) |
 | `lint` and `format` cover `src/` and `test/` | Also `prisma/` | The seed is application code |
 | `vitest.config.e2e.ts` | Adds `setupFiles: ['./test/setup-e2e.ts']` (loads `.env.test`) and `fileParallelism: false` | The end-to-end files share one real database |
-| `tsconfig.json` | Adds `noUnusedLocals`, `noUnusedParameters`, `forceConsistentCasingInFileNames`, and `multer` in `types` | Checks already in use; `multer` types the file upload |
+| Express (`@nestjs/platform-express`) | The native Node adapter, `NodeAdapter` from `@nestjs/platform-node`, in `main.ts` and in the end-to-end tests | D-52, [ADR-0011](../adr/0011-native-http-adapter.md) |
+| `tsconfig.json` | Adds `noUnusedLocals`, `noUnusedParameters` and `forceConsistentCasingInFileNames` | Checks already in use |
 | `nest-cli.json` only | Adds `nest-cli.docker.json` (`deleteOutDir: false`), used by the `fn-core` start command | `dist/` in `fn-core` is the mount point of the `backend_core_dist` volume, which cannot be removed (`EBUSY`) |
 | `tsconfig.build.json` | Adds `tsBuildInfoFile: ./dist/tsconfig.build.tsbuildinfo` | With `rootDir: ./src` the file lands next to the config, outside `dist/`: a stale copy makes tsc emit nothing where `dist/` is not emptied (the container), and the container would write it as root into the bind mount |
 | `@nestjs/mau` and the `deploy` script | Absent | The project does not deploy to Mau |
