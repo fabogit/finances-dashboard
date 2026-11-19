@@ -111,9 +111,10 @@ export class ScienceService {
   }
 
   /**
-   * POST to backend-science with a per-attempt timeout and retries with
-   * exponential backoff for transient failures. All science endpoints are
-   * stateless computations, so repeating a call is safe.
+   * POST to backend-science with retries and exponential backoff for
+   * transient failures, all within one timeout for the whole call: a retry
+   * never extends it. All science endpoints are stateless computations, so
+   * repeating a call is safe.
    * Final failures become HttpExceptions: 504 timeout, 503 unreachable,
    * 502 error response.
    */
@@ -121,7 +122,6 @@ export class ScienceService {
     const request$: Observable<{ data: T }> = this.httpService
       .post<T>(`${this.scienceUrl}${path}`, body)
       .pipe(
-        timeout(this.timeoutMs),
         retry({
           count: this.retryCount,
           delay: (error: unknown, attempt: number) => {
@@ -134,6 +134,7 @@ export class ScienceService {
             return timer(SCIENCE_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1));
           },
         }),
+        timeout(this.timeoutMs),
         catchError((error: unknown) =>
           throwError(() => this.toHttpException(path, error)),
         ),
