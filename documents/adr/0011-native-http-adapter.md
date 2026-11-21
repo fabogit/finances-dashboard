@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-19
-- **Decisions:** D-52, D-121
+- **Decisions:** D-52, D-121; amended by D-122 (2026-11-21)
 
 ## Context
 
@@ -30,7 +30,7 @@ Before the switch, end-to-end tests pinned the behaviour on Express: the upload 
 | --- | --- |
 | `helmet` (`app-setup.ts`) | Same headers on API responses, static files and the fallback (end-to-end). |
 | CORS (`enableCors`) | Same preflight response, `204` with the allowed methods (end-to-end). |
-| Upload (`FileInterceptor`) | Imported from `@nestjs/platform-node`, the same Multer 2.5.0 as under Express; same `201`, `422` and `400` responses (end-to-end). |
+| Upload (`FileInterceptor`) | Imported from `@nestjs/platform-node`, the same Multer 2.5.0 as under Express; same `201`, `422` and `400` responses (end-to-end). A file over 5 MiB is a `413` since D-122 ([Amendments](#amendments)). |
 | `ServeStaticModule` (`@nestjs/serve-static` 12.1.1) | Serves through `useStaticAssets()`, with no `express` package; the fallback to `index.html` works (end-to-end). |
 | Swagger (`/docs`, `/docs-json`) | Served through `useStaticAssets()`, unchanged; checked with requests on the running application and in the `fn-core` image. |
 | `ValidationPipe`, and `StandardSchemaValidationPipe` from step 3 (ADR-0010) | Unchanged: both read the parsed body and query, which the adapter fills as Express did. Prototype keys are rejected before either pipe. |
@@ -88,3 +88,7 @@ About a third faster on the route that only crosses the framework, 10 to 20% fas
 - A new Express middleware is checked against the [Express compatibility](https://docs.nestjs.com/http/performance#express-compatibility) list first: `res.render()`, `res.download()`, `req.accepts()` and Express settings, among others, do not exist on the Node adapter.
 - API responses carry no `ETag`. A route that needs conditional requests sets its own validator (from `updatedAt`, for instance, which also spares the server's work) and answers the `304` itself: the adapter does not, even when the handler sets `ETag`. A global middleware wrapping `res.send()` as Express does was rejected: a hash of every response and the adapter's fast path lost, to save bytes the application does not need to save.
 - `nest new` still scaffolds Express: the adapter is a divergence from the scaffold ([setup § Divergences from `nest new`](../development/setup.md#divergences-from-nest-new)).
+
+## Amendments
+
+- **D-122 · The upload stops reading at 5 MiB and answers `413`.** The M1 review (#98) found that `FileInterceptor('file')` set no `fileSize` limit, on Express as on the Node adapter: the whole file was held in memory before the 5 MiB check of the validation pipe answered `422` (a 200 MiB part took the process from 109 to 512 MiB). The interceptor now passes `limits.fileSize` from `MAX_UPLOAD_BYTES`, so Multer stops at the limit and the upload answers `413` with `error: "Payload Too Large"` and `message: "File too large"`. The pipe keeps the same limit, with the same constant. Rejected: turning Multer's error back into a `422`, which keeps the old status at the cost of code that only maps one error onto another; and a Multer limit just above 5 MiB, which would answer `422` or `413` for the same mistake depending on the size. The v2 import (#93) states its own limit in the import flow.

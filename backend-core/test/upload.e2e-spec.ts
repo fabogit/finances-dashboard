@@ -123,9 +123,10 @@ describe('Transactions upload (E2E)', () => {
     expect((res.body as ErrorResponse).message).toMatch(/file is required/i);
   });
 
-  it('Should answer 422 when the file is larger than 5 MiB', async () => {
+  it('Should answer 413 when the file is larger than 5 MiB (D-122)', async () => {
     // A valid workbook padded past the limit: its content still reads as .xlsx,
-    // so only the size check fails.
+    // so only the size check fails. Multer stops reading at the limit, before
+    // the whole file is in memory.
     const xlsx = createExcelBuffer([ROW]);
     const oversized = Buffer.concat([
       xlsx,
@@ -138,10 +139,14 @@ describe('Transactions upload (E2E)', () => {
         filename: 'export.xlsx',
         contentType: XLSX_MIME,
       })
-      .expect(422);
+      .expect(413);
 
-    expectError(res.body as ErrorResponse, 422);
-    expect((res.body as ErrorResponse).message).toMatch(/size/i);
+    expect(res.body).toMatchObject({
+      statusCode: 413,
+      path: UPLOAD_URL,
+      message: 'File too large',
+      error: 'Payload Too Large',
+    });
   });
 
   it('Should answer 422 when the content is not an .xlsx file', async () => {
