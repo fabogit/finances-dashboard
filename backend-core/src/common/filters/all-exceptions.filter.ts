@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { Prisma } from '@prisma/client';
+import { STATUS_CODES } from 'node:http';
 
 interface ErrorResponseObject {
   statusCode: number;
@@ -35,7 +36,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
       const response = exception.getResponse();
 
       if (typeof response === 'string') {
+        // An exception built from a bare message, as the Node adapter does
+        // for body parser errors (413, 415): the code is the status's reason
+        // phrase, as for Nest's built-in exceptions
         message = response;
+        errorCode = STATUS_CODES[httpStatus] ?? errorCode;
       } else if (typeof response === 'object' && response !== null) {
         const responseObj = response as ErrorResponseObject;
 

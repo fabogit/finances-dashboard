@@ -34,6 +34,7 @@ import {
 } from './dto/create-update-transaction.dto.js';
 import { RawTransactionDto } from './dto/raw-transaction.dto.js';
 import type { MulterFile } from './interfaces/multer-file.interface.js';
+import { MAX_UPLOAD_BYTES } from './transactions.constants.js';
 import { Serialize } from '../../common/interceptors/serialize.interceptor.js';
 
 @ApiTags('Transactions')
@@ -62,8 +63,14 @@ export class TransactionsController {
     description: 'File processed successfully',
     type: UploadTransactionResponseDto,
   })
+  @ApiResponse({
+    status: 413,
+    description: 'File larger than 5 MiB (`error: Payload Too Large`)',
+  })
   @ApiResponse({ status: 422, description: 'File validation failed' })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: MAX_UPLOAD_BYTES } }),
+  )
   async uploadFile(
     @UploadedFile(
       new ParseFilePipeBuilder()
@@ -71,7 +78,9 @@ export class TransactionsController {
           fileType:
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         })
-        .addMaxSizeValidator({ maxSize: 1024 * 1024 * 5 })
+        // Multer already stops at the limit; this keeps the pipe correct on
+        // its own
+        .addMaxSizeValidator({ maxSize: MAX_UPLOAD_BYTES })
         .build({ errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY }),
     )
     file: MulterFile,
