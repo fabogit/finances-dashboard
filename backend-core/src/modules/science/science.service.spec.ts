@@ -76,6 +76,11 @@ const mockForecast: MonthlyForecastDto[] = [
 ];
 
 describe('ScienceService', () => {
+  // Restores the spies, such as the logger one, even when a test fails
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('with a mocked HttpService (success paths)', () => {
     let service: ScienceService;
     let httpService: Mocked<HttpService>;
@@ -264,9 +269,8 @@ describe('ScienceService', () => {
     };
 
     /**
-     * The first real request that times out pays a one-off cold start
-     * (measured on Jest: about 190 ms, 391 ms against 207 ms for the next
-     * one), which would eat the timeout margin. One timed-out request up front keeps it
+     * The first real request that times out pays a one-off cold start, which
+     * would eat the timeout margin. One timed-out request up front keeps it
      * out of the timed tests.
      */
     beforeAll(async () => {
@@ -383,7 +387,8 @@ describe('ScienceService', () => {
       });
 
       it('should retry after a DNS failure, then answer 503', async () => {
-        // `.invalid` never resolves (RFC 6761), like a misspelt service name
+        // `.invalid` never resolves (RFC 6761), like a misspelt service name.
+        // Without network the resolver answers EAI_AGAIN instead of ENOTFOUND.
         const warn = vi.spyOn(Logger.prototype, 'warn');
         const service = await buildService('http://backend-science.invalid', {
           SCIENCE_RETRY_COUNT: 1,
@@ -392,12 +397,11 @@ describe('ScienceService', () => {
         const error = await captureError(service.getForecast(forecastInput));
 
         expect(error).toBeInstanceOf(ServiceUnavailableException);
-        expect(error.message).toBe(
-          'Science service unreachable on /forecast: ENOTFOUND',
+        expect(error.message).toMatch(
+          /^Science service unreachable on \/forecast: (ENOTFOUND|EAI_AGAIN)$/,
         );
         expect(warn).toHaveBeenCalledTimes(1);
         expect(warn.mock.calls[0][0]).toContain('retry 1/1');
-        warn.mockRestore();
       });
 
       it('should wait with backoff between attempts', async () => {
