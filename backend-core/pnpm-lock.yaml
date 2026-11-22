@@ -178,9 +178,6 @@ importers:
       '@nestjs/core':
         specifier: ^12.5.1
         version: 12.5.1(@nestjs/common@12.5.1(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/mapped-types':
-        specifier: ^12.0.1
-        version: 12.0.1(@nestjs/common@12.5.1(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)
       '@nestjs/platform-node':
         specifier: ^12.5.1
         version: 12.5.1(@nestjs/common@12.5.1(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.5.1(@nestjs/common@12.5.1(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(reflect-metadata@0.2.2)(rxjs@7.8.2))(rxjs@7.8.2)(supports-color@7.2.0)
@@ -211,9 +208,6 @@ importers:
       helmet:
         specifier: ^8.3.0
         version: 8.3.0
-      pg:
-        specifier: ^8.23.1
-        version: 8.23.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -236,9 +230,6 @@ importers:
       '@types/node':
         specifier: ^26.6.6
         version: 26.6.6
-      '@types/pg':
-        specifier: ^8.23.1
-        version: 8.23.1
       '@types/supertest':
         specifier: ^7.2.1
         version: 7.2.1
@@ -260,9 +251,6 @@ importers:
       prisma:
         specifier: ^7.10.1
         version: 7.10.1(@types/node@26.6.6)(@types/react@19.2.9)(magicast@0.5.5)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@6.0.3)
-      source-map-support:
-        specifier: ^0.5.21
-        version: 0.5.21
       supertest:
         specifier: ^7.3.2
         version: 7.3.2(supports-color@7.2.0)
@@ -4569,7 +4557,8 @@ snapshots:
       update-browserslist-db: 1.2.3(browserslist@4.28.2)
     optional: true
 
-  buffer-from@1.1.2: {}
+  buffer-from@1.1.2:
+    optional: true
 
   busboy@1.6.0:
     dependencies:
@@ -5780,8 +5769,10 @@ snapshots:
     dependencies:
       buffer-from: 1.1.2
       source-map: 0.6.1
+    optional: true
 
-  source-map@0.6.1: {}
+  source-map@0.6.1:
+    optional: true
 
   source-map@0.7.6:
     optional: true
