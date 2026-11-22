@@ -1,17 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { NestNodeApplication, NodeAdapter } from '@nestjs/platform-node';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
-import { configureApp } from './app-setup.js';
-
-// The same relative path from src/ (tests, tsx) and from dist/ (build).
-const { version } = JSON.parse(
-  readFileSync(join(import.meta.dirname, '../package.json'), 'utf8'),
-) as { version: string };
+import { configureApp, setupSwagger, SWAGGER_PATH } from './app-setup.js';
 
 async function bootstrap() {
   // Native Node HTTP adapter instead of Express (ADR-0011).
@@ -24,23 +16,12 @@ async function bootstrap() {
 
   // Apply all shared configurations (CORS, Pipes, Filters, Interceptors, Prefix, Versioning)
   configureApp(app);
-
-  const document = SwaggerModule.createDocument(
-    app,
-    new DocumentBuilder()
-      .setTitle('Finance Dashboard API')
-      .setDescription('API for managing and analyzing personal expenses')
-      .setVersion(version)
-      .addTag('Transactions')
-      .build(),
-  );
-  const swaggerPath = 'docs';
-  SwaggerModule.setup(swaggerPath, app, document);
+  setupSwagger(app);
 
   const HOST = configService.get<string>('HOST') || '0.0.0.0';
   const PORT = configService.get<number>('PORT') || 3000;
   await app.listen(PORT, HOST);
   logger.log(`✅ Application is running on: ${await app.getUrl()}`);
-  logger.log(`✅ Swagger documentation: ${await app.getUrl()}/${swaggerPath}`);
+  logger.log(`✅ Swagger documentation: ${await app.getUrl()}/${SWAGGER_PATH}`);
 }
 await bootstrap();

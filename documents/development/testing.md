@@ -42,7 +42,7 @@ Useful variants, from `backend-core/`:
 3. `test:e2e` runs Vitest with `vitest.config.e2e.ts`: `test/setup-e2e.ts` loads `.env.test`, and the `*.e2e-spec.ts` files run one at a time (`fileParallelism: false`), because they share the database;
 4. `db:test:down` removes the container.
 
-Each test file builds its application with `createApp()` from `test/create-app.ts`, on the same HTTP adapter as `main.ts` ([ADR-0011](../adr/0011-native-http-adapter.md)); `static-assets.e2e-spec.ts` builds it with `NestFactory.create()`, as `main.ts` does, so that the static files are served.
+Each test file builds its application with `createApp()` from `test/create-app.ts`, on the same HTTP adapter as `main.ts` ([ADR-0011](../adr/0011-native-http-adapter.md)); `static-assets.e2e-spec.ts` and `swagger.e2e-spec.ts` build it with `NestFactory.create()`, as `main.ts` does, so that the static files and the Swagger UI are served.
 
 If a run is interrupted, the container may stay up: `pnpm run db:test:down`.
 
