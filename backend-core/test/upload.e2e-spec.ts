@@ -141,9 +141,8 @@ describe('Transactions upload (E2E)', () => {
       })
       .expect(413);
 
+    expectError(res.body as ErrorResponse, 413);
     expect(res.body).toMatchObject({
-      statusCode: 413,
-      path: UPLOAD_URL,
       message: 'File too large',
       error: 'Payload Too Large',
     });
