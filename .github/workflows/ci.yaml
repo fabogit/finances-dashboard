@@ -242,7 +242,6 @@ jobs:
         run: pnpm run test:e2e
         env:
           DATABASE_URL: postgresql://test_user:test_password@localhost:5432/finance_test_db?schema=public
-          JWT_SECRET: "secret-for-testing-only"
           PORT: 3000
           HOST: 0.0.0.0
           SCIENCE_SERVICE_URL: "http://localhost:8000"
